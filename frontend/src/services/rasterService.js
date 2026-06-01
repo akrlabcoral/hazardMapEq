@@ -1,0 +1,579 @@
+import * as GeoTIFF from 'geotiff';
+import proj4 from 'proj4';
+
+// ─── Memory Safety Constants ────────────────────────────────────────────────
+// Reading large GeoTIFFs in one shot crashes the browser because geotiff.js
+// decompresses strips/tiles at full resolution internally before resampling.
+// Solution: read in spatial windows (tiles) so only a small portion is
+// decompressed at any given time, then composite onto a single output canvas.
+const MAX_OUTPUT_DIM     = 2048;   // Max output canvas dimension
+const TILE_READ_SIZE     = 512;    // Read 512x512 pixel windows from the source
+const MAX_SAFE_MEMORY_MB = 256;    // Memory threshold for single-shot decode
+
+class RasterService {
+  constructor() {
+    this.map = null;
+    this.rasterCache = new Map();
+  }
+
+  setMap(map) {
+    this.map = map;
+  }
+
+  // ─── CRS / Projection Transformation ────────────────────────────────────────
+  transformBoundsRaw(projection, xmin, ymin, xmax, ymax) {
+    const crs = projection;
+
+    console.log(`%c[GeoTIFF CRS Audit]`, 'color: #0ea5e9; font-weight: bold;');
+    console.log(`Detected CRS: EPSG:${crs || 'Unknown'}`);
+    console.log(`Original Bounds: [${xmin}, ${ymin}, ${xmax}, ${ymax}]`);
+
+    if (crs === 4326) {
+      console.log(`Projection Type: Geographic (WGS84)`);
+      console.log(`Coordinate Conversion: Skipped (Already EPSG:4326)`);
+      return { xmin, ymin, xmax, ymax };
+    }
+
+    try {
+      let sourceProj = null;
+      let projectionType = 'Unknown';
+
+      if (crs === 3857) {
+        sourceProj = 'EPSG:3857';
+        projectionType = 'Web Mercator';
+      } else if (crs >= 32601 && crs <= 32660) {
+        const zone = crs - 32600;
+        sourceProj = `+proj=utm +zone=${zone} +datum=WGS84 +units=m +no_defs`;
+        projectionType = `UTM Zone ${zone}N`;
+      } else if (crs >= 32701 && crs <= 32760) {
+        const zone = crs - 32700;
+        sourceProj = `+proj=utm +zone=${zone} +south +datum=WGS84 +units=m +no_defs`;
+        projectionType = `UTM Zone ${zone}S`;
+      } else if (crs) {
+        console.warn(`Unsupported EPSG:${crs}. Assuming geographic coordinates.`);
+        return { xmin, ymin, xmax, ymax };
+      } else {
+        console.warn(`Missing CRS metadata. Assuming geographic coordinates.`);
+        return { xmin, ymin, xmax, ymax };
+      }
+
+      console.log(`Projection Type: ${projectionType}`);
+
+      const [lonMin, latMin] = proj4(sourceProj, 'EPSG:4326', [xmin, ymin]);
+      const [lonMax, latMax] = proj4(sourceProj, 'EPSG:4326', [xmax, ymax]);
+
+      console.log(`Transformed Bounds (EPSG:4326): [${lonMin}, ${latMin}, ${lonMax}, ${latMax}]`);
+      console.log(`Coordinate Conversion: Success`);
+
+      return { xmin: lonMin, ymin: latMin, xmax: lonMax, ymax: latMax };
+    } catch (error) {
+      console.error('CRS Transformation failed:', error);
+      return { xmin, ymin, xmax, ymax };
+    }
+  }
+
+  // ─── Memory-Safe GeoTIFF Decoder ────────────────────────────────────────────
+  /**
+   * Complete memory-safe GeoTIFF decoding pipeline:
+   *
+   * 1. Opens the TIFF and reads ONLY headers (no pixel decompression)
+   * 2. Checks for overview images (pre-downsampled pyramids in the TIFF)
+   * 3. If an overview fits in memory, uses it for a fast single-shot read
+   * 4. Otherwise, reads the full-res image in small SPATIAL WINDOWS (tiles)
+   *    so geotiff.js only decompresses one small strip/tile at a time
+   * 5. Composites all tile results onto a single output canvas
+   *
+   * This avoids the root cause: geotiff.js decompresses strips at native
+   * resolution internally, regardless of the output width/height you request.
+   */
+  async decodeGeoTiffSafe(arrayBuffer) {
+    const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
+    const imageCount = await tiff.getImageCount();
+    const primaryImage = await tiff.getImage(0);
+
+    const fullWidth = primaryImage.getWidth();
+    const fullHeight = primaryImage.getHeight();
+    const bandCount = primaryImage.getSamplesPerPixel();
+    const bbox = primaryImage.getBoundingBox();
+    const noDataValue = primaryImage.getGDALNoData();
+
+    // Extract CRS
+    let projection = null;
+    const geoKeys = primaryImage.getGeoKeys();
+    if (geoKeys) {
+      projection = geoKeys.ProjectedCSTypeGeoKey || geoKeys.GeographicTypeGeoKey || null;
+    }
+
+    // ── Raster Type Detection ──────────────────────────────────────────────
+    // PhotometricInterpretation (TIFF tag 262) tells us how to render pixels:
+    //   0 = WhiteIsZero (grayscale, inverted)
+    //   1 = BlackIsZero (grayscale, normal)
+    //   2 = RGB (multi-band color)
+    const fileDir = primaryImage.fileDirectory || {};
+    // In geotiff.js v3, TIFF tags are stored in the actualizedFields Map by their numeric tag ID
+    // 262 = PhotometricInterpretation
+    // 320 = ColorMap
+    // 258 = BitsPerSample
+    const photometric = fileDir.actualizedFields?.get(262);
+    const rawColorMap = fileDir.actualizedFields?.get(320);
+    const bitsPerSample = fileDir.actualizedFields?.get(258)?.[0] || 8;
+
+    // Build a normalized RGB palette lookup table if ColorMap is present.
+    // TIFF ColorMap is stored as [R0,R1,...,Rn, G0,G1,...,Gn, B0,B1,...,Bn]
+    // with values in range 0-65535. We normalize them to 0-255.
+    let palette = null;
+    let renderingMode = 'grayscale'; // default fallback
+
+    if (bandCount >= 3) {
+      renderingMode = 'rgb';
+    } else if (photometric === 3 && rawColorMap && rawColorMap.length > 0) {
+      // Palette/Indexed color raster — build RGB lookup table
+      const nColors = rawColorMap.length / 3;
+      palette = new Array(nColors);
+      for (let i = 0; i < nColors; i++) {
+        // ColorMap values are 16-bit (0-65535), scale to 8-bit (0-255)
+        palette[i] = [
+          Math.round(rawColorMap[i] / 257),               // R
+          Math.round(rawColorMap[nColors + i] / 257),     // G
+          Math.round(rawColorMap[2 * nColors + i] / 257)  // B
+        ];
+      }
+      renderingMode = 'palette';
+    } else if (photometric === 0) {
+      renderingMode = 'grayscale-inverted';
+    }
+
+    const fullMemMB = (fullWidth * fullHeight * bandCount * 8) / (1024 * 1024);
+
+    console.log(`%c[GeoTIFF Rendering Audit]`, 'color: #f59e0b; font-weight: bold;');
+    console.log(`Raster Width: ${fullWidth}`);
+    console.log(`Raster Height: ${fullHeight}`);
+    console.log(`Band Count: ${bandCount}`);
+    console.log(`BitsPerSample: ${bitsPerSample}`);
+    console.log(`Photometric Interpretation: ${photometric} (${['WhiteIsZero','BlackIsZero','RGB','Palette'][photometric] || 'Other'})`);
+    console.log(`ColorMap Detected: ${rawColorMap ? `Yes (${rawColorMap.length / 3} entries)` : 'No'}`);
+    console.log(`Palette Applied: ${palette ? 'Yes' : 'No'}`);
+    console.log(`Rendering Mode: ${renderingMode}`);
+    console.log(`Compression: ${fileDir.actualizedFields?.get(259) || 'Unknown'}`);
+    console.log(`Estimated Full Decoded Memory: ${fullMemMB.toFixed(1)} MB`);
+    console.log(`Image Count (overviews): ${imageCount}`);
+    console.log(`NoData Value: ${noDataValue}`);
+
+    // ── Strategy 1: Try overview images (pre-downsampled pyramids) ──
+    // Many GeoTIFFs (especially Cloud Optimized) contain overview images
+    // at progressively lower resolutions. These are cheap to decode.
+    if (imageCount > 1) {
+      for (let i = imageCount - 1; i >= 1; i--) {
+        try {
+          const overview = await tiff.getImage(i);
+          const ow = overview.getWidth();
+          const oh = overview.getHeight();
+          const omem = (ow * oh * bandCount * 8) / (1024 * 1024);
+
+          if (omem <= MAX_SAFE_MEMORY_MB && ow <= MAX_OUTPUT_DIM * 2 && oh <= MAX_OUTPUT_DIM * 2) {
+            console.log(`Using overview image #${i}: ${ow}x${oh} (${omem.toFixed(1)} MB)`);
+
+            const outW = Math.min(ow, MAX_OUTPUT_DIM);
+            const outH = Math.min(oh, MAX_OUTPUT_DIM);
+
+            const rasterData = await overview.readRasters({
+              width: outW,
+              height: outH,
+              interleave: false
+            });
+
+            const dataUrl = this.renderToCanvas(rasterData, outW, outH, bandCount, noDataValue, palette, renderingMode);
+
+            return {
+              dataUrl, projection,
+              xmin: bbox[0], ymin: bbox[1], xmax: bbox[2], ymax: bbox[3],
+              noDataValue, fullWidth, fullHeight,
+              decodeWidth: outW, decodeHeight: outH, downsampled: true
+            };
+          }
+        } catch (e) {
+          console.warn(`Overview #${i} failed, trying next...`);
+        }
+      }
+    }
+
+    // ── Strategy 2: Small raster — single-shot decode ──
+    if (fullMemMB <= MAX_SAFE_MEMORY_MB) {
+      console.log(`Raster fits in memory. Decoding at constrained resolution.`);
+      const outW = Math.min(fullWidth, MAX_OUTPUT_DIM);
+      const outH = Math.min(fullHeight, MAX_OUTPUT_DIM);
+
+      try {
+        const rasterData = await primaryImage.readRasters({
+          width: outW,
+          height: outH,
+          interleave: false
+        });
+
+        const dataUrl = this.renderToCanvas(rasterData, outW, outH, bandCount, noDataValue, palette, renderingMode);
+
+        return {
+          dataUrl, projection,
+          xmin: bbox[0], ymin: bbox[1], xmax: bbox[2], ymax: bbox[3],
+          noDataValue, fullWidth, fullHeight,
+          decodeWidth: outW, decodeHeight: outH, downsampled: outW < fullWidth
+        };
+      } catch (e) {
+        console.warn('Single-shot decode failed, falling back to tiled reading...', e.message);
+      }
+    }
+
+    // ── Strategy 3: Large raster — tiled window-based reading ──
+    // This is the critical memory-safe path. We read small spatial windows
+    // (TILE_READ_SIZE x TILE_READ_SIZE pixels from the source) one at a time.
+    // Each window only requires geotiff.js to decompress the strips/tiles
+    // that intersect it, keeping peak memory usage bounded.
+    console.log(`%c[GeoTIFF Tiled Decode]`, 'color: #ef4444; font-weight: bold;');
+    console.log(`Using tiled window reading (${TILE_READ_SIZE}px windows)`);
+
+    // Calculate output dimensions maintaining aspect ratio
+    let outW, outH;
+    if (fullWidth >= fullHeight) {
+      outW = MAX_OUTPUT_DIM;
+      outH = Math.max(1, Math.round((fullHeight / fullWidth) * MAX_OUTPUT_DIM));
+    } else {
+      outH = MAX_OUTPUT_DIM;
+      outW = Math.max(1, Math.round((fullWidth / fullHeight) * MAX_OUTPUT_DIM));
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = outW;
+    canvas.height = outH;
+    const ctx = canvas.getContext('2d');
+
+    // Scale factors from source pixels to output pixels
+    const scaleX = outW / fullWidth;
+    const scaleY = outH / fullHeight;
+
+    const tilesX = Math.ceil(fullWidth / TILE_READ_SIZE);
+    const tilesY = Math.ceil(fullHeight / TILE_READ_SIZE);
+    const totalTiles = tilesX * tilesY;
+    let tilesProcessed = 0;
+
+    console.log(`Tile grid: ${tilesX} x ${tilesY} = ${totalTiles} tiles`);
+
+    for (let ty = 0; ty < tilesY; ty++) {
+      for (let tx = 0; tx < tilesX; tx++) {
+        // Source pixel window for this tile
+        const srcX0 = tx * TILE_READ_SIZE;
+        const srcY0 = ty * TILE_READ_SIZE;
+        const srcX1 = Math.min(srcX0 + TILE_READ_SIZE, fullWidth);
+        const srcY1 = Math.min(srcY0 + TILE_READ_SIZE, fullHeight);
+        const srcW = srcX1 - srcX0;
+        const srcH = srcY1 - srcY0;
+
+        // Output pixel position and size for this tile
+        const dstX = Math.round(srcX0 * scaleX);
+        const dstY = Math.round(srcY0 * scaleY);
+        const dstW = Math.max(1, Math.round(srcW * scaleX));
+        const dstH = Math.max(1, Math.round(srcH * scaleY));
+
+        try {
+          // Read ONLY this spatial window — geotiff.js will only decompress
+          // the strips/tiles that intersect [srcX0, srcY0, srcX1, srcY1]
+          const tileData = await primaryImage.readRasters({
+            window: [srcX0, srcY0, srcX1, srcY1],
+            width: dstW,
+            height: dstH,
+            interleave: false
+          });
+
+          // Render this tile's pixels to a temporary canvas
+          const tileCanvas = document.createElement('canvas');
+          tileCanvas.width = dstW;
+          tileCanvas.height = dstH;
+          const tileCtx = tileCanvas.getContext('2d');
+          const tileImgData = tileCtx.createImageData(dstW, dstH);
+
+          this.fillImageData(tileImgData, tileData, bandCount, noDataValue, palette, renderingMode);
+
+          tileCtx.putImageData(tileImgData, 0, 0);
+
+          // Composite onto the main output canvas
+          ctx.drawImage(tileCanvas, dstX, dstY);
+
+        } catch (tileErr) {
+          // If a single tile fails, skip it rather than crashing everything
+          console.warn(`Tile [${tx},${ty}] failed: ${tileErr.message}`);
+        }
+
+        tilesProcessed++;
+        if (tilesProcessed % 10 === 0 || tilesProcessed === totalTiles) {
+          console.log(`Tiles processed: ${tilesProcessed}/${totalTiles}`);
+        }
+      }
+    }
+
+    const dataUrl = canvas.toDataURL('image/png');
+
+    console.log(`Tiled decode complete: ${outW}x${outH} from ${fullWidth}x${fullHeight}`);
+
+    return {
+      dataUrl, projection,
+      xmin: bbox[0], ymin: bbox[1], xmax: bbox[2], ymax: bbox[3],
+      noDataValue, fullWidth, fullHeight,
+      decodeWidth: outW, decodeHeight: outH, downsampled: true
+    };
+  }
+
+  // ─── Pixel Rendering Helpers ────────────────────────────────────────────────
+
+  /**
+   * Fills an ImageData object from flat band arrays returned by readRasters().
+   *
+   * Rendering mode selection:
+   *   - 'palette':            Single-band indexed raster with embedded ColorMap.
+   *                           Each pixel value is an index into the palette array.
+   *   - 'rgb':                Multi-band (3+) raster. Bands map to R, G, B directly.
+   *   - 'grayscale-inverted': Single-band where 0=white, max=black (PhotometricInterpretation=0).
+   *   - 'grayscale':          Default fallback. Normalizes values to 0-255 grayscale.
+   */
+  fillImageData(imageData, rasterData, bandCount, noDataValue, palette = null, renderingMode = 'grayscale') {
+    const bandR = rasterData[0];
+    const bandG = bandCount >= 3 ? rasterData[1] : null;
+    const bandB = bandCount >= 3 ? rasterData[2] : null;
+    const pixelCount = bandR.length;
+
+    // ── Palette rendering: look up each pixel value in the ColorMap ──
+    if (renderingMode === 'palette' && palette) {
+      for (let i = 0; i < pixelCount; i++) {
+        const v = bandR[i];
+        if (v === noDataValue || isNaN(v) || !isFinite(v)) {
+          imageData.data[i * 4 + 3] = 0; // Transparent
+        } else {
+          const idx = Math.round(v);
+          if (idx >= 0 && idx < palette.length) {
+            imageData.data[i * 4]     = palette[idx][0]; // R from palette
+            imageData.data[i * 4 + 1] = palette[idx][1]; // G from palette
+            imageData.data[i * 4 + 2] = palette[idx][2]; // B from palette
+            imageData.data[i * 4 + 3] = 255;
+          } else {
+            // Index out of palette range — render transparent
+            imageData.data[i * 4 + 3] = 0;
+          }
+        }
+      }
+      return;
+    }
+
+    // ── RGB rendering: use band values directly as color channels ──
+    if (renderingMode === 'rgb' && bandG && bandB) {
+      for (let i = 0; i < pixelCount; i++) {
+        const v = bandR[i];
+        if (v === noDataValue || isNaN(v) || !isFinite(v)) {
+          imageData.data[i * 4 + 3] = 0;
+        } else {
+          imageData.data[i * 4]     = Math.min(255, Math.max(0, v));
+          imageData.data[i * 4 + 1] = Math.min(255, Math.max(0, bandG[i]));
+          imageData.data[i * 4 + 2] = Math.min(255, Math.max(0, bandB[i]));
+          imageData.data[i * 4 + 3] = 255;
+        }
+      }
+      return;
+    }
+
+    // ── Grayscale fallback: normalize single-band values to 0-255 ──
+    let min = 0, max = 255;
+    let cMin = Infinity, cMax = -Infinity;
+    for (let i = 0; i < pixelCount; i++) {
+      const v = bandR[i];
+      if (v !== noDataValue && !isNaN(v) && isFinite(v)) {
+        if (v < cMin) cMin = v;
+        if (v > cMax) cMax = v;
+      }
+    }
+    if (cMin !== Infinity) { min = cMin; max = cMax; }
+    const range = (max - min) || 1;
+    const invert = renderingMode === 'grayscale-inverted';
+
+    for (let i = 0; i < pixelCount; i++) {
+      const v = bandR[i];
+      if (v === noDataValue || isNaN(v) || !isFinite(v)) {
+        imageData.data[i * 4 + 3] = 0;
+      } else {
+        let c = Math.round(((v - min) / range) * 255);
+        if (c < 0) c = 0; if (c > 255) c = 255;
+        if (invert) c = 255 - c;
+        imageData.data[i * 4]     = c;
+        imageData.data[i * 4 + 1] = c;
+        imageData.data[i * 4 + 2] = c;
+        imageData.data[i * 4 + 3] = 255;
+      }
+    }
+  }
+
+  /**
+   * Renders flat rasterData arrays to a canvas and returns a data URL.
+   * Used for single-shot (non-tiled) decodes.
+   */
+  renderToCanvas(rasterData, width, height, bandCount, noDataValue, palette = null, renderingMode = 'grayscale') {
+    const canvas = document.createElement('canvas');
+    canvas.width = width;
+    canvas.height = height;
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.createImageData(width, height);
+
+    this.fillImageData(imageData, rasterData, bandCount, noDataValue, palette, renderingMode);
+
+    ctx.putImageData(imageData, 0, 0);
+    return canvas.toDataURL('image/png');
+  }
+
+  // ─── Add GeoTIFF from Local File Upload ─────────────────────────────────────
+  async addGeoTiffLayer(file, layerId, options = {}) {
+    const { onProgress, onStateChange, abortSignal } = options;
+    const map = this.map;
+    if (!map) throw new Error("Map instance is not available.");
+
+    try {
+      const arrayBuffer = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+
+        if (abortSignal) {
+          abortSignal.addEventListener('abort', () => {
+            reader.abort();
+            reject(new Error('Upload cancelled by user.'));
+          });
+        }
+
+        reader.onprogress = (event) => {
+          if (event.lengthComputable && onProgress) {
+            onProgress(event.loaded, event.total);
+          }
+        };
+
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Failed to read file.'));
+        reader.readAsArrayBuffer(file);
+      });
+
+      if (onStateChange) onStateChange('processing');
+
+      const result = await this.decodeGeoTiffSafe(arrayBuffer);
+
+      const { xmin, ymin, xmax, ymax } = this.transformBoundsRaw(
+        result.projection, result.xmin, result.ymin, result.xmax, result.ymax
+      );
+
+      const coordinates = [
+        [xmin, ymax], [xmax, ymax], [xmax, ymin], [xmin, ymin]
+      ];
+
+      const sourceId = `${layerId}-source`;
+
+      if (!map.getSource(sourceId)) {
+        map.addSource(sourceId, {
+          type: 'image', url: result.dataUrl, coordinates
+        });
+
+        console.log(`%c[GeoTIFF Render]`, 'color: #22c55e; font-weight: bold;');
+        console.log(`Adding layer: ${layerId}`);
+        console.log(`Decoded: ${result.decodeWidth}x${result.decodeHeight} (from ${result.fullWidth}x${result.fullHeight})`);
+        if (result.downsampled) console.warn(`⚠ Large raster was downsampled for memory safety.`);
+
+        map.addLayer({
+          id: layerId, type: 'raster', source: sourceId,
+          layout: { 'visibility': 'visible' },
+          paint: { 'raster-opacity': 0.8, 'raster-fade-duration': 0 }
+        });
+
+        console.log(`Layer "${layerId}" added successfully.`);
+      }
+
+      this.rasterCache.set(layerId, { sourceId, layerId });
+
+    } catch (error) {
+      console.error('Failed to add GeoTIFF layer:', error);
+      throw error;
+    }
+  }
+
+  // ─── Add GeoTIFF from URL (Built-in Layers) ────────────────────────────────
+  async addGeoTiffFromUrl(url, layerId, options = {}) {
+    const { onStateChange } = options;
+    const map = this.map;
+    if (!map) throw new Error("Map instance is not available.");
+
+    try {
+      if (onStateChange) onStateChange('reading');
+
+      const response = await fetch(url);
+      if (!response.ok) throw new Error(`Failed to fetch raster from ${url}`);
+      const arrayBuffer = await response.arrayBuffer();
+
+      if (onStateChange) onStateChange('processing');
+
+      const result = await this.decodeGeoTiffSafe(arrayBuffer);
+
+      const { xmin, ymin, xmax, ymax } = this.transformBoundsRaw(
+        result.projection, result.xmin, result.ymin, result.xmax, result.ymax
+      );
+
+      const coordinates = [
+        [xmin, ymax], [xmax, ymax], [xmax, ymin], [xmin, ymin]
+      ];
+
+      const sourceId = `${layerId}-source`;
+
+      if (!map.getSource(sourceId)) {
+        map.addSource(sourceId, {
+          type: 'image', url: result.dataUrl, coordinates
+        });
+
+        console.log(`%c[GeoTIFF Render]`, 'color: #22c55e; font-weight: bold;');
+        console.log(`Adding built-in layer: ${layerId}`);
+        console.log(`Decoded: ${result.decodeWidth}x${result.decodeHeight}`);
+
+        map.addLayer({
+          id: layerId, type: 'raster', source: sourceId,
+          layout: { 'visibility': options.visible !== false ? 'visible' : 'none' },
+          paint: {
+            'raster-opacity': options.opacity !== undefined ? options.opacity : 0.8,
+            'raster-fade-duration': 0
+          }
+        });
+
+        console.log(`Layer "${layerId}" added successfully.`);
+      }
+
+      this.rasterCache.set(layerId, { sourceId, layerId });
+      if (onStateChange) onStateChange('completed');
+
+    } catch (error) {
+      console.error('Failed to add GeoTIFF from URL:', error);
+      if (onStateChange) onStateChange('failed', error.message);
+      throw error;
+    }
+  }
+
+  // ─── Layer Management ───────────────────────────────────────────────────────
+
+  removeGeoTiffLayer(layerId) {
+    const map = this.map;
+    if (!map) return;
+    const cacheEntry = this.rasterCache.get(layerId);
+    if (!cacheEntry) return;
+    if (map.getLayer(layerId)) map.removeLayer(layerId);
+    if (map.getSource(cacheEntry.sourceId)) map.removeSource(cacheEntry.sourceId);
+    this.rasterCache.delete(layerId);
+  }
+
+  updateOpacity(layerId, opacity) {
+    const map = this.map;
+    if (!map || !map.getLayer(layerId)) return;
+    map.setPaintProperty(layerId, 'raster-opacity', opacity);
+  }
+
+  updateVisibility(layerId, isVisible) {
+    const map = this.map;
+    if (!map || !map.getLayer(layerId)) return;
+    map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
+  }
+}
+
+export const rasterService = new RasterService();

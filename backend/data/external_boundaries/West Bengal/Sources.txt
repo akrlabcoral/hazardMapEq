@@ -1,0 +1,5 @@
+  Purpose           | Dataset                  | Source                 |
+| ----------------- | ------------------------ | ---------------------- |
+| State boundary    | FAO/GAUL/2015/level1     | FAO                    |
+| District boundary | FAO/GAUL/2015/level2     | FAO                    |
+| Soil texture/type | OpenLandMap soil texture | OpenGeoHub/OpenLandMap |
