@@ -1,14 +1,15 @@
 import React from 'react';
 import useStore from '../store/useStore';
+import { classifyRisk, getDamageIndex, getIntensityLabel, getRiskColorText } from '../utils/hazardCalculations';
 
 export default function StateHoverTooltip() {
   const hoveredStateId = useStore((state) => state.hoveredStateId);
+  const hoveredCellData = useStore((state) => state.hoveredCellData);
   const isHoverTooltipEnabled = useStore((state) => state.isHoverTooltipEnabled);
   const mousePos = useStore((state) => state.mousePos);
   const stateIdMapping = useStore((state) => state.stateIdMapping);
-  const simulationResults = useStore((state) => state.simulationResults);
 
-  if (!isHoverTooltipEnabled || !hoveredStateId || !stateIdMapping || !simulationResults?.state_summary) {
+  if (!isHoverTooltipEnabled || !hoveredStateId || !stateIdMapping) {
     return null;
   }
 
@@ -16,51 +17,48 @@ export default function StateHoverTooltip() {
   const stateName = Object.keys(stateIdMapping).find(k => stateIdMapping[k] === hoveredStateId);
   if (!stateName) return null;
 
-  const summary = simulationResults.state_summary[stateName];
-  if (!summary) return null;
-
-  const getRiskColor = (risk) => {
-    switch (risk) {
-      case 'EXTREME': return 'text-red-500';
-      case 'SEVERE': return 'text-orange-500';
-      case 'HIGH': return 'text-yellow-500';
-      case 'MODERATE': return 'text-green-500';
-      default: return 'text-slate-400';
-    }
-  };
-
   return (
     <div 
       className="fixed z-50 pointer-events-none transform -translate-x-1/2 -translate-y-[calc(100%+20px)]"
       style={{ left: mousePos.x, top: mousePos.y }}
     >
-      <div className="bg-slate-900/80 backdrop-blur-md border border-slate-700 p-4 rounded-xl shadow-2xl min-w-[200px] text-white font-sans tracking-wide">
+      <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700 p-4 rounded-xl shadow-2xl min-w-[220px] text-white font-sans tracking-wide">
         <h3 className="text-lg font-bold border-b border-slate-700 pb-2 mb-2">{stateName}</h3>
         
-        <div className="space-y-1 text-sm">
-          <div className="flex justify-between">
-            <span className="text-slate-400">Risk:</span>
-            <span className={`font-bold ${getRiskColor(summary.risk_category)}`}>
-              {summary.risk_category}
-            </span>
+        {!hoveredCellData ? (
+          <div className="text-sm text-slate-400 italic py-1">
+            No local hazard data.
           </div>
-          <div className="flex justify-between">
-            <span className="text-slate-400">Avg PGA:</span>
-            <span className="font-mono">{summary.avg_pga}g</span>
+        ) : (
+          <div className="space-y-1.5 text-sm">
+            <div className="flex justify-between">
+              <span className="text-slate-400">Risk:</span>
+              <span className={`font-bold ${getRiskColorText(classifyRisk(hoveredCellData.pga_final))}`}>
+                {classifyRisk(hoveredCellData.pga_final)}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Intensity:</span>
+              <span className="font-medium text-slate-200">{getIntensityLabel(hoveredCellData.pga_final)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Local PGA:</span>
+              <span className="font-mono text-slate-200">{hoveredCellData.pga_final?.toFixed(4)}g</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-slate-400">Damage Index:</span>
+              <span className="font-mono text-slate-200">{getDamageIndex(hoveredCellData.pga_final)}%</span>
+            </div>
+            {hoveredCellData.population !== undefined && (
+              <div className="flex justify-between border-t border-slate-700/50 pt-1.5 mt-1.5">
+                <span className="text-slate-400">Local Pop Exposure:</span>
+                <span className="font-mono text-cyan-400">
+                  {hoveredCellData.population.toLocaleString()}
+                </span>
+              </div>
+            )}
           </div>
-          <div className="flex justify-between">
-            <span className="text-slate-400">Max PGA:</span>
-            <span className="font-mono">{summary.max_pga}g</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-400">Population Affected:</span>
-            <span className="font-mono">{(summary.pop_affected / 1000000).toFixed(1)}M</span>
-          </div>
-          <div className="flex justify-between">
-            <span className="text-slate-400">Damage Index:</span>
-            <span className="font-mono">{summary.damage_score}%</span>
-          </div>
-        </div>
+        )}
       </div>
       
       {/* Tooltip triangle pointer */}

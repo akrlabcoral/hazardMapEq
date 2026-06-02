@@ -53,6 +53,7 @@ def aggregate_impact(
                 "total_pga":   0.0,
                 "cell_count":  0,
                 "severe_cells": 0,
+                "total_pop_affected": 0,
             })
             if raw_score > s["max_pga"]:
                 s["max_pga"] = raw_score
@@ -60,6 +61,10 @@ def aggregate_impact(
                 s["severe_cells"] += 1
             s["total_pga"]  += raw_score
             s["cell_count"] += 1
+            
+            # If the cell feels the earthquake (e.g. >0.02g), add its population
+            if raw_score > 0.02:
+                s["total_pop_affected"] += props.get("population", 0)
 
     # --- Format district summary ---
     district_summary = [
@@ -77,9 +82,7 @@ def aggregate_impact(
         max_pga = v["max_pga"]
         risk    = _classify_risk(max_pga)
         damage_score = min(int(avg_pga * 50 + max_pga * 50), 100)
-        pop_affected = int(
-            v["cell_count"] * 25000 if avg_pga > 0.1 else v["severe_cells"] * 3 * 25000
-        )
+        
         state_summary[k] = {
             "state":         k,
             "avg_pga":       round(avg_pga, 3),
@@ -87,7 +90,7 @@ def aggregate_impact(
             "severe_cells":  v["severe_cells"],
             "risk_category": risk,
             "damage_score":  damage_score,
-            "pop_affected":  pop_affected,
+            "pop_affected":  int(v["total_pop_affected"]),
         }
 
     return district_summary, state_summary

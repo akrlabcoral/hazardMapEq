@@ -86,7 +86,7 @@ class RasterService {
    * This avoids the root cause: geotiff.js decompresses strips at native
    * resolution internally, regardless of the output width/height you request.
    */
-  async decodeGeoTiffSafe(arrayBuffer) {
+  async decodeGeoTiffSafe(arrayBuffer, options = {}) {
     const tiff = await GeoTIFF.fromArrayBuffer(arrayBuffer);
     const imageCount = await tiff.getImageCount();
     const primaryImage = await tiff.getImage(0);
@@ -141,6 +141,10 @@ class RasterService {
       renderingMode = 'palette';
     } else if (photometric === 0) {
       renderingMode = 'grayscale-inverted';
+    }
+    
+    if (options.renderingModeOverride) {
+      renderingMode = options.renderingModeOverride;
     }
 
     const fullMemMB = (fullWidth * fullHeight * bandCount * 8) / (1024 * 1024);
@@ -377,7 +381,7 @@ class RasterService {
       return;
     }
 
-    // ── Grayscale fallback: normalize single-band values to 0-255 ──
+    // ── Grayscale fallback or Custom Color Ramp ──
     let min = 0, max = 255;
     let cMin = Infinity, cMax = -Infinity;
     for (let i = 0; i < pixelCount; i++) {
@@ -388,20 +392,55 @@ class RasterService {
       }
     }
     if (cMin !== Infinity) { min = cMin; max = cMax; }
+    
+    // For population density, a typical max is extremely high due to cities.
+    // Clamp the max for visual rendering to 95th percentile or a fixed cap (e.g. 5000)
+    // if using the population ramp, to prevent it from looking mostly blue.
+    if (renderingMode === 'population') {
+      max = Math.min(max, 2500); 
+    }
+    
     const range = (max - min) || 1;
     const invert = renderingMode === 'grayscale-inverted';
 
     for (let i = 0; i < pixelCount; i++) {
       const v = bandR[i];
-      if (v === noDataValue || isNaN(v) || !isFinite(v)) {
+      if (v === noDataValue || isNaN(v) || !isFinite(v) || v <= 0) {
         imageData.data[i * 4 + 3] = 0;
       } else {
-        let c = Math.round(((v - min) / range) * 255);
-        if (c < 0) c = 0; if (c > 255) c = 255;
-        if (invert) c = 255 - c;
-        imageData.data[i * 4]     = c;
-        imageData.data[i * 4 + 1] = c;
-        imageData.data[i * 4 + 2] = c;
+        let frac = (v - min) / range;
+        if (frac < 0) frac = 0; if (frac > 1) frac = 1;
+        
+        if (renderingMode === 'population') {
+          // Heatmap: Blue -> Cyan -> Yellow -> Red -> Dark Red
+          let r, g, b;
+          if (frac < 0.25) {
+            // Blue to Cyan
+            let f = frac / 0.25;
+            r = 0; g = Math.floor(255 * f); b = 255;
+          } else if (frac < 0.5) {
+            // Cyan to Yellow
+            let f = (frac - 0.25) / 0.25;
+            r = Math.floor(255 * f); g = 255; b = Math.floor(255 * (1 - f));
+          } else if (frac < 0.75) {
+            // Yellow to Red
+            let f = (frac - 0.5) / 0.25;
+            r = 255; g = Math.floor(255 * (1 - f)); b = 0;
+          } else {
+            // Red to Dark Red
+            let f = (frac - 0.75) / 0.25;
+            r = Math.floor(255 * (1 - 0.5 * f)); g = 0; b = 0;
+          }
+          imageData.data[i * 4]     = r;
+          imageData.data[i * 4 + 1] = g;
+          imageData.data[i * 4 + 2] = b;
+        } else {
+          let c = Math.round(frac * 255);
+          if (invert) c = 255 - c;
+          imageData.data[i * 4]     = c;
+          imageData.data[i * 4 + 1] = c;
+          imageData.data[i * 4 + 2] = c;
+        }
         imageData.data[i * 4 + 3] = 255;
       }
     }
@@ -454,7 +493,7 @@ class RasterService {
 
       if (onStateChange) onStateChange('processing');
 
-      const result = await this.decodeGeoTiffSafe(arrayBuffer);
+      const result = await this.decodeGeoTiffSafe(arrayBuffer, options);
 
       const { xmin, ymin, xmax, ymax } = this.transformBoundsRaw(
         result.projection, result.xmin, result.ymin, result.xmax, result.ymax
@@ -508,7 +547,7 @@ class RasterService {
 
       if (onStateChange) onStateChange('processing');
 
-      const result = await this.decodeGeoTiffSafe(arrayBuffer);
+      const result = await this.decodeGeoTiffSafe(arrayBuffer, options);
 
       const { xmin, ymin, xmax, ymax } = this.transformBoundsRaw(
         result.projection, result.xmin, result.ymin, result.xmax, result.ymax

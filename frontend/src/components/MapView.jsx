@@ -315,6 +315,7 @@ export default function MapView() {
         });
 
       let hoveredStateId = null;
+      let cellHoverTimeout = null;
 
       map.current.on('mousemove', 'state-boundaries-fill', (e) => {
         if (e.features.length > 0) {
@@ -331,6 +332,25 @@ export default function MapView() {
           );
           useStore.getState().setHoveredStateId(hoveredStateId);
           useStore.getState().setMousePos({ x: e.originalEvent.clientX, y: e.originalEvent.clientY });
+          
+          // Debounced Cell Lookup for live raster inspector tooltip
+          if (cellHoverTimeout) clearTimeout(cellHoverTimeout);
+          cellHoverTimeout = setTimeout(() => {
+            if (!map.current || !useStore.getState().isSimulationRunning && !useStore.getState().simulationResults) {
+              useStore.getState().setHoveredCellData(null);
+              return;
+            }
+            try {
+              const features = map.current.queryRenderedFeatures(e.point, { layers: [SIM_LAYERS.WB_GRID_FILL] });
+              if (features.length > 0) {
+                useStore.getState().setHoveredCellData(features[0].properties);
+              } else {
+                useStore.getState().setHoveredCellData(null);
+              }
+            } catch (err) {
+              // Ignore if layer doesn't exist
+            }
+          }, 50);
         }
       });
 
@@ -343,6 +363,9 @@ export default function MapView() {
         }
         hoveredStateId = null;
         useStore.getState().setHoveredStateId(null);
+        
+        if (cellHoverTimeout) clearTimeout(cellHoverTimeout);
+        useStore.getState().setHoveredCellData(null);
       });
     });
 

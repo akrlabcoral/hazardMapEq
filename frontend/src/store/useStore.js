@@ -74,6 +74,9 @@ const useStore = create((set) => ({
   hoveredStateId: null,
   setHoveredStateId: (id) => set({ hoveredStateId: id }),
   
+  hoveredCellData: null,
+  setHoveredCellData: (data) => set({ hoveredCellData: data }),
+  
   selectedStateName: null,
   setSelectedStateName: (name) => set({ selectedStateName: name }),
   
