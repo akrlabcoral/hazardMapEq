@@ -4,7 +4,7 @@ import React from 'react';
 // Premium glassmorphism with cyan header accent bar and layered depth
 export default function ControlPanel({ title, children }) {
   return (
-    <div className="glass-card flex flex-col overflow-hidden max-h-full shadow-[0_0_40px_rgba(0,0,0,0.4)]">
+    <div className="glass-card flex flex-col overflow-hidden h-full shadow-[0_0_40px_rgba(0,0,0,0.4)]">
       {/* Panel header with left cyan accent bar and gradient background */}
       {/* The accent bar provides visual hierarchy and command-center aesthetic */}
       <div className="relative bg-slate-900/90 px-4 py-3 border-b border-slate-700/50">

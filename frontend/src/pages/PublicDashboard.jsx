@@ -15,6 +15,8 @@ import RightControlPanel from '../components/RightControlPanel';
 import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 
+import LiveEventsPanel from '../panels/LiveEventsPanel';
+
 const PANEL_TITLE = {
   layers:    'MAP LAYERS',
   alerts:    'ALERTS',
@@ -55,24 +57,34 @@ export default function PublicDashboard() {
           animate={{ left: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
-          {/* Left Control Panels (Bottom aligned) */}
-          <div className="mt-auto flex gap-4 pointer-events-none items-end [&>*]:pointer-events-auto">
-            <AnimatePresence mode="wait">
-              {activeSection && PANEL_TITLE[activeSection] && (
-                <motion.div
-                  key={activeSection}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className="w-[480px]"
-                >
-                  <ControlPanel title={PANEL_TITLE[activeSection]}>
-                    {activeSection === 'layers'    && <LayersPanel />}
-                    {activeSection === 'alerts'    && <AlertsPanel />}
-                  </ControlPanel>
-                </motion.div>
-              )}
-            </AnimatePresence>
+          {/* Left Control Panels (Split Layout) */}
+          <div className="h-full flex flex-col gap-4 pointer-events-none [&>*]:pointer-events-auto w-[480px]">
+            {/* Top Half: Dynamic Control Panel */}
+            <div className="flex-1 overflow-hidden">
+              <AnimatePresence mode="wait">
+                {activeSection && PANEL_TITLE[activeSection] && (
+                  <motion.div
+                    key={activeSection}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    className="w-full h-full"
+                  >
+                    <ControlPanel title={PANEL_TITLE[activeSection]}>
+                      {activeSection === 'layers'    && <LayersPanel />}
+                      {activeSection === 'alerts'    && <AlertsPanel />}
+                    </ControlPanel>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Bottom Half: Live Feeds */}
+            <div className="flex-1 overflow-hidden mt-auto">
+              <div className="w-full h-full">
+                <LiveEventsPanel />
+              </div>
+            </div>
           </div>
 
           {/* Right Control Panels (Center aligned vertically) */}
