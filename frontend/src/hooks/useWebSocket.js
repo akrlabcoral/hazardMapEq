@@ -71,11 +71,10 @@ export function useWebSocket() {
     if (!mountedRef.current) return;
 
     const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    
-    // Bypass Vite proxy in development for WebSockets to avoid connection drops
-    const url = import.meta.env.DEV 
-      ? `ws://localhost:8000/api/ws/live`
-      : `${protocol}//${location.host}/scientific-api/ws/live`;
+
+    // Always use the current window's host so it works via Cloudflare tunnel,
+    // LAN, or localhost — the Vite proxy handles routing to the backend.
+    const url = `${protocol}//${location.host}/scientific-api/ws/live`;
 
     console.log('[WS] Connecting to', url);
     const ws = new WebSocket(url);

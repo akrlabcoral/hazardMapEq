@@ -19,7 +19,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import simulate, export
+from app.api import simulate
 from app.api import ws as ws_module
 from app.api import events as events_module
 from app.soil import cache as soil_cache
@@ -96,7 +96,6 @@ app.add_middleware(
 )
 
 app.include_router(simulate.router,       prefix="/api")
-app.include_router(export.router,         prefix="/api")
 app.include_router(ws_module.router,      prefix="/api")
 app.include_router(events_module.router,  prefix="/api")
 

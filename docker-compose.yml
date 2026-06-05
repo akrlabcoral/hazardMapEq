@@ -44,6 +44,7 @@ services:
     volumes:
       - ./frontend/src:/app/src
       - ./frontend/public:/app/public
+      - ./frontend/vite.config.js:/app/vite.config.js
     environment:
       - VITE_ML_API_URL=http://backend:8000
       - VITE_SCIENTIFIC_API_URL=http://backend:8000
