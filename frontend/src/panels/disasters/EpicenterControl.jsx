@@ -42,7 +42,7 @@ export function EpicenterControl() {
         <span className="font-semibold text-slate-300">Earthquake Epicenter</span>
         <div className="flex gap-2">
           {epicenterRegion && (
-            <span className="text-[10px] px-2 py-1 rounded bg-cyan-900/40 text-cyan-400 border border-cyan-700/50">
+            <span className="text-[10px] px-2 py-1 rounded bg-cyan-900/40 text-white border border-cyan-700/50">
               {epicenterRegion}
             </span>
           )}
@@ -51,7 +51,7 @@ export function EpicenterControl() {
           </span>
         </div>
       </div>
-      <div className="text-sm font-mono text-cyan-400 mt-1">{formatCoords(epicenter)}</div>
+      <div className="text-sm font-mono text-white mt-1">{formatCoords(epicenter)}</div>
 
       <div className="flex gap-2 mt-2">
         <div className="flex-1">
@@ -60,7 +60,7 @@ export function EpicenterControl() {
             type="number" step="0.0001"
             value={epicenter?.lat ?? ''}
             onChange={handleLatChange}
-            className="w-full bg-slate-900 border border-slate-700 text-cyan-400 text-sm rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
             placeholder="e.g. 22.5726"
           />
         </div>
@@ -70,7 +70,7 @@ export function EpicenterControl() {
             type="number" step="0.0001"
             value={epicenter?.lng ?? ''}
             onChange={handleLngChange}
-            className="w-full bg-slate-900 border border-slate-700 text-cyan-400 text-sm rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
             placeholder="e.g. 88.3639"
           />
         </div>
@@ -81,14 +81,14 @@ export function EpicenterControl() {
           onClick={() => setIsPlacing(!isPlacing)}
           className={`w-full flex justify-center items-center gap-2 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
             isPlacing
-              ? 'bg-cyan-900/40 text-cyan-400 border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.2)]'
+              ? 'bg-slate-700 text-white border border-slate-500'
               : 'bg-slate-700/50 hover:bg-slate-600 text-slate-300 border border-slate-600'
           }`}
         >
           {isPlacing ? 'Cancel Pin Drop' : 'Drop Pin on Map'}
         </button>
         {isPlacing && (
-          <div className="text-[10px] text-cyan-400 mt-2 text-center animate-pulse">
+          <div className="text-[10px] text-white mt-2 text-center animate-pulse">
             Click anywhere on the map to place epicenter.
           </div>
         )}

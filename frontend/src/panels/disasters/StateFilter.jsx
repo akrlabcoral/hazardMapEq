@@ -25,7 +25,7 @@ export function StateFilter() {
       <select
         value={selectedStateName || ''}
         onChange={(e) => setSelectedStateName(e.target.value || null)}
-        className="w-full bg-slate-900 border border-slate-700 text-cyan-400 text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+        className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
       >
         <option value="">All States (Nationwide)</option>
         {sortedStateNames.map((name) => (

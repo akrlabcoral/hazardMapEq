@@ -100,6 +100,9 @@ app.include_router(export.router,         prefix="/api")
 app.include_router(ws_module.router,      prefix="/api")
 app.include_router(events_module.router,  prefix="/api")
 
+from app.api import tests as tests_module
+app.include_router(tests_module.router,   prefix="/api")
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)

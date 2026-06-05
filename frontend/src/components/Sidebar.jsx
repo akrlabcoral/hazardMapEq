@@ -32,7 +32,7 @@ export default function Sidebar({ isAdmin = false }) {
       <div className="p-3 flex items-center border-b border-slate-800/80 bg-slate-900/50">
         <button 
           onClick={toggleSidebar}
-          className="w-12 h-12 flex items-center justify-center hover:bg-slate-800 rounded-lg text-slate-300 hover:text-cyan-400 transition-colors shrink-0"
+          className="w-12 h-12 flex items-center justify-center hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition-colors shrink-0"
           title="Toggle Sidebar"
         >
           <Menu size={20} strokeWidth={2} />
@@ -45,7 +45,7 @@ export default function Sidebar({ isAdmin = false }) {
               exit={{ opacity: 0, x: -10 }}
               className="ml-2 font-bold text-slate-200 tracking-wider whitespace-nowrap overflow-hidden"
             >
-              HAZARD<span className="text-cyan-400">MAP</span>
+              HAZARD<span className="text-white">MAP</span>
             </motion.div>
           )}
         </AnimatePresence>
@@ -61,16 +61,16 @@ export default function Sidebar({ isAdmin = false }) {
                 onClick={() => setActiveSection(item.id)}
                 className={`w-full flex items-center h-12 rounded-lg transition-all duration-300 relative ${
                   isActive 
-                    ? 'bg-cyan-900/30 text-cyan-400 shadow-[inset_0_0_15px_rgba(6,182,212,0.2)]' 
+                    ? 'bg-slate-700/50 text-white' 
                     : 'hover:bg-slate-800/50 text-slate-400 hover:text-slate-200'
                 }`}
               >
                 {isActive && (
-                  <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.6)]" />
+                  <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-white" />
                 )}
                 
                 <div className="shrink-0 flex items-center justify-center w-12 h-12">
-                  <Icon className={`w-5 h-5 ${isActive ? 'drop-shadow-[0_0_8px_rgba(6,182,212,0.8)]' : ''}`} strokeWidth={2} />
+                  <Icon className={`w-5 h-5 ${isActive ? 'text-white' : ''}`} strokeWidth={2} />
                 </div>
                 
                 <AnimatePresence>
@@ -110,7 +110,7 @@ export default function Sidebar({ isAdmin = false }) {
               exit={{ opacity: 0 }}
               className="text-xs text-slate-500 text-center whitespace-nowrap"
             >
-              HazardMap · GIS Hazard Platform
+              HazardMap
             </motion.div>
           ) : (
             <motion.div

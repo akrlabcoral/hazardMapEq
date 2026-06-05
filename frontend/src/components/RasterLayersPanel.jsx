@@ -119,7 +119,7 @@ export default function RasterLayersPanel() {
         
         <button 
           onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 px-3 py-1.5 bg-cyan-600/80 hover:bg-cyan-500 text-white text-xs font-bold rounded shadow-[0_0_10px_rgba(8,145,178,0.3)] transition-all"
+          className="flex items-center gap-2 px-3 py-1.5 bg-slate-600/80 hover:bg-slate-500 text-white text-xs font-bold rounded shadow-[0_0_10px_rgba(8,145,178,0.3)] transition-all"
         >
           <UploadCloud size={14} />
           Add GeoTIFF
@@ -141,7 +141,7 @@ export default function RasterLayersPanel() {
                 <div className="flex items-center gap-1">
                   <button 
                     onClick={() => handleToggleVisibility(layer)}
-                    className={`p-1.5 rounded transition-colors ${layer.visible ? 'text-cyan-400 bg-cyan-900/30' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700'}`}
+                    className={`p-1.5 rounded transition-colors ${layer.visible ? 'text-white bg-cyan-900/30' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700'}`}
                     title="Toggle Visibility"
                   >
                     {layer.visible ? <Eye size={16} /> : <EyeOff size={16} />}
@@ -168,7 +168,7 @@ export default function RasterLayersPanel() {
                     onChange={(e) => handleOpacityChange(layer.id, parseFloat(e.target.value))}
                     className="flex-1 accent-cyan-500 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer"
                   />
-                  <span className="text-xs text-cyan-400 w-8 text-right font-mono">
+                  <span className="text-xs text-white w-8 text-right font-mono">
                     {Math.round(layer.opacity * 100)}%
                   </span>
                 </div>

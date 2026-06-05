@@ -21,7 +21,7 @@ export function LayerRow({ label, subtitle, visible, opacity, onToggle, onOpacit
             onChange={(e) => onOpacityChange(parseFloat(e.target.value))}
             className="flex-1 accent-cyan-500 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer"
           />
-          <span className="text-xs text-cyan-400 w-8 text-right">{Math.round((opacity ?? 1) * 100)}%</span>
+          <span className="text-xs text-white w-8 text-right">{Math.round((opacity ?? 1) * 100)}%</span>
         </div>
       )}
     </div>

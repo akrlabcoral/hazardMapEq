@@ -11,7 +11,7 @@ export default function ControlPanel({ title, children }) {
         {/* Top edge glow line for depth separation */}
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
         {/* Left accent bar — provides visual weight and section identity */}
-        <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-cyan-500 shadow-[0_0_8px_rgba(6,182,212,0.5)]" />
+        <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-white" />
         <h3 className="font-semibold tracking-wide neon-text pl-3">{title}</h3>
       </div>
       <div className="p-4 overflow-y-auto flex-1">

@@ -7,13 +7,18 @@ export default {
   theme: {
     extend: {
       colors: {
-        background: '#020617', // slate-950
-        surface: '#0f172a', // slate-900
-        primary: '#06b6d4', // cyan-500
-        secondary: '#3b82f6', // blue-500
-        alert: '#ef4444', // red-500
-        warning: '#f59e0b', // amber-500
-        success: '#10b981', // emerald-500
+        slate: {
+          800: '#415a6e',
+          900: '#354a5a',
+          950: '#2C3D4B',
+        },
+        background: '#2C3D4B', 
+        surface: '#354a5a', 
+        primary: '#06b6d4', 
+        secondary: '#3b82f6', 
+        alert: '#ef4444', 
+        warning: '#f59e0b', 
+        success: '#10b981', 
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

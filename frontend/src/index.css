@@ -17,19 +17,19 @@
   }
 
   .glass-card:hover {
-    @apply border-cyan-500/30 shadow-[0_0_15px_rgba(6,182,212,0.15)];
+    @apply border-slate-600;
   }
 
   .neon-text {
-    @apply text-cyan-400 drop-shadow-[0_0_8px_rgba(34,211,238,0.8)];
+    @apply text-white;
   }
 
   .neon-text-alert {
-    @apply text-red-500 drop-shadow-[0_0_8px_rgba(239,68,68,0.8)];
+    @apply text-white;
   }
 
   .neon-border {
-    @apply border border-cyan-500/50 shadow-[0_0_10px_rgba(6,182,212,0.3)];
+    @apply border border-slate-700/50;
   }
 }
 

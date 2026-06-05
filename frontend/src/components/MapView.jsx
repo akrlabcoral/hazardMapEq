@@ -214,49 +214,7 @@ export default function MapView({ isAdmin = false }) {
 
     map.current = new maplibregl.Map({
       container: mapContainer.current,
-      style: {
-        version: 8,
-        sources: {
-          'osm-dark': {
-            type: 'raster',
-            tiles: [
-              'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-              'https://b.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png',
-              'https://c.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}@2x.png'
-            ],
-            tileSize: 256,
-            attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>'
-          },
-          'osm-light': {
-            type: 'raster',
-            tiles: [
-              'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-              'https://b.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png',
-              'https://c.basemaps.cartocdn.com/light_all/{z}/{x}/{y}@2x.png'
-            ],
-            tileSize: 256,
-            attribution: '&copy; <a href="https://carto.com/attributions">CARTO</a>'
-          }
-        },
-        layers: [
-          {
-            id: 'osm-dark-layer',
-            type: 'raster',
-            source: 'osm-dark',
-            minzoom: 0,
-            maxzoom: 22,
-            layout: { visibility: 'visible' }
-          },
-          {
-            id: 'osm-light-layer',
-            type: 'raster',
-            source: 'osm-light',
-            minzoom: 0,
-            maxzoom: 22,
-            layout: { visibility: 'none' }
-          }
-        ]
-      },
+      style: { version: 8, sources: {}, layers: [] },
       center: [mapViewport.longitude, mapViewport.latitude],
       zoom: mapViewport.zoom,
       pitch: 0,
@@ -300,74 +258,79 @@ export default function MapView({ isAdmin = false }) {
     map.current.on('click', onMapClick);
     map.current.on('mousedown', onMouseDown);
 
+    let isMapEventsInitialized = false;
+
     map.current.on('style.load', () => {
       initSimulationLayers(map.current);
       mapLayerService.initializeSourcesAndLayers(map.current, useStore.getState().gisLayers);
       rasterService.setMap(map.current);
 
-      fetch('/data/india_states.geojson')
-        .then(res => res.json())
-        .then(data => {
-          const mapping = {};
-          data.features.forEach(f => {
-            mapping[f.properties.state || f.properties.STATE] = f.id;
+      if (!isMapEventsInitialized) {
+        isMapEventsInitialized = true;
+        
+        fetch('/data/india_states.geojson')
+          .then(res => res.json())
+          .then(data => {
+            const mapping = {};
+            data.features.forEach(f => {
+              mapping[f.properties.state || f.properties.STATE] = f.id;
+            });
+            useStore.getState().setStateIdMapping(mapping);
           });
-          useStore.getState().setStateIdMapping(mapping);
+
+        let hoveredStateId = null;
+        let cellHoverTimeout = null;
+
+        map.current.on('mousemove', 'state-boundaries-fill', (e) => {
+          if (e.features.length > 0) {
+            if (hoveredStateId !== null) {
+              map.current.setFeatureState(
+                { source: 'state-boundaries-source', id: hoveredStateId },
+                { hover: false }
+              );
+            }
+            hoveredStateId = e.features[0].id;
+            map.current.setFeatureState(
+              { source: 'state-boundaries-source', id: hoveredStateId },
+              { hover: true }
+            );
+            useStore.getState().setHoveredStateId(hoveredStateId);
+            useStore.getState().setMousePos({ x: e.originalEvent.clientX, y: e.originalEvent.clientY });
+            
+            if (cellHoverTimeout) clearTimeout(cellHoverTimeout);
+            cellHoverTimeout = setTimeout(() => {
+              if (!map.current || (!useStore.getState().isSimulationRunning && !useStore.getState().simulationResults)) {
+                useStore.getState().setHoveredCellData(null);
+                return;
+              }
+              try {
+                const features = map.current.queryRenderedFeatures(e.point, { layers: [SIM_LAYERS.WB_GRID_FILL] });
+                if (features.length > 0) {
+                  useStore.getState().setHoveredCellData(features[0].properties);
+                } else {
+                  useStore.getState().setHoveredCellData(null);
+                }
+              } catch (err) {
+                // Ignore if layer doesn't exist
+              }
+            }, 50);
+          }
         });
 
-      let hoveredStateId = null;
-      let cellHoverTimeout = null;
-
-      map.current.on('mousemove', 'state-boundaries-fill', (e) => {
-        if (e.features.length > 0) {
+        map.current.on('mouseleave', 'state-boundaries-fill', () => {
           if (hoveredStateId !== null) {
             map.current.setFeatureState(
               { source: 'state-boundaries-source', id: hoveredStateId },
               { hover: false }
             );
           }
-          hoveredStateId = e.features[0].id;
-          map.current.setFeatureState(
-            { source: 'state-boundaries-source', id: hoveredStateId },
-            { hover: true }
-          );
-          useStore.getState().setHoveredStateId(hoveredStateId);
-          useStore.getState().setMousePos({ x: e.originalEvent.clientX, y: e.originalEvent.clientY });
+          hoveredStateId = null;
+          useStore.getState().setHoveredStateId(null);
           
-          // Debounced Cell Lookup for live raster inspector tooltip
           if (cellHoverTimeout) clearTimeout(cellHoverTimeout);
-          cellHoverTimeout = setTimeout(() => {
-            if (!map.current || !useStore.getState().isSimulationRunning && !useStore.getState().simulationResults) {
-              useStore.getState().setHoveredCellData(null);
-              return;
-            }
-            try {
-              const features = map.current.queryRenderedFeatures(e.point, { layers: [SIM_LAYERS.WB_GRID_FILL] });
-              if (features.length > 0) {
-                useStore.getState().setHoveredCellData(features[0].properties);
-              } else {
-                useStore.getState().setHoveredCellData(null);
-              }
-            } catch (err) {
-              // Ignore if layer doesn't exist
-            }
-          }, 50);
-        }
-      });
-
-      map.current.on('mouseleave', 'state-boundaries-fill', () => {
-        if (hoveredStateId !== null) {
-          map.current.setFeatureState(
-            { source: 'state-boundaries-source', id: hoveredStateId },
-            { hover: false }
-          );
-        }
-        hoveredStateId = null;
-        useStore.getState().setHoveredStateId(null);
-        
-        if (cellHoverTimeout) clearTimeout(cellHoverTimeout);
-        useStore.getState().setHoveredCellData(null);
-      });
+          useStore.getState().setHoveredCellData(null);
+        });
+      }
     });
 
     return () => {
@@ -381,15 +344,33 @@ export default function MapView({ isAdmin = false }) {
     };
   }, [mapViewport, setEarthquakeEpicenter, initSimulationLayers]);
 
-  // Sync Map Theme (Dark/Light)
+  // Sync Map Theme (Dark/Light) using vector styles to color the oceans light blue
   useEffect(() => {
-    if (!map.current || !map.current.getStyle()) return;
-    if (mapLayerManager.layerExists(map.current, 'osm-dark-layer')) {
-      map.current.setLayoutProperty('osm-dark-layer', 'visibility', mapStyle === 'dark' ? 'visible' : 'none');
-    }
-    if (mapLayerManager.layerExists(map.current, 'osm-light-layer')) {
-      map.current.setLayoutProperty('osm-light-layer', 'visibility', mapStyle === 'light' ? 'visible' : 'none');
-    }
+    if (!map.current) return;
+    const applyStyle = async () => {
+      try {
+        const url = mapStyle === 'dark' 
+          ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+          : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+        const res = await fetch(url);
+        const styleJson = await res.json();
+        
+        // Find the water layer and mutate its color to light blue
+        const waterLayer = styleJson.layers.find(l => l.id === 'water');
+        if (waterLayer) {
+          waterLayer.paint['fill-color'] = '#B1D8E6'; // Light blue ocean
+        }
+
+        // Setting a new style wipes out custom layers. 
+        // We must tell mapLayerService to re-initialize on the next style.load
+        mapLayerService.initialized = false;
+        
+        map.current.setStyle(styleJson);
+      } catch (err) {
+        console.error("Failed to load map style:", err);
+      }
+    };
+    applyStyle();
   }, [mapStyle]);
 
   // Sync GIS layer visibility

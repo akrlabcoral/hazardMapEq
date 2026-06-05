@@ -9,7 +9,7 @@ const useStore = create((set) => ({
   activeSection: null,
   setActiveSection: (section) => set((state) => ({ activeSection: state.activeSection === section ? null : section })),
 
-  mapStyle: 'dark',
+  mapStyle: 'light',
   toggleMapStyle: () => set((state) => ({ mapStyle: state.mapStyle === 'dark' ? 'light' : 'dark' })),
 
   // Earthquake Simulation State

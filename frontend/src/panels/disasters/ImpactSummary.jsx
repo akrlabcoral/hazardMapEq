@@ -21,7 +21,7 @@ export function ImpactSummary() {
     <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
       <div className="text-xs text-slate-400 uppercase tracking-wider mb-2 flex justify-between">
         <span>Scientific Impact Summary</span>
-        <span className="text-cyan-400 font-mono">ID: {simulationResults.simulation_id}</span>
+        <span className="text-white font-mono">ID: {simulationResults.simulation_id}</span>
       </div>
 
       <div className="max-h-40 overflow-y-auto pr-2 space-y-2 mb-3">

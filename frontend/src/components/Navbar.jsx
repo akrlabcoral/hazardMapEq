@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, Bell, UserCircle, Menu, Moon, Sun } from 'lucide-react';
+import { Shield, Bell,Earth, UserCircle, Menu, Moon, Sun } from 'lucide-react';
 import useStore from '../store/useStore';
 
 export default function Navbar() {
@@ -19,11 +19,9 @@ export default function Navbar() {
           <Menu className="w-6 h-6 neon-text" />
         </button>
         <div className="flex items-center gap-2">
-          <Shield className="w-6 h-6 text-cyan-400" />
-          <h1 className="text-xl font-bold tracking-wider neon-text" style={{ textShadow: '0 0 20px rgba(6,182,212,0.4)' }}>HazardMap</h1>
-          <span className="text-xs bg-cyan-900/50 text-cyan-400 px-2 py-0.5 rounded border border-cyan-500/40 shadow-[0_0_8px_rgba(6,182,212,0.2)] hover:shadow-[0_0_12px_rgba(6,182,212,0.4)] transition-shadow">
-            v1.0.0
-          </span>
+          <Earth className="w-6 h-6 text-white" />
+          <h1 className="text-xl font-bold tracking-wider neon-text" >HazardMap</h1>
+          
         </div>
       </div>
 
@@ -33,7 +31,7 @@ export default function Navbar() {
           className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
           title={mapStyle === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
         >
-          {mapStyle === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-cyan-400" />}
+          {mapStyle === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-white" />}
         </button>
         <button
           className="relative p-2 hover:bg-slate-800 rounded-lg transition-colors"
@@ -45,9 +43,7 @@ export default function Navbar() {
             <span className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full animate-pulse" />
           )}
         </button>
-        <button className="p-2 hover:bg-slate-800 rounded-lg transition-colors">
-          <UserCircle className="w-5 h-5 text-slate-300" />
-        </button>
+        
       </div>
       {/* Cinematic bottom gradient divider */}
       <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/50 to-transparent" />

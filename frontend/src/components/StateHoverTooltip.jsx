@@ -52,7 +52,7 @@ export default function StateHoverTooltip() {
             {hoveredCellData.population !== undefined && (
               <div className="flex justify-between border-t border-slate-700/50 pt-1.5 mt-1.5">
                 <span className="text-slate-400">Local Pop Exposure:</span>
-                <span className="font-mono text-cyan-400">
+                <span className="font-mono text-white">
                   {hoveredCellData.population.toLocaleString()}
                 </span>
               </div>

@@ -11,7 +11,7 @@ export default function MapLegend() {
     <div className="absolute top-24 right-6 z-20 flex flex-col items-end gap-2 pointer-events-auto">
       <button 
         onClick={() => setIsVisible(!isVisible)}
-        className="p-2 bg-slate-900/80 hover:bg-slate-800 backdrop-blur-md border border-slate-700/60 rounded-full text-slate-400 hover:text-cyan-400 transition-colors shadow-lg flex items-center justify-center"
+        className="p-2 bg-slate-900/80 hover:bg-slate-800 backdrop-blur-md border border-slate-700/60 rounded-full text-slate-400 hover:text-white transition-colors shadow-lg flex items-center justify-center"
         title={isVisible ? "Hide Legend" : "Show Legend"}
       >
         {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -80,35 +80,35 @@ export default function MapLegend() {
               <div className="w-2.5 h-2.5 rounded-sm bg-red-400"></div>
               <span className="text-slate-400">Site E (&lt;180 m/s)</span>
             </div>
-            <span className="text-cyan-400 font-mono">1.70x</span>
+            <span className="text-white font-mono">1.70x</span>
           </div>
           <div className="flex items-center justify-between text-xs mt-1.5">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-sm bg-orange-400"></div>
               <span className="text-slate-400">Site D (180-360)</span>
             </div>
-            <span className="text-cyan-400 font-mono">1.40x</span>
+            <span className="text-white font-mono">1.40x</span>
           </div>
           <div className="flex items-center justify-between text-xs mt-1.5">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-sm bg-yellow-400"></div>
               <span className="text-slate-400">Site C (360-760)</span>
             </div>
-            <span className="text-cyan-400 font-mono">1.20x</span>
+            <span className="text-white font-mono">1.20x</span>
           </div>
           <div className="flex items-center justify-between text-xs mt-1.5">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-sm bg-green-400"></div>
               <span className="text-slate-400">Site B (760-1500)</span>
             </div>
-            <span className="text-cyan-400 font-mono">1.00x</span>
+            <span className="text-white font-mono">1.00x</span>
           </div>
           <div className="flex items-center justify-between text-xs mt-1.5">
             <div className="flex items-center gap-2">
               <div className="w-2.5 h-2.5 rounded-sm bg-blue-400"></div>
               <span className="text-slate-400">Site A (&gt;1500 m/s)</span>
             </div>
-            <span className="text-cyan-400 font-mono">0.80x</span>
+            <span className="text-white font-mono">0.80x</span>
           </div>
         </div>
       </div>

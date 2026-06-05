@@ -24,7 +24,7 @@ export default function StateAnalysisPanel() {
           {/* Header */}
           <div className="p-5 border-b border-slate-700 flex justify-between items-center bg-slate-800/50">
             <div>
-              <div className="text-[10px] text-cyan-400 font-mono tracking-widest uppercase mb-1">State Analysis</div>
+              <div className="text-[10px] text-white font-mono tracking-widest uppercase mb-1">State Analysis</div>
               <h2 className="text-2xl font-bold text-white tracking-wide">{selectedStateName}</h2>
             </div>
             <button 
@@ -53,7 +53,7 @@ export default function StateAnalysisPanel() {
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-slate-800/50 border border-slate-700 p-4 rounded-xl flex flex-col justify-center">
                 <div className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><Activity size={12}/> Avg PGA</div>
-                <div className="text-2xl font-mono font-bold text-cyan-400">{summary.avg_pga}g</div>
+                <div className="text-2xl font-mono font-bold text-white">{summary.avg_pga}g</div>
               </div>
               <div className="bg-slate-800/50 border border-slate-700 p-4 rounded-xl flex flex-col justify-center">
                 <div className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 flex items-center gap-1"><TrendingUp size={12}/> Max PGA</div>

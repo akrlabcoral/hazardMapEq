@@ -44,7 +44,7 @@ export function HazardModules() {
                     onChange={(e) => setHazardLayerWeight(layer.id, parseFloat(e.target.value))}
                     className="flex-1 accent-cyan-500 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer"
                   />
-                  <span className="text-[10px] text-cyan-400 w-6 text-right font-mono">{config.weight.toFixed(1)}</span>
+                  <span className="text-[10px] text-white w-6 text-right font-mono">{config.weight.toFixed(1)}</span>
                 </div>
               )}
             </div>

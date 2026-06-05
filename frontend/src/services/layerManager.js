@@ -21,8 +21,8 @@ export const LAYER_CONFIGS = {
         source: 'india-boundary-source',
         beforeId: 'sim-wb-grid-fill',
         paint: {
-          'line-color': '#00d4ff',
-          'line-width': 1.5,
+          'line-color': '#000000',
+          'line-width': 0.5,
           'line-opacity': 0.6
         }
       }
@@ -56,14 +56,14 @@ export const LAYER_CONFIGS = {
           'line-color': [
             'case',
             ['boolean', ['feature-state', 'hover'], false],
-            '#0ea5e9', // Bright neon blue when hovered
-            '#00d4ff'  // Default cyan
+            '#000000', // Hover color
+            '#000000'  // Default color
           ],
           'line-width': [
             'case',
             ['boolean', ['feature-state', 'hover'], false],
-            3.0,
-            1.5
+            1.0, // Thicker when hovered (reduced from 3.0)
+            0.5  // Default width
           ],
           'line-opacity': [
             'case',
