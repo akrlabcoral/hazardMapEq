@@ -16,7 +16,7 @@ const SIM_LAYERS = {
   SOIL_AMP:       'sim-soil-amp-layer',
 };
 
-export default function MapView() {
+export default function MapView({ isAdmin = false }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
   const mapViewport = useStore((state) => state.mapViewport);
@@ -288,6 +288,7 @@ export default function MapView() {
     };
     
     const onMouseDown = (e) => {
+      if (!isAdmin) return;
       if (e.originalEvent && e.originalEvent.button === 1) { // Middle mouse button
         e.originalEvent.preventDefault();
         const coords = { lng: e.lngLat.lng, lat: e.lngLat.lat };

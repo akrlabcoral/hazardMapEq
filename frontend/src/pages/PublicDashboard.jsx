@@ -1,8 +1,4 @@
-// src/pages/Dashboard.jsx
-// Main layout shell — composes all panels and map components.
-// All business logic has been extracted to dedicated panels and hooks.
-
-import React from 'react';
+import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Navbar from '../components/Navbar';
 import Sidebar from '../components/Sidebar';
@@ -11,22 +7,27 @@ import MapLegend from '../components/MapLegend';
 import ControlPanel from '../components/ControlPanel';
 import StateHoverTooltip from '../components/StateHoverTooltip';
 import StateAnalysisPanel from '../components/StateAnalysisPanel';
-import UploadProgressManager from '../components/UploadProgressManager';
 import AlertBanner from '../components/AlertBanner';
-import { DisastersPanel } from '../panels/DisastersPanel';
 import { LayersPanel } from '../panels/LayersPanel';
 import { AlertsPanel } from '../panels/AlertsPanel';
 import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 
 const PANEL_TITLE = {
-  disasters: 'DISASTERS PANEL',
   layers:    'MAP LAYERS',
   alerts:    'ALERTS',
 };
 
-export default function Dashboard() {
+export default function PublicDashboard() {
   const activeSection = useStore((s) => s.activeSection);
+  const setActiveSection = useStore((s) => s.setActiveSection);
+
+  // Auto-switch to alerts or layers if disasters was left active in the store
+  useEffect(() => {
+    if (activeSection === 'disasters') {
+      setActiveSection('alerts');
+    }
+  }, [activeSection, setActiveSection]);
 
   // Start WebSocket connection — real-time earthquake events + auto-sim results
   useWebSocket();
@@ -38,12 +39,11 @@ export default function Dashboard() {
       <Navbar />
 
       <div className="flex-1 relative flex overflow-hidden">
-        <Sidebar />
-        <MapView />
+        <Sidebar isAdmin={false} />
+        <MapView isAdmin={false} />
         <StateHoverTooltip />
         <MapLegend />
         <StateAnalysisPanel />
-        <UploadProgressManager />
 
         {/* Main Content Overlay */}
         <motion.div
@@ -55,7 +55,7 @@ export default function Dashboard() {
           {/* Bottom Control Panels */}
           <div className="mt-auto flex gap-4 pointer-events-none items-end [&>*]:pointer-events-auto">
             <AnimatePresence mode="wait">
-              {activeSection && (
+              {activeSection && PANEL_TITLE[activeSection] && (
                 <motion.div
                   key={activeSection}
                   initial={{ opacity: 0, y: 20 }}
@@ -63,8 +63,7 @@ export default function Dashboard() {
                   exit={{ opacity: 0, y: -20 }}
                   className="w-[480px]"
                 >
-                  <ControlPanel title={PANEL_TITLE[activeSection] ?? activeSection.toUpperCase()}>
-                    {activeSection === 'disasters' && <DisastersPanel />}
+                  <ControlPanel title={PANEL_TITLE[activeSection]}>
                     {activeSection === 'layers'    && <LayersPanel />}
                     {activeSection === 'alerts'    && <AlertsPanel />}
                   </ControlPanel>

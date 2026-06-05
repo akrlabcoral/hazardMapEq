@@ -9,7 +9,9 @@ const navItems = [
   { id: 'alerts',    icon: AlertTriangle, label: 'Alerts'                },
 ];
 
-export default function Sidebar() {
+export default function Sidebar({ isAdmin = false }) {
+  const visibleNavItems = navItems.filter(item => isAdmin || item.id !== 'disasters');
+
   const isSidebarOpen = useStore((state) => state.isSidebarOpen);
   const toggleSidebar = useStore((state) => state.toggleSidebar);
   const activeSection = useStore((state) => state.activeSection);
@@ -50,7 +52,7 @@ export default function Sidebar() {
       </div>
 
       <div className="p-3 flex-1 overflow-y-auto space-y-1 overflow-x-hidden">
-        {navItems.map((item) => {
+        {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
           return (
