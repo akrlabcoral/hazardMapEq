@@ -9,7 +9,6 @@ Import from here instead of hardcoding magic numbers inline.
 # Data Paths
 # ---------------------------------------------------------------------------
 GRID_PATH = "data/grids/nationwide_20km.geojson"
-DB_PATH_RELATIVE = "data/simulations.db"  # relative to /app inside Docker
 
 # ---------------------------------------------------------------------------
 # PGA Intensity Scale — thresholds in units of g (gravitational acceleration)

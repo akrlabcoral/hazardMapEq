@@ -146,12 +146,21 @@ const useStore = create((set) => ({
   setMapViewport: (viewport) => set({ mapViewport: viewport }),
 
 
-  // Centralized cleanup for simulation state
-  clearSimulationState: () => set({
+  // Centralized cleanup for simulation state and map overlays
+  clearSimulationState: () => set((state) => ({
     earthquakeEpicenter: null,
     simulationResults: null,
     isSimulationRunning: false,
-  }),
+    selectedStateName: null,
+    soilAmpVisible: false,
+    activeAlert: null,
+    gisLayers: {
+      ...state.gisLayers,
+      satellite: false,
+      terrain: false,
+    },
+    rasterLayers: state.rasterLayers.map(l => ({ ...l, visible: false })),
+  })),
 
   // ── Real-Time Live Events ─────────────────────────────────────────
   liveEvents: [],   // newest first, capped at 50

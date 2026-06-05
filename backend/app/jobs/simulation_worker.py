@@ -36,10 +36,10 @@ logger = logging.getLogger("hazardmap.worker")
 try:
     with open(GRID_PATH) as f:
         _NATIONWIDE_GRID: dict = json.load(f)
-    logger.info(f"[SimRunner] Grid loaded ({len(_NATIONWIDE_GRID['features'])} cells)")
+    logger.info("[SimRunner] Grid loaded (%d cells)", len(_NATIONWIDE_GRID["features"]))
 except Exception as exc:
     _NATIONWIDE_GRID = None
-    logger.error(f"[SimRunner] Failed to load grid: {exc}")
+    logger.error("[SimRunner] Failed to load grid: %s", exc)
 
 _pga_engine  = PGAEngine()
 _soil_engine = SoilEngine()
@@ -67,7 +67,7 @@ def _annotate_features(features: list, raw_pga: np.ndarray, norm_pga: np.ndarray
         for i, feat in enumerate(features):
             feat["properties"]["soil_normalized"] = round(float(soil_norm[i]), 4)
     except Exception as exc:
-        logger.warning(f"[SimRunner] SoilEngine failed, using neutral factors: {exc}")
+        logger.warning("[SimRunner] SoilEngine failed, using neutral factors: %s", exc)
 
     # Step 3: Apply soil amplification to produce final PGA and re-normalize
     pga_final_arr = np.array([
@@ -79,7 +79,7 @@ def _annotate_features(features: list, raw_pga: np.ndarray, norm_pga: np.ndarray
     for i, feat in enumerate(features):
         p = feat["properties"]
         p["pga_final"]    = round(float(pga_final_arr[i]), 4)
-        p["fused_hazard"] = round(float(norm_pga_final[i]), 4)  # amplified by Vs30
+        p["fused_hazard"] = round(float(norm_pga_final[i]), 4)
 
     return pga_final_arr
 
@@ -122,14 +122,11 @@ class SimulationRunner:
         max_feat = features[max_idx]["properties"]
         max_lon = max_feat["centroid_lon"]
         max_lat = max_feat["centroid_lat"]
-        # Calculate rough distance to the cell with max PGA
-        # (Assuming small angles, simple distance formula for rough diagnostic, or we can just use _pga_engine haversine)
-        # Using a simple haversine approximation for diagnostic distance
+        # Haversine approximation — diagnostic only, not used in PGA calculation
         dlon = np.radians(max_lon - longitude)
         dlat = np.radians(max_lat - latitude)
         a = np.sin(dlat / 2)**2 + np.cos(np.radians(latitude)) * np.cos(np.radians(max_lat)) * np.sin(dlon / 2)**2
         dist_km = 6371.0 * 2.0 * np.arctan2(np.sqrt(a), np.sqrt(1.0 - a))
-        
         logger.info(
             "\n=== Developer Diagnostics ===\n" +
             json.dumps({
@@ -159,8 +156,8 @@ class SimulationRunner:
         )
 
         logger.info(
-            f"[SimRunner] sim_id={sim_id} triggered_by={triggered_by} "
-            f"mag={magnitude} lat={latitude:.3f} lon={longitude:.3f}"
+            "[SimRunner] sim_id=%s triggered_by=%s mag=%s lat=%.3f lon=%.3f",
+            sim_id, triggered_by, magnitude, latitude, longitude,
         )
 
         return {

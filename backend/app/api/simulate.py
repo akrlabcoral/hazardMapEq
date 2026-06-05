@@ -12,7 +12,6 @@ import asyncio
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 from typing import Dict
-from enum import Enum
 
 from app.gis.boundary import is_epicenter_valid
 from app.jobs.simulation_worker import SimulationRunner

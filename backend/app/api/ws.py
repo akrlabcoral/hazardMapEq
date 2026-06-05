@@ -69,7 +69,7 @@ async def broadcast(message: dict) -> None:
         except Exception:
             dead.add(client)
 
-    _CLIENTS -= dead
+    _CLIENTS.difference_update(dead)
 
     if dead:
         logger.debug(f"[WS] Removed {len(dead)} dead connection(s)")

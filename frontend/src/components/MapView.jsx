@@ -463,11 +463,20 @@ export default function MapView() {
         if (!wbGridSrc || !contourSrc) return;
 
         if (!simulationResults) {
-          // simulationResults=null means simulation was just triggered — hide layers immediately
-          console.log('[MapView] simulationResults cleared — hiding layers (sim in progress)');
+          // simulationResults=null means simulation was just triggered or cleared
+          console.log('[MapView] simulationResults cleared — hiding layers and clearing data');
           if (map.current.getLayer(SIM_LAYERS.CONTOUR_FILL))   map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL,   'visibility', 'none');
           if (map.current.getLayer(SIM_LAYERS.CONTOUR_STROKE)) map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'none');
           if (map.current.getLayer(SIM_LAYERS.WB_GRID_FILL))   map.current.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL,   'visibility', 'none');
+          
+          const emptyFC = { type: 'FeatureCollection', features: [] };
+          if (wbGridSrc) wbGridSrc.setData(emptyFC);
+          if (contourSrc) contourSrc.setData(emptyFC);
+
+          if (map.current.getSource('state-boundaries-source')) {
+            map.current.removeFeatureState({ source: 'state-boundaries-source' });
+          }
+
           animationManager.stopShockwave();
           return;
         }

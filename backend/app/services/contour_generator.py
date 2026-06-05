@@ -14,6 +14,7 @@ Algorithm:
 """
 from __future__ import annotations
 
+import logging
 import warnings
 import json
 
@@ -34,6 +35,8 @@ from app.config import (
     CONTOUR_BLUR_SIGMA,
     CONTOUR_FILL_OPACITY,
 )
+
+logger = logging.getLogger("hazardmap.contour")
 
 # Pre-build GeoSeries mask once at import time for maximum speed
 # (avoids rebuilding the 400x400 mask on every request)
@@ -109,5 +112,5 @@ def generate_contour_geojson(
         return json.loads(contour_geojson_str)
 
     except Exception as exc:
-        print(f"[ContourGenerator] WARNING: Failed to generate contour — {exc}")
+        logger.warning("[ContourGenerator] Failed to generate contour: %s", exc)
         return {"type": "FeatureCollection", "features": []}

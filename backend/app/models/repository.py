@@ -15,6 +15,7 @@ Environment variable:
 from __future__ import annotations
 
 import json
+import logging
 import os
 from typing import Any
 from contextlib import contextmanager
@@ -22,6 +23,8 @@ from contextlib import contextmanager
 import psycopg2
 import psycopg2.extras
 from psycopg2.pool import ThreadedConnectionPool
+
+logger = logging.getLogger("hazardmap.repository")
 
 # ---------------------------------------------------------------------------
 # Connection pool — created once at module import
@@ -277,10 +280,10 @@ def mark_event_simulated(event_id: int, sim_id: int) -> None:
             cur.execute(
                 """
                 UPDATE earthquake_events
-                SET sim_triggered = 1, updated_at = NOW(), event_id = %s
+                SET sim_triggered = 1, updated_at = NOW()
                 WHERE id = %s
                 """,
-                (sim_id, event_id),
+                (event_id,),
             )
 
 
@@ -373,7 +376,7 @@ def cleanup_old_data() -> None:
 def close_pool() -> None:
     """Close all connections in the pool gracefully."""
     _pool.closeall()
-    print("[DB] Connection pool closed.")
+    logger.info("[DB] Connection pool closed.")
 
 
 # ---------------------------------------------------------------------------

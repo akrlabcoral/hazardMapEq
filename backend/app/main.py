@@ -35,14 +35,15 @@ async def _run_daily_cleanup() -> None:
         await asyncio.sleep(24 * 60 * 60)  # wait 24 hours before first run
         try:
             await asyncio.to_thread(cleanup_old_data)
-            print("[Cleanup] Daily DB cleanup complete.")
+            logger.info("[Cleanup] Daily DB cleanup complete.")
         except Exception as exc:
-            print(f"[Cleanup] WARNING: DB cleanup failed — {exc}")
+            logger.warning("[Cleanup] DB cleanup failed — %s", exc)
 
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s %(name)s %(levelname)s %(message)s",
 )
+logger = logging.getLogger("hazardmap.main")
 
 _bg_tasks: list[asyncio.Task] = []
 
@@ -50,9 +51,9 @@ _bg_tasks: list[asyncio.Task] = []
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ──────────────────────────────────────────────────────
-    print("[Startup] Loading USDA soil rasters...")
+    logger.info("[Startup] Loading soil rasters...")
     load_all_soil_rasters()
-    print("[Startup] Soil raster loading complete.")
+    logger.info("[Startup] Soil raster loading complete.")
 
     queue = get_queue()
 
@@ -61,22 +62,22 @@ async def lifespan(app: FastAPI):
     ncs_poller_task  = asyncio.create_task(run_ncs_poller(queue),  name="ncs_poller")
     worker_task      = asyncio.create_task(run_worker(),           name="sim_worker")
     cleanup_task     = asyncio.create_task(_run_daily_cleanup(),   name="db_cleanup")
-    
+
     _bg_tasks.extend([usgs_poller_task, ncs_poller_task, worker_task, cleanup_task])
-    print("[Startup] USGS poller, NCS poller, simulation worker, and daily cleanup task started.")
+    logger.info("[Startup] USGS poller, NCS poller, simulation worker, and daily cleanup started.")
 
     yield
 
     # ── Shutdown ─────────────────────────────────────────────────────
-    print("[Shutdown] Cancelling background tasks...")
+    logger.info("[Shutdown] Cancelling background tasks...")
     for task in _bg_tasks:
         task.cancel()
     await asyncio.gather(*_bg_tasks, return_exceptions=True)
 
-    print("[Shutdown] Closing soil raster handles...")
+    logger.info("[Shutdown] Closing soil raster handles...")
     soil_cache.close_all()
 
-    print("[Shutdown] Closing DB connection pool...")
+    logger.info("[Shutdown] Closing DB connection pool...")
     close_pool()
 
 
