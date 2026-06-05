@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import useStore from '../store/useStore';
 import { Filter } from 'lucide-react';
 
@@ -30,65 +30,97 @@ function MagBadge({ magnitude }) {
 
 export default function LiveEventsPanel() {
   const liveEvents  = useStore((s) => s.liveEvents);
+  const setLiveEvents = useStore((s) => s.setLiveEvents);
   const wsConnected = useStore((s) => s.wsConnected);
 
   const [minMag, setMinMag] = useState('');
   const [timeframe, setTimeframe] = useState('24h');
+  const [regionFilter, setRegionFilter] = useState('all');
+
+  // Fetch initial history from backend on mount
+  useEffect(() => {
+    fetch('/scientific-api/events?limit=50')
+      .then(res => res.json())
+      .then(data => {
+        if (data && data.events) {
+          setLiveEvents(data.events);
+        }
+      })
+      .catch(err => console.error('Failed to fetch initial events:', err));
+  }, [setLiveEvents]);
 
   // Filter events
   const filteredEvents = liveEvents.filter(event => {
     if (minMag && !isNaN(parseFloat(minMag)) && event.magnitude < parseFloat(minMag)) return false;
     
-    if (timeframe !== 'all' && event.origin_time) {
-      const hours = timeframe === '1h' ? 1 : timeframe === '24h' ? 24 : timeframe === '7d' ? 168 : 0;
-      if (hours > 0) {
-        const diffHrs = (Date.now() - new Date(event.origin_time).getTime()) / (1000 * 60 * 60);
-        if (diffHrs > hours) return false;
+    if (timeframe !== 'all') {
+      const diff = Date.now() - new Date(event.origin_time).getTime();
+      if (timeframe === '1h' && diff > 3600000) return false;
+      if (timeframe === '24h' && diff > 86400000) return false;
+      if (timeframe === '7d' && diff > 604800000) return false;
+    }
+
+    if (regionFilter === 'india') {
+      // Rough bounding box covering India + ~1000km buffer
+      // Latitude: 0 to 45N | Longitude: 60E to 105E
+      if (event.latitude < 0 || event.latitude > 45 || event.longitude < 60 || event.longitude > 105) {
+        return false;
       }
     }
+    
     return true;
   });
 
   return (
     <div className="glass-card flex flex-col h-full font-sans overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.4)]">
       {/* Header */}
-      <div className="relative flex items-center justify-between px-4 py-3 border-b border-slate-700/50 bg-slate-900/90">
+      <div className="relative flex items-center justify-between px-4 py-3 border-b border-slate-700/50 bg-slate-900/90 shrink-0">
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/40 to-transparent" />
         <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-white" />
         <span className="text-white font-semibold text-sm tracking-wide uppercase pl-3 neon-text">
           LIVE EVENTS
         </span>
         {/* Connection dot */}
-        <span className={`flex items-center gap-1.5 text-xs font-semibold ${wsConnected ? 'text-emerald-400' : 'text-slate-500'}`}>
-          <span className={`w-2 h-2 rounded-full ${wsConnected ? 'bg-emerald-400 sim-running-indicator' : 'bg-slate-600'}`} />
-          {wsConnected ? 'LIVE' : 'OFFLINE'}
-        </span>
+        <div className="flex items-center gap-2">
+          <div className="relative flex h-2 w-2">
+            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${wsConnected ? 'bg-cyan-400' : 'bg-slate-500'}`}></span>
+            <span className={`relative inline-flex rounded-full h-2 w-2 ${wsConnected ? 'bg-cyan-500' : 'bg-slate-500'}`}></span>
+          </div>
+          <span className="text-xs text-slate-400 font-medium tracking-wider">{wsConnected ? 'LIVE' : 'OFFLINE'}</span>
+        </div>
       </div>
 
-      {/* Filters */}
-      <div className="px-3 py-2 border-b border-slate-700/50 bg-slate-800/80 flex gap-2 items-center">
+      {/* Filter Bar */}
+      <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-700/50 bg-slate-800/80 shrink-0">
         <Filter size={14} className="text-slate-400 shrink-0" />
-        <div className="flex-1 flex gap-2">
-          <input 
-            type="number" 
-            placeholder="Min Mag..." 
-            value={minMag}
-            onChange={(e) => setMinMag(e.target.value)}
-            className="w-full bg-slate-900/50 border border-slate-700 rounded px-2 py-1 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-cyan-500"
-            step="0.1"
-            min="0"
-          />
-          <select 
-            value={timeframe} 
-            onChange={(e) => setTimeframe(e.target.value)}
-            className="w-full bg-slate-900/50 border border-slate-700 rounded px-1 py-1 text-xs text-slate-300 focus:outline-none focus:border-cyan-500 appearance-none cursor-pointer"
-          >
-            <option value="1h">Last 1h</option>
-            <option value="24h">Last 24h</option>
-            <option value="7d">Last 7d</option>
-            <option value="all">All time</option>
-          </select>
-        </div>
+        <input
+          type="number"
+          placeholder="Min Mag..."
+          value={minMag}
+          onChange={(e) => setMinMag(e.target.value)}
+          className="w-20 bg-slate-900/50 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-cyan-500"
+          step="0.1"
+        />
+        <select
+          value={timeframe}
+          onChange={(e) => setTimeframe(e.target.value)}
+          className="w-20 bg-slate-900/50 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-cyan-500"
+        >
+          <option value="1h">Last 1h</option>
+          <option value="24h">Last 24h</option>
+          <option value="7d">Last 7d</option>
+          <option value="all">All time</option>
+        </select>
+        
+        {/* Region Filter */}
+        <select
+          value={regionFilter}
+          onChange={(e) => setRegionFilter(e.target.value)}
+          className="w-[110px] bg-slate-900/50 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-cyan-500 ml-auto"
+        >
+          <option value="all">Global</option>
+          <option value="india">India</option>
+        </select>
       </div>
 
       {/* Event list */}

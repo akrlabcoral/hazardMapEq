@@ -25,14 +25,17 @@ const PANEL_TITLE = {
 export default function PublicDashboard() {
   const activeSection = useStore((s) => s.activeSection);
   const setActiveSection = useStore((s) => s.setActiveSection);
+  const forceActiveSection = useStore((s) => s.forceActiveSection);
   const activeRightSection = useStore((s) => s.activeRightSection);
 
-  // Auto-switch to alerts or layers if disasters was left active in the store
+  // On mount, if no section is active (or if an admin-only section like disasters leaked over), default to live_events
   useEffect(() => {
-    if (activeSection === 'disasters') {
-      setActiveSection('alerts');
+    // Read fresh state to avoid closure staleness in StrictMode
+    const current = useStore.getState().activeSection;
+    if (!current || current === 'disasters') {
+      forceActiveSection('live_events');
     }
-  }, [activeSection, setActiveSection]);
+  }, [forceActiveSection]);
 
   // Start WebSocket connection — real-time earthquake events + auto-sim results
   useWebSocket();
@@ -57,34 +60,32 @@ export default function PublicDashboard() {
           animate={{ left: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
-          {/* Left Control Panels (Split Layout) */}
-          <div className="h-full flex flex-col gap-4 pointer-events-none [&>*]:pointer-events-auto w-[480px]">
-            {/* Top Half: Dynamic Control Panel */}
-            <div className="flex-1 overflow-hidden">
-              <AnimatePresence mode="wait">
-                {activeSection && PANEL_TITLE[activeSection] && (
-                  <motion.div
-                    key={activeSection}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -20 }}
-                    className="w-full h-full"
-                  >
-                    <ControlPanel title={PANEL_TITLE[activeSection]}>
-                      {activeSection === 'layers'    && <LayersPanel />}
-                      {activeSection === 'alerts'    && <AlertsPanel />}
-                    </ControlPanel>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Bottom Half: Live Feeds */}
-            <div className="flex-1 overflow-hidden mt-auto">
-              <div className="w-full h-full">
-                <LiveEventsPanel />
-              </div>
-            </div>
+          {/* Left Control Panels (Bottom aligned) */}
+          <div className="mt-auto flex gap-4 pointer-events-none items-end [&>*]:pointer-events-auto">
+            <AnimatePresence mode="wait">
+              {activeSection && (
+                <motion.div
+                  key={activeSection}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  className="w-[480px]"
+                >
+                  {activeSection === 'live_events' ? (
+                    <div className="h-[500px]">
+                      <LiveEventsPanel />
+                    </div>
+                  ) : (
+                    PANEL_TITLE[activeSection] && (
+                      <ControlPanel title={PANEL_TITLE[activeSection]}>
+                        {activeSection === 'layers' && <LayersPanel />}
+                        {activeSection === 'alerts' && <AlertsPanel />}
+                      </ControlPanel>
+                    )
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
 
           {/* Right Control Panels (Center aligned vertically) */}

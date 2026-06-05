@@ -8,6 +8,7 @@ const useStore = create((set) => ({
   
   activeSection: null,
   setActiveSection: (section) => set((state) => ({ activeSection: state.activeSection === section ? null : section })),
+  forceActiveSection: (section) => set({ activeSection: section }),
 
   activeRightSection: null,
   setActiveRightSection: (section) => set((state) => ({ activeRightSection: state.activeRightSection === section ? null : section })),
@@ -160,6 +161,7 @@ const useStore = create((set) => ({
 
   // ── Real-Time Live Events ─────────────────────────────────────────
   liveEvents: [],   // newest first, capped at 50
+  setLiveEvents: (events) => set({ liveEvents: events }),
   addLiveEvent: (event) => set((s) => ({
     liveEvents: [event, ...s.liveEvents].slice(0, 50),
   })),

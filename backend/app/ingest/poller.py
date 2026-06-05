@@ -29,8 +29,8 @@ logger = logging.getLogger("hazardmap.poller")
 POLL_INTERVAL_SECONDS = 60
 
 USGS_FEEDS = [
-    "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_hour.geojson",
-    "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/4.5_hour.geojson",  # fallback
+    "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_hour.geojson",
+    "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/1.0_hour.geojson",  # fallback
 ]
 
 # Shared state — read by GET /api/health

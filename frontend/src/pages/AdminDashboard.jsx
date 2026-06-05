@@ -20,6 +20,7 @@ import RightSidebar from '../components/RightSidebar';
 import RightControlPanel from '../components/RightControlPanel';
 import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
+import LiveEventsPanel from '../panels/LiveEventsPanel';
 
 const PANEL_TITLE = {
   disasters: 'DISASTERS PANEL',
@@ -66,11 +67,17 @@ export default function AdminDashboard() {
                   exit={{ opacity: 0, y: -20 }}
                   className="w-[480px]"
                 >
-                  <ControlPanel title={PANEL_TITLE[activeSection] ?? activeSection.toUpperCase()}>
-                    {activeSection === 'disasters' && <DisastersPanel />}
-                    {activeSection === 'layers'    && <LayersPanel />}
-                    {activeSection === 'alerts'    && <AlertsPanel />}
-                  </ControlPanel>
+                  {activeSection === 'live_events' ? (
+                    <div className="h-[500px]">
+                      <LiveEventsPanel />
+                    </div>
+                  ) : (
+                    <ControlPanel title={PANEL_TITLE[activeSection] ?? activeSection.toUpperCase()}>
+                      {activeSection === 'disasters' && <DisastersPanel />}
+                      {activeSection === 'layers'    && <LayersPanel />}
+                      {activeSection === 'alerts'    && <AlertsPanel />}
+                    </ControlPanel>
+                  )}
                 </motion.div>
               )}
             </AnimatePresence>

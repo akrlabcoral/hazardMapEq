@@ -15,7 +15,7 @@ from shapely.geometry import Point
 from app.ingest.normalizer import EarthquakeEvent
 from app.gis.boundary import BUFFERED_INDIA
 
-MIN_MAGNITUDE = 4.0
+MIN_MAGNITUDE = 0.0
 MAX_DEPTH_KM  = 300.0
 
 
