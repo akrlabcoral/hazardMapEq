@@ -531,11 +531,30 @@ export default function MapView() {
       }
     };
 
-    if (map.current.isStyleLoaded()) {
-      updateSimulationResults();
-    } else {
-      map.current.once('styledata', updateSimulationResults);
-    }
+    // Wait for style to be fully loaded before updating.
+    // Previous approach used once('styledata') which silently failed when the
+    // event had already fired, causing the heatmap to require two clicks.
+    const waitForStyleAndUpdate = () => {
+      if (map.current.isStyleLoaded()) {
+        updateSimulationResults();
+      } else {
+        // Poll every 50ms until the style finishes processing (max 2s safety)
+        let attempts = 0;
+        const interval = setInterval(() => {
+          attempts++;
+          if (map.current && map.current.isStyleLoaded()) {
+            clearInterval(interval);
+            updateSimulationResults();
+          } else if (attempts > 40) {
+            clearInterval(interval);
+            console.warn('[MapView] Style never loaded after 2s, forcing update.');
+            updateSimulationResults();
+          }
+        }, 50);
+      }
+    };
+
+    waitForStyleAndUpdate();
   }, [simulationResults, earthquakeEpicenter]);
 
   return (

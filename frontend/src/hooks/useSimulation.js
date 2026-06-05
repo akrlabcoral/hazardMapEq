@@ -21,7 +21,7 @@ export function useSimulation() {
 
     setIsSimulationRunning(true);
     setError(null);
-    setSimulationResults(null); // Clear previous to trigger layer visibility toggle
+    setSimulationResults(null); // Clear previous results
 
     try {
       const hazardLayers = state.hazardLayers;

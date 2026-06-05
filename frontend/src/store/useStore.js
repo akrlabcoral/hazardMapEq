@@ -152,14 +152,7 @@ const useStore = create((set) => ({
     simulationResults: null,
     isSimulationRunning: false,
     selectedStateName: null,
-    soilAmpVisible: false,
     activeAlert: null,
-    gisLayers: {
-      ...state.gisLayers,
-      satellite: false,
-      terrain: false,
-    },
-    rasterLayers: state.rasterLayers.map(l => ({ ...l, visible: false })),
   })),
 
   // ── Real-Time Live Events ─────────────────────────────────────────
