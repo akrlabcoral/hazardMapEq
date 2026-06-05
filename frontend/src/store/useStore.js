@@ -9,6 +9,9 @@ const useStore = create((set) => ({
   activeSection: null,
   setActiveSection: (section) => set((state) => ({ activeSection: state.activeSection === section ? null : section })),
 
+  activeRightSection: null,
+  setActiveRightSection: (section) => set((state) => ({ activeRightSection: state.activeRightSection === section ? null : section })),
+
   mapStyle: 'light',
   toggleMapStyle: () => set((state) => ({ mapStyle: state.mapStyle === 'dark' ? 'light' : 'dark' })),
 

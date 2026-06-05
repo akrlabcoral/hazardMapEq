@@ -10,6 +10,8 @@ import StateAnalysisPanel from '../components/StateAnalysisPanel';
 import AlertBanner from '../components/AlertBanner';
 import { LayersPanel } from '../panels/LayersPanel';
 import { AlertsPanel } from '../panels/AlertsPanel';
+import RightSidebar from '../components/RightSidebar';
+import RightControlPanel from '../components/RightControlPanel';
 import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 
@@ -21,6 +23,7 @@ const PANEL_TITLE = {
 export default function PublicDashboard() {
   const activeSection = useStore((s) => s.activeSection);
   const setActiveSection = useStore((s) => s.setActiveSection);
+  const activeRightSection = useStore((s) => s.activeRightSection);
 
   // Auto-switch to alerts or layers if disasters was left active in the store
   useEffect(() => {
@@ -40,19 +43,19 @@ export default function PublicDashboard() {
 
       <div className="flex-1 relative flex overflow-hidden">
         <Sidebar isAdmin={false} />
+        <RightSidebar />
         <MapView isAdmin={false} />
         <StateHoverTooltip />
         <MapLegend />
-        <StateAnalysisPanel />
 
         {/* Main Content Overlay */}
         <motion.div
-          className="absolute inset-0 pointer-events-none z-10 flex flex-col justify-between p-6 pl-[96px]"
+          className="absolute inset-0 pointer-events-none z-10 flex justify-between p-6 pl-[96px] pr-[96px]"
           initial={{ left: 0 }}
           animate={{ left: 0 }}
           transition={{ type: 'spring', stiffness: 300, damping: 30 }}
         >
-          {/* Bottom Control Panels */}
+          {/* Left Control Panels (Bottom aligned) */}
           <div className="mt-auto flex gap-4 pointer-events-none items-end [&>*]:pointer-events-auto">
             <AnimatePresence mode="wait">
               {activeSection && PANEL_TITLE[activeSection] && (
@@ -67,6 +70,25 @@ export default function PublicDashboard() {
                     {activeSection === 'layers'    && <LayersPanel />}
                     {activeSection === 'alerts'    && <AlertsPanel />}
                   </ControlPanel>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Right Control Panels (Center aligned vertically) */}
+          <div className="flex flex-col justify-center gap-4 pointer-events-none [&>*]:pointer-events-auto h-full">
+            <AnimatePresence mode="wait">
+              {activeRightSection === 'analysis' && (
+                <motion.div
+                  key="analysis"
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: 20 }}
+                  className="w-[400px]"
+                >
+                  <RightControlPanel title="STATE ANALYSIS">
+                    <StateAnalysisPanel />
+                  </RightControlPanel>
                 </motion.div>
               )}
             </AnimatePresence>
