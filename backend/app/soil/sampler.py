@@ -5,8 +5,11 @@ Vectorized batch raster sampling.
 Performs ONE rasterio.sample() call per state raster, never per point.
 Supports thousands of grid cells efficiently.
 """
+import logging
 import numpy as np
 from app.soil import cache
+
+logger = logging.getLogger("hazardmap.soil.sampler")
 
 # Sentinel for points not covered by any raster
 # 760 m/s corresponds to NEHRP Class B (Neutral / Base Rock)
@@ -58,7 +61,7 @@ def sample_batch(lons: np.ndarray, lats: np.ndarray) -> np.ndarray:
                 if raw > 0:
                     result[idx] = np.float32(raw)
         except Exception as e:
-            print(f"[SoilSampler] WARNING: sampling failed for '{state_name}': {e}")
+            logger.warning("[SoilSampler] Sampling failed for '%s': %s", state_name, e)
 
     return result
 

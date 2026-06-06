@@ -69,6 +69,9 @@ async def run_worker() -> None:
                 },
             })
 
+            # Derive trigger label from event source so NCS events aren't mislabeled
+            triggered_by = f"auto_{event.source}" if event.source else "auto_unknown"
+
             # Run in thread — keeps event loop free during matplotlib contour gen
             result = await asyncio.to_thread(
                 SimulationRunner.run,
@@ -78,7 +81,7 @@ async def run_worker() -> None:
                 event.depth_km,
                 None,           # use default GMPE params for auto-triggered events
                 event.db_id,
-                "auto_usgs",
+                triggered_by,
             )
 
             # Broadcast complete result to all browser clients

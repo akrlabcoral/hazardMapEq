@@ -2,7 +2,8 @@
 app/ingest/filter.py
 
 Relevance filter — only pass events that are:
-  1. M >= 4.0 (meaningful shaking potential)
+  1. M >= MIN_MAGNITUDE (currently 0.0 — ingests all magnitudes including micro-tremors)
+     Raise to 4.0 to suppress low-significance events and reduce simulation load.
   2. Within India's buffered boundary (9-degree buffer = ~1000 km)
   3. Depth <= 300 km (very deep events have diffuse surface impact)
 
@@ -15,7 +16,7 @@ from shapely.geometry import Point
 from app.ingest.normalizer import EarthquakeEvent
 from app.gis.boundary import BUFFERED_INDIA
 
-MIN_MAGNITUDE = 0.0
+MIN_MAGNITUDE = 0.0   # Raise to e.g. 4.0 to suppress micro-tremors and reduce simulation load
 MAX_DEPTH_KM  = 300.0
 
 

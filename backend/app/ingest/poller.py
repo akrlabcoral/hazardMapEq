@@ -1,8 +1,8 @@
 """
 app/ingest/poller.py
 
-Async background task that polls the USGS earthquake feed every 60 seconds.
-Runs inside the FastAPI process as an asyncio task — no separate worker process needed.
+Async background tasks that poll USGS and NCS earthquake feeds every 60 seconds.
+Runs inside the FastAPI process as asyncio tasks — no separate worker process needed.
 
 Pipeline per cycle:
   fetch → normalize → validate → deduplicate → filter → enqueue
@@ -16,9 +16,10 @@ from datetime import datetime, timezone
 
 import aiohttp
 
-from app.ingest.normalizer import normalize_usgs_feature, is_valid
+from app.ingest.normalizer import normalize_usgs_feature, is_valid, EarthquakeEvent
 from app.ingest import deduplicator
 from app.ingest.filter import is_relevant
+from app.ingest.ncs_scraper import fetch_ncs_events
 from app.models.repository import save_earthquake_event
 
 logger = logging.getLogger("hazardmap.poller")
@@ -70,10 +71,49 @@ async def _fetch_feed(session: aiohttp.ClientSession) -> dict | None:
 
 
 # ---------------------------------------------------------------------------
-# One poll cycle
+# Shared event processing pipeline (used by both USGS and NCS cycles)
+# ---------------------------------------------------------------------------
+def _process_event(
+    event: EarthquakeEvent,
+    queue: asyncio.Queue,
+    log_prefix: str,
+) -> tuple[bool, bool]:
+    """
+    Run the dedup → persist → filter → enqueue pipeline for a single event.
+
+    Returns:
+        (is_new, was_queued) — both True means a new, India-relevant event was enqueued.
+    """
+    # 1. Deduplicate (PostgreSQL-backed)
+    if deduplicator.is_seen(event):
+        return False, False
+    deduplicator.record(event)
+
+    # 2. Persist to earthquake_events table
+    event.db_id = save_earthquake_event(event)
+
+    # 3. Filter — only India-relevant events go to simulation
+    if not is_relevant(event):
+        return True, False
+
+    # 4. Enqueue for simulation
+    try:
+        queue.put_nowait(event)
+        logger.info(
+            "[%s] Queued event: source_id=%s mag=%s place=%r",
+            log_prefix, event.source_id, event.magnitude, event.place,
+        )
+        return True, True
+    except asyncio.QueueFull:
+        logger.warning("[%s] Queue full — dropping event %s", log_prefix, event.source_id)
+        return True, False
+
+
+# ---------------------------------------------------------------------------
+# One USGS poll cycle
 # ---------------------------------------------------------------------------
 async def _poll_cycle(queue: asyncio.Queue) -> None:
-    """Execute a single poll → normalize → dedup → filter → enqueue cycle."""
+    """Execute a single USGS poll → normalize → dedup → filter → enqueue cycle."""
     t_start = time.monotonic()
 
     async with aiohttp.ClientSession() as session:
@@ -89,7 +129,7 @@ async def _poll_cycle(queue: asyncio.Queue) -> None:
     n_queued = 0
 
     for feature in features:
-        # 1. Normalize
+        # 1. Normalize USGS GeoJSON feature into EarthquakeEvent
         event = normalize_usgs_feature(feature)
         if event is None:
             continue
@@ -98,29 +138,11 @@ async def _poll_cycle(queue: asyncio.Queue) -> None:
         if not is_valid(event):
             continue
 
-        # 3. Deduplicate (PostgreSQL-backed)
-        if deduplicator.is_seen(event):
-            continue
-        deduplicator.record(event)
-        n_new += 1
-
-        # 4. Persist to earthquake_events table
-        event.db_id = save_earthquake_event(event)
-
-        # 5. Filter — only India-relevant events go to simulation
-        if not is_relevant(event):
-            continue
-
-        # 6. Enqueue for simulation
-        try:
-            queue.put_nowait(event)
+        is_new, was_queued = _process_event(event, queue, "Poller")
+        if is_new:
+            n_new += 1
+        if was_queued:
             n_queued += 1
-            logger.info(
-                f"[Poller] Queued event: source_id={event.source_id} "
-                f"mag={event.magnitude} place={event.place!r}"
-            )
-        except asyncio.QueueFull:
-            logger.warning(f"[Poller] Queue full — dropping event {event.source_id}")
 
     duration_ms = int((time.monotonic() - t_start) * 1000)
     poller_stats.update({
@@ -129,38 +151,37 @@ async def _poll_cycle(queue: asyncio.Queue) -> None:
         "status":           "ok",
     })
     logger.info(
-        f"[Poller] cycle: fetched={n_fetched} new={n_new} "
-        f"queued={n_queued} duration_ms={duration_ms}"
+        "[Poller] cycle: fetched=%d new=%d queued=%d duration_ms=%d",
+        n_fetched, n_new, n_queued, duration_ms,
     )
 
 
 # ---------------------------------------------------------------------------
-# Main poller loop — run as asyncio.create_task() in main.py lifespan
+# Main USGS poller loop — run as asyncio.create_task() in main.py lifespan
 # ---------------------------------------------------------------------------
 async def run_poller(queue: asyncio.Queue) -> None:
     """
     Infinite loop that polls USGS every POLL_INTERVAL_SECONDS.
     Designed to be started with asyncio.create_task().
     """
-    logger.info(f"[Poller] Starting USGS poller (interval={POLL_INTERVAL_SECONDS}s)")
+    logger.info("[Poller] Starting USGS poller (interval=%ds)", POLL_INTERVAL_SECONDS)
     poller_stats["status"] = "running"
 
     while True:
         try:
             await _poll_cycle(queue)
         except Exception as e:
-            logger.exception(f"[Poller] Unexpected error in poll cycle: {e}")
+            logger.exception("[Poller] Unexpected error in poll cycle: %s", e)
 
         await asyncio.sleep(POLL_INTERVAL_SECONDS)
 
 
 # ---------------------------------------------------------------------------
-# NCS Poller Loop
+# One NCS poll cycle
 # ---------------------------------------------------------------------------
 async def _poll_ncs_cycle(queue: asyncio.Queue) -> None:
-    """Execute a single NCS poll → normalize → dedup → filter → enqueue cycle."""
+    """Execute a single NCS poll → validate → dedup → filter → enqueue cycle."""
     t_start = time.monotonic()
-    from app.ingest.ncs_scraper import fetch_ncs_events
 
     async with aiohttp.ClientSession() as session:
         events = await fetch_ncs_events(session)
@@ -173,50 +194,36 @@ async def _poll_ncs_cycle(queue: asyncio.Queue) -> None:
     n_queued = 0
 
     for event in events:
-        # 2. Validate physical parameters
+        # Validate physical parameters (NCS events are already normalized by the scraper)
         if not is_valid(event):
             continue
 
-        # 3. Deduplicate (PostgreSQL-backed)
-        if deduplicator.is_seen(event):
-            continue
-        deduplicator.record(event)
-        n_new += 1
-
-        # 4. Persist to earthquake_events table
-        event.db_id = save_earthquake_event(event)
-
-        # 5. Filter — only India-relevant events go to simulation
-        if not is_relevant(event):
-            continue
-
-        # 6. Enqueue for simulation
-        try:
-            queue.put_nowait(event)
+        is_new, was_queued = _process_event(event, queue, "NCS Poller")
+        if is_new:
+            n_new += 1
+        if was_queued:
             n_queued += 1
-            logger.info(
-                f"[NCS Poller] Queued event: source_id={event.source_id} "
-                f"mag={event.magnitude} place={event.place!r}"
-            )
-        except asyncio.QueueFull:
-            logger.warning(f"[NCS Poller] Queue full — dropping event {event.source_id}")
 
     duration_ms = int((time.monotonic() - t_start) * 1000)
     logger.info(
-        f"[NCS Poller] cycle: fetched={n_fetched} new={n_new} "
-        f"queued={n_queued} duration_ms={duration_ms}"
+        "[NCS Poller] cycle: fetched=%d new=%d queued=%d duration_ms=%d",
+        n_fetched, n_new, n_queued, duration_ms,
     )
 
 
+# ---------------------------------------------------------------------------
+# NCS poller loop — run as asyncio.create_task() in main.py lifespan
+# ---------------------------------------------------------------------------
 async def run_ncs_poller(queue: asyncio.Queue) -> None:
     """
     Infinite loop that polls NCS every POLL_INTERVAL_SECONDS.
+    Designed to be started with asyncio.create_task().
     """
-    logger.info(f"[NCS Poller] Starting NCS scraper (interval={POLL_INTERVAL_SECONDS}s)")
+    logger.info("[NCS Poller] Starting NCS scraper (interval=%ds)", POLL_INTERVAL_SECONDS)
     while True:
         try:
             await _poll_ncs_cycle(queue)
         except Exception as e:
-            logger.exception(f"[NCS Poller] Unexpected error in NCS poll cycle: {e}")
+            logger.exception("[NCS Poller] Unexpected error in NCS poll cycle: %s", e)
 
         await asyncio.sleep(POLL_INTERVAL_SECONDS)

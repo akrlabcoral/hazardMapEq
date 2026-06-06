@@ -11,7 +11,6 @@ import asyncio
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
-from typing import Dict
 
 from app.gis.boundary import is_epicenter_valid
 from app.jobs.simulation_worker import SimulationRunner
@@ -24,8 +23,9 @@ class EarthquakeInput(BaseModel):
     depth:       float            = Field(..., gt=0,   le=10000)
     latitude:    float            = Field(..., ge=-90.0,  le=90.0)
     longitude:   float            = Field(..., ge=-180.0, le=180.0)
-    weights:     Dict[str, float] = Field(default={"pga": 1.0})
-    gmpe_params: Dict[str, float] | None = Field(
+    # weights: reserved for future multi-layer fusion (infrastructure, liquefaction, etc.)
+    # Not yet implemented — only the PGA layer is currently active.
+    gmpe_params: dict[str, float] | None = Field(
         default=None,
         description="Optional custom GMPE polynomial parameters. If omitted, automatically selects based on region."
     )

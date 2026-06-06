@@ -5,9 +5,11 @@ Raster handle registry.  Each state raster is opened ONCE at startup
 and stored here.  All simulation loops read from these handles — no
 raster is ever reopened inside a hot path.
 """
+import logging
 import rasterio
-from rasterio.crs import CRS
 from collections import namedtuple
+
+logger = logging.getLogger("hazardmap.soil.cache")
 
 BoundingBox = namedtuple("BoundingBox", ["left", "bottom", "right", "top"])
 
@@ -29,7 +31,7 @@ def register(state_name: str, path: str) -> None:
         b = src.bounds
         _BOUNDS[state_name] = BoundingBox(b.left, b.bottom, b.right, b.top)
     except Exception as e:
-        print(f"[SoilCache] WARNING: Could not open raster for '{state_name}': {e}")
+        logger.warning("[SoilCache] Could not open raster for '%s': %s", state_name, e)
 
 
 def get_handle(state_name: str) -> rasterio.DatasetReader | None:
@@ -54,4 +56,4 @@ def close_all() -> None:
             pass
     _REGISTRY.clear()
     _BOUNDS.clear()
-    print("[SoilCache] All raster handles closed.")
+    logger.info("[SoilCache] All raster handles closed.")

@@ -57,11 +57,11 @@ def _initialize_regions():
 
         # Combine lines into a single MultiLineString
         line_geoms = []
-        for l in lines:
-            if l.geom_type == 'LineString':
-                line_geoms.append(l)
-            elif l.geom_type == 'MultiLineString':
-                line_geoms.extend(l.geoms)
+        for boundary in lines:
+            if boundary.geom_type == 'LineString':
+                line_geoms.append(boundary)
+            elif boundary.geom_type == 'MultiLineString':
+                line_geoms.extend(boundary.geoms)
                 
         active_margin = MultiLineString(line_geoms)
         

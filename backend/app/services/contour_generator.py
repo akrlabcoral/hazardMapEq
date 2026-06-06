@@ -27,7 +27,7 @@ from scipy.interpolate import griddata
 from scipy.ndimage import gaussian_filter
 import geopandas as gpd
 
-from app.gis.boundary import _india_geom
+from app.gis.boundary import get_india_geom
 from app.config import (
     PGA_LEVELS,
     PGA_COLORS,
@@ -84,7 +84,7 @@ def generate_contour_geojson(
         cache_key = (round(x_min, 2), round(x_max, 2), round(y_min, 2), round(y_max, 2), N)
         if cache_key not in _GRID_CACHE:
             pts = gpd.GeoSeries.from_xy(grid_x.flatten(), grid_y.flatten(), crs="EPSG:4326")
-            _GRID_CACHE[cache_key] = pts.within(_india_geom).values.reshape(grid_x.shape)
+            _GRID_CACHE[cache_key] = pts.within(get_india_geom()).values.reshape(grid_x.shape)
         mask = _GRID_CACHE[cache_key]
         grid_z[~mask] = np.nan
 

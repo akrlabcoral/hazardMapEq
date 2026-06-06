@@ -130,6 +130,13 @@ def init_db() -> None:
                 ON earthquake_events(magnitude DESC)
             """)
 
+            # Migration: add sim_id FK column if it doesn't already exist
+            # (safe to run on every startup — IF NOT EXISTS guard prevents duplicates)
+            cur.execute("""
+                ALTER TABLE earthquake_events
+                ADD COLUMN IF NOT EXISTS sim_id INTEGER DEFAULT NULL
+            """)
+
 
 # ---------------------------------------------------------------------------
 # Simulations CRUD
@@ -168,45 +175,6 @@ def save_simulation(
                 ),
             )
             return cur.fetchone()[0]
-
-
-def get_simulation(sim_id: int) -> dict[str, Any] | None:
-    """Retrieve a simulation by ID. Returns None if not found."""
-    with _get_conn() as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute("SELECT * FROM simulations WHERE id = %s", (sim_id,))
-            row = cur.fetchone()
-
-    if row is None:
-        return None
-
-    result = dict(row)
-
-    # JSONB columns come back as Python dicts/lists directly from psycopg2
-    districts = result.pop("affected_districts_json", [])
-    result["affected_districts"] = districts if isinstance(districts, list) else json.loads(districts)
-
-    grid = result.pop("grid_geojson_json", None)
-    result["grid_geojson"] = grid  # already a dict from JSONB, or None
-
-    return result
-
-
-def get_recent_simulations(limit: int = 20) -> list[dict]:
-    """Return the N most recent simulations (metadata only, no blobs)."""
-    with _get_conn() as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
-            cur.execute(
-                """
-                SELECT id, timestamp, latitude, longitude, magnitude,
-                       depth, triggered_by, event_id
-                FROM simulations
-                ORDER BY timestamp DESC
-                LIMIT %s
-                """,
-                (limit,),
-            )
-            return [dict(row) for row in cur.fetchall()]
 
 
 # ---------------------------------------------------------------------------
@@ -280,10 +248,10 @@ def mark_event_simulated(event_id: int, sim_id: int) -> None:
             cur.execute(
                 """
                 UPDATE earthquake_events
-                SET sim_triggered = 1, updated_at = NOW()
+                SET sim_triggered = 1, sim_id = %s, updated_at = NOW()
                 WHERE id = %s
                 """,
-                (event_id,),
+                (sim_id, event_id),
             )
 
 

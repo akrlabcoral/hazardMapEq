@@ -13,7 +13,6 @@ during contour generation — WebSocket pings and the poller won't stall.
 """
 from __future__ import annotations
 
-import asyncio
 import copy
 import json
 import logging
