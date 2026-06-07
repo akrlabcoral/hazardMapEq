@@ -330,6 +330,52 @@ export default function MapView({ isAdmin = false }) {
           if (cellHoverTimeout) clearTimeout(cellHoverTimeout);
           useStore.getState().setHoveredCellData(null);
         });
+
+        // Tectonic Plates Hover Logic
+        let hoveredPlateId = null;
+        const platePopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
+
+        map.current.on('mousemove', 'tectonic-plates-line', (e) => {
+          if (e.features.length > 0) {
+            map.current.getCanvas().style.cursor = 'pointer';
+            const feature = e.features[0];
+            const type = feature.properties.Boundary_Type || 'Unknown';
+            
+            if (hoveredPlateId !== null) {
+              map.current.setFeatureState(
+                { source: 'tectonic-plates-source', id: hoveredPlateId },
+                { hover: false }
+              );
+            }
+            // Fallback to OBJECTID if id is missing
+            hoveredPlateId = feature.id || feature.properties.OBJECTID;
+            if (hoveredPlateId !== undefined) {
+              map.current.setFeatureState(
+                { source: 'tectonic-plates-source', id: hoveredPlateId },
+                { hover: true }
+              );
+            }
+
+            platePopup.setLngLat(e.lngLat).setHTML(`
+              <div style="background:#0f172a;border:1px solid #334155;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px;color:#e2e8f0;">
+                <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;margin-bottom:2px">Plate Boundary</div>
+                <div style="color:#fb923c;font-weight:700;font-size:14px">${type}</div>
+              </div>
+            `).addTo(map.current);
+          }
+        });
+
+        map.current.on('mouseleave', 'tectonic-plates-line', () => {
+          map.current.getCanvas().style.cursor = '';
+          platePopup.remove();
+          if (hoveredPlateId !== null) {
+            map.current.setFeatureState(
+              { source: 'tectonic-plates-source', id: hoveredPlateId },
+              { hover: false }
+            );
+            hoveredPlateId = null;
+          }
+        });
       }
     });
 

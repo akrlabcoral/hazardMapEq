@@ -75,6 +75,39 @@ export const LAYER_CONFIGS = {
       }
     ]
   },
+  tectonicPlates: {
+    sourceId: 'tectonic-plates-source',
+    dataUrl: 'tectonic_plates.geojson',
+    lazy: true,
+    layers: [
+      {
+        id: 'tectonic-plates-line',
+        type: 'line',
+        source: 'tectonic-plates-source',
+        beforeId: 'sim-wb-grid-fill',
+        paint: {
+          'line-color': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            '#ffed4a', // bright yellow on hover
+            '#ea580c'  // orange by default
+          ],
+          'line-width': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            3.0,
+            1.5
+          ],
+          'line-opacity': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            1.0,
+            0.6
+          ]
+        }
+      }
+    ]
+  },
 };
 
 // Raster layer configs (no GeoJSON)

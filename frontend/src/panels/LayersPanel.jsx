@@ -11,11 +11,13 @@ import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 const RasterLayersPanel = React.lazy(() => import('../components/RasterLayersPanel'));
 
 const GIS_BOUNDARY_LAYERS = ['indiaBoundary', 'stateBoundaries'];
+const GLOBAL_LAYERS = ['tectonicPlates'];
 const BASE_LAYERS = ['satellite', 'terrain'];
 
 const LAYER_LABELS = {
   indiaBoundary:    'India Boundary',
   stateBoundaries:  'State Boundaries',
+  tectonicPlates:   'Tectonic Plate Boundaries',
   satellite:        'Satellite',
   terrain:          'Terrain',
 };
@@ -50,6 +52,18 @@ export function LayersPanel({ isAdmin = true }) {
 
         {/* GIS Boundary Layers */}
         {isAdmin && GIS_BOUNDARY_LAYERS.map((key) => (
+          <LayerRow
+            key={key}
+            label={LAYER_LABELS[key]}
+            visible={gisLayers[key]}
+            opacity={layerOpacities[key]}
+            onToggle={() => toggleGisLayer(key)}
+            onOpacityChange={isAdmin ? (v) => setLayerOpacity(key, v) : undefined}
+          />
+        ))}
+
+        {/* Global Overlays */}
+        {GLOBAL_LAYERS.map((key) => (
           <LayerRow
             key={key}
             label={LAYER_LABELS[key]}

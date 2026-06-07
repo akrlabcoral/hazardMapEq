@@ -5,6 +5,21 @@ class MapLayerService {
   constructor() {
     this.map = null;
     this.initialized = false;
+    this.dataLoaded = {};
+  }
+
+  loadGeoJsonData(config) {
+    if (this.dataLoaded[config.sourceId]) return;
+    this.dataLoaded[config.sourceId] = 'loading';
+    fetchGeoJson(config.dataUrl).then(data => {
+      if (this.map && this.map.getSource(config.sourceId)) {
+        this.map.getSource(config.sourceId).setData(data);
+        this.dataLoaded[config.sourceId] = 'loaded';
+      }
+    }).catch(err => {
+      console.error(`Failed to lazy load ${config.sourceId}`, err);
+      this.dataLoaded[config.sourceId] = false;
+    });
   }
 
   async initializeSourcesAndLayers(mapInstance, initialVisibilityState) {
@@ -41,7 +56,8 @@ class MapLayerService {
         // Init with empty data
         const sourceConfig = {
           type: 'geojson',
-          data: { type: 'FeatureCollection', features: [] }
+          data: { type: 'FeatureCollection', features: [] },
+          generateId: true
         };
         if (config.cluster) {
           sourceConfig.cluster = true;
@@ -51,12 +67,10 @@ class MapLayerService {
         
         this.map.addSource(config.sourceId, sourceConfig);
 
-        // Fetch data asynchronously
-        fetchGeoJson(config.dataUrl).then(data => {
-          if (this.map && this.map.getSource(config.sourceId)) {
-            this.map.getSource(config.sourceId).setData(data);
-          }
-        });
+        // Fetch data asynchronously (unless lazy and initially hidden)
+        if (!config.lazy || initialVisibilityState[key]) {
+          this.loadGeoJsonData(config);
+        }
 
         // Add layers
         config.layers.forEach(layer => {
@@ -82,7 +96,11 @@ class MapLayerService {
     
     // Check GeoJSON configs
     if (LAYER_CONFIGS[layerKey]) {
-      LAYER_CONFIGS[layerKey].layers.forEach(layer => {
+      const config = LAYER_CONFIGS[layerKey];
+      if (isVisible && config.lazy && !this.dataLoaded[config.sourceId]) {
+        this.loadGeoJsonData(config);
+      }
+      config.layers.forEach(layer => {
         if (this.map.getLayer(layer.id)) {
           this.map.setLayoutProperty(layer.id, 'visibility', visibility);
         }
