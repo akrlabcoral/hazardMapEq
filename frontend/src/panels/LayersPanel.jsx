@@ -25,7 +25,6 @@ const LAYER_LABELS = {
 export function LayersPanel({ isAdmin = true }) {
   const {
     gisLayers, toggleGisLayer,
-    layerOpacities, setLayerOpacity,
   } = useLayersState();
 
   return (
@@ -39,9 +38,7 @@ export function LayersPanel({ isAdmin = true }) {
             key={key}
             label={LAYER_LABELS[key]}
             visible={gisLayers[key]}
-            opacity={layerOpacities[key]}
             onToggle={() => toggleGisLayer(key)}
-            onOpacityChange={isAdmin ? (v) => setLayerOpacity(key, v) : undefined}
           />
         ))}
       </div>
@@ -56,9 +53,7 @@ export function LayersPanel({ isAdmin = true }) {
             key={key}
             label={LAYER_LABELS[key]}
             visible={gisLayers[key]}
-            opacity={layerOpacities[key]}
             onToggle={() => toggleGisLayer(key)}
-            onOpacityChange={isAdmin ? (v) => setLayerOpacity(key, v) : undefined}
           />
         ))}
 
@@ -68,9 +63,7 @@ export function LayersPanel({ isAdmin = true }) {
             key={key}
             label={LAYER_LABELS[key]}
             visible={gisLayers[key]}
-            opacity={layerOpacities[key]}
             onToggle={() => toggleGisLayer(key)}
-            onOpacityChange={isAdmin ? (v) => setLayerOpacity(key, v) : undefined}
           />
         ))}
 

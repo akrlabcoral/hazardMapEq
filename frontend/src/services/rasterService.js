@@ -602,11 +602,6 @@ class RasterService {
     this.rasterCache.delete(layerId);
   }
 
-  updateOpacity(layerId, opacity) {
-    const map = this.map;
-    if (!map || !map.getLayer(layerId)) return;
-    map.setPaintProperty(layerId, 'raster-opacity', opacity);
-  }
 
   updateVisibility(layerId, isVisible) {
     const map = this.map;

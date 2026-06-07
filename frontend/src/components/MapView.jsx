@@ -27,7 +27,6 @@ export default function MapView({ isAdmin = false }) {
   const selectedStateName      = useStore((state) => state.selectedStateName);
   
   const gisLayers      = useStore((state) => state.gisLayers);
-  const layerOpacities = useStore((state) => state.layerOpacities);
   const soilAmpVisible = useStore((state) => state.soilAmpVisible);
   
   const simulationResults = useStore((state) => state.simulationResults);
@@ -426,14 +425,6 @@ export default function MapView({ isAdmin = false }) {
       mapLayerService.setLayerVisibility(key, isVisible);
     });
   }, [gisLayers]);
-
-  // Sync layer opacities
-  useEffect(() => {
-    if (!map.current || !mapLayerService.initialized) return;
-    Object.entries(layerOpacities).forEach(([key, opacity]) => {
-      mapLayerService.setLayerOpacity(key, opacity);
-    });
-  }, [layerOpacities]);
 
   // Update epicenter marker
   useEffect(() => {

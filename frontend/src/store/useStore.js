@@ -96,7 +96,7 @@ const useStore = create((set) => ({
     terrain: false,
     indiaBoundary: true,
     stateBoundaries: true,
-    tectonicPlates: false,
+    tectonicPlates: true,
   },
   toggleGisLayer: (layer) => set((state) => ({
     gisLayers: { ...state.gisLayers, [layer]: !state.gisLayers[layer] }
@@ -106,16 +106,6 @@ const useStore = create((set) => ({
   soilAmpVisible: false,
   setSoilAmpVisible: (val) => set({ soilAmpVisible: val }),
 
-  // Per-layer opacity (0-1)
-  layerOpacities: {
-    satellite: 1.0,
-    terrain: 1.0,
-    indiaBoundary: 1.0,
-    stateBoundaries: 1.0,
-  },
-  setLayerOpacity: (layer, opacity) => set((state) => ({
-    layerOpacities: { ...state.layerOpacities, [layer]: opacity }
-  })),
 
   // Dynamic Raster Layers State
   rasterLayers: [...BUILT_IN_RASTERS],
@@ -125,9 +115,6 @@ const useStore = create((set) => ({
   })),
   removeRasterLayer: (id) => set((state) => ({ 
     rasterLayers: state.rasterLayers.filter(l => l.id !== id) 
-  })),
-  updateRasterLayerOpacity: (id, opacity) => set((state) => ({
-    rasterLayers: state.rasterLayers.map(l => l.id === id ? { ...l, opacity } : l)
   })),
   updateRasterLayerVisibility: (id, visible) => set((state) => ({
     rasterLayers: state.rasterLayers.map(l => l.id === id ? { ...l, visible } : l)

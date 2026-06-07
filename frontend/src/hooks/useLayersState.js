@@ -8,8 +8,6 @@ export function useLayersState() {
   return useStore(useShallow((s) => ({
     gisLayers:        s.gisLayers,
     toggleGisLayer:   s.toggleGisLayer,
-    layerOpacities:   s.layerOpacities,
-    setLayerOpacity:  s.setLayerOpacity,
     soilAmpVisible:   s.soilAmpVisible,
     setSoilAmpVisible: s.setSoilAmpVisible,
     hazardLayers:     s.hazardLayers,

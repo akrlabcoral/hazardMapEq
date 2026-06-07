@@ -117,38 +117,6 @@ class MapLayerService {
     }
   }
 
-  setLayerOpacity(layerKey, opacity) {
-    if (!this.map) return;
-
-    // GeoJSON layer opacity
-    if (LAYER_CONFIGS[layerKey]) {
-      LAYER_CONFIGS[layerKey].layers.forEach(layer => {
-        if (!this.map.getLayer(layer.id)) return;
-        // Different paint property depending on layer type
-        if (layer.type === 'fill') {
-          this.map.setPaintProperty(layer.id, 'fill-opacity', opacity * 0.4);
-        } else if (layer.type === 'line') {
-          this.map.setPaintProperty(layer.id, 'line-opacity', opacity);
-        } else if (layer.type === 'circle') {
-          this.map.setPaintProperty(layer.id, 'circle-opacity', opacity);
-        } else if (layer.type === 'heatmap') {
-          // heatmap-opacity is top-level, scale relative to zoom interpolation
-          this.map.setPaintProperty(layer.id, 'heatmap-opacity', opacity);
-        } else if (layer.type === 'symbol') {
-          this.map.setPaintProperty(layer.id, 'text-opacity', opacity);
-        }
-      });
-    }
-
-    // Raster layer opacity
-    if (RASTER_CONFIGS[layerKey]) {
-      RASTER_CONFIGS[layerKey].layers.forEach(layer => {
-        if (this.map.getLayer(layer.id)) {
-          this.map.setPaintProperty(layer.id, 'raster-opacity', opacity);
-        }
-      });
-    }
-  }
 }
 
 export const mapLayerService = new MapLayerService();

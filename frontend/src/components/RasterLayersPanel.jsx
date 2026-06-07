@@ -8,7 +8,6 @@ export default function RasterLayersPanel({ isAdmin = true }) {
   const rasterLayers = useStore((state) => state.rasterLayers);
   const addRasterLayer = useStore((state) => state.addRasterLayer);
   const removeRasterLayer = useStore((state) => state.removeRasterLayer);
-  const updateRasterLayerOpacity = useStore((state) => state.updateRasterLayerOpacity);
   const updateRasterLayerVisibility = useStore((state) => state.updateRasterLayerVisibility);
   const updateRasterLayerLoaded = useStore((state) => state.updateRasterLayerLoaded);
 
@@ -98,11 +97,6 @@ export default function RasterLayersPanel({ isAdmin = true }) {
     updateRasterLayerVisibility(layer.id, newVisibility);
   };
 
-  const handleOpacityChange = (id, opacity) => {
-    rasterService.updateOpacity(id, opacity);
-    updateRasterLayerOpacity(id, opacity);
-  };
-
   return (
     <div className="space-y-2">
       {isAdmin && (
@@ -162,21 +156,6 @@ export default function RasterLayersPanel({ isAdmin = true }) {
                 </div>
               </div>
 
-              {layer.visible && isAdmin && (
-                <div className="flex items-center gap-3">
-                  <span className="text-[10px] text-slate-500 uppercase tracking-wider w-12">Opacity</span>
-                  <input 
-                    type="range" 
-                    min="0" max="1" step="0.05" 
-                    value={layer.opacity}
-                    onChange={(e) => handleOpacityChange(layer.id, parseFloat(e.target.value))}
-                    className="flex-1 accent-cyan-500 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer"
-                  />
-                  <span className="text-xs text-white w-8 text-right font-mono">
-                    {Math.round(layer.opacity * 100)}%
-                  </span>
-                </div>
-              )}
             </div>
           ))}
         </div>
