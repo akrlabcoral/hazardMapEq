@@ -1,5 +1,6 @@
 import { LAYER_CONFIGS, RASTER_CONFIGS } from './layerManager';
 import { fetchGeoJson } from './geoJsonLoader';
+import { mapLayerManager } from './mapLayerManager';
 
 class MapLayerService {
   constructor() {
@@ -87,6 +88,7 @@ class MapLayerService {
     }
     
     this.initialized = true;
+    mapLayerManager.bringSimulationLayersToFront(this.map);
   }
 
   setLayerVisibility(layerKey, isVisible) {
@@ -115,6 +117,8 @@ class MapLayerService {
         }
       });
     }
+
+    mapLayerManager.bringSimulationLayersToFront(this.map);
   }
 
 }

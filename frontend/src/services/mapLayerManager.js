@@ -5,6 +5,17 @@
  * provides debugging insights into the map rendering lifecycle.
  */
 
+export const SIMULATION_LAYER_ORDER = [
+  'sim-soil-amp-layer',
+  'sim-wb-grid-fill',
+  'sim-contour-fill',
+  'sim-contour-stroke',
+  'sim-shockwave',
+  'sim-epicenter-glow',
+  'sim-epicenter-ring',
+  'sim-epicenter',
+];
+
 class MapLayerManager {
   layerExists(map, layerId) {
     if (!map || !map.getStyle()) return false;
@@ -77,6 +88,19 @@ class MapLayerManager {
       if (source && source.setData) {
         console.debug(`[MapLayerManager] Clearing data for source: ${id}`);
         source.setData(emptyData);
+      }
+    });
+  }
+
+  /**
+   * Moves all active simulation layers to the top of the map layer stack.
+   * Ensures simulation layers are never obscured by other layers (e.g. newly added GeoTIFFs or toggled layers).
+   */
+  bringSimulationLayersToFront(map) {
+    if (!map || !map.getStyle()) return;
+    SIMULATION_LAYER_ORDER.forEach(layerId => {
+      if (this.layerExists(map, layerId)) {
+        map.moveLayer(layerId);
       }
     });
   }

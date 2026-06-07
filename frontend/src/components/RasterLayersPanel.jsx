@@ -1,5 +1,6 @@
 import React, { useRef } from 'react';
-import { Eye, EyeOff, Trash2, UploadCloud } from 'lucide-react';
+import { UploadCloud } from 'lucide-react';
+import { LayerRow } from './ui/LayerRow';
 import useStore from '../store/useStore';
 import { rasterService } from '../services/rasterService';
 
@@ -131,32 +132,13 @@ export default function RasterLayersPanel({ isAdmin = true }) {
       ) : (
         <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
           {rasterLayers.map(layer => (
-            <div key={layer.id} className="p-3 bg-slate-800/80 rounded-lg border border-slate-700/80 hover:border-slate-600 transition-colors">
-              <div className="flex justify-between items-center mb-2">
-                <span className="font-medium text-slate-300 text-sm truncate max-w-[180px]" title={layer.name}>
-                  {layer.name}
-                </span>
-                <div className="flex items-center gap-1">
-                  <button 
-                    onClick={() => handleToggleVisibility(layer)}
-                    className={`p-1.5 rounded transition-colors ${layer.visible ? 'text-white bg-cyan-900/30' : 'text-slate-500 hover:text-slate-300 hover:bg-slate-700'}`}
-                    title="Toggle Visibility"
-                  >
-                    {layer.visible ? <Eye size={16} /> : <EyeOff size={16} />}
-                  </button>
-                  {!layer.isBuiltIn && (
-                    <button 
-                      onClick={() => handleRemove(layer.id)}
-                      className="p-1.5 rounded text-slate-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
-                      title="Remove Layer"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  )}
-                </div>
-              </div>
-
-            </div>
+            <LayerRow
+              key={layer.id}
+              label={layer.name}
+              visible={layer.visible}
+              onToggle={() => handleToggleVisibility(layer)}
+              onRemove={!layer.isBuiltIn ? () => handleRemove(layer.id) : undefined}
+            />
           ))}
         </div>
       )}
