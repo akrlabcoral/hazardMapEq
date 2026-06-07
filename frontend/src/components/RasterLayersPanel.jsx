@@ -104,32 +104,36 @@ export default function RasterLayersPanel({ isAdmin = true }) {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex justify-between items-center mb-2">
-        <h4 className="text-sm font-semibold text-slate-300">GeoTIFF Overlays</h4>
-        
-        <input 
-          type="file" 
-          accept=".tif,.tiff" 
-          multiple
-          ref={fileInputRef} 
-          onChange={handleFileUpload} 
-          className="hidden" 
-        />
-        
-        <button 
-          onClick={() => fileInputRef.current?.click()}
-          className="flex items-center gap-2 px-3 py-1.5 bg-slate-600/80 hover:bg-slate-500 text-white text-xs font-bold rounded shadow-[0_0_10px_rgba(8,145,178,0.3)] transition-all"
-        >
-          <UploadCloud size={14} />
-          Add GeoTIFF
-        </button>
-      </div>
+    <div className="space-y-2">
+      {isAdmin && (
+        <div className="flex justify-between items-center mb-2">
+          <h4 className="text-sm font-semibold text-slate-300">GeoTIFF Overlays</h4>
+          
+          <input 
+            type="file" 
+            accept=".tif,.tiff" 
+            multiple
+            ref={fileInputRef} 
+            onChange={handleFileUpload} 
+            className="hidden" 
+          />
+          
+          <button 
+            onClick={() => fileInputRef.current?.click()}
+            className="flex items-center gap-2 px-3 py-1.5 bg-slate-600/80 hover:bg-slate-500 text-white text-xs font-bold rounded shadow-[0_0_10px_rgba(8,145,178,0.3)] transition-all"
+          >
+            <UploadCloud size={14} />
+            Add GeoTIFF
+          </button>
+        </div>
+      )}
 
       {rasterLayers.length === 0 ? (
-        <div className="p-4 border border-slate-700/50 bg-slate-800/30 rounded-lg text-center text-slate-500 text-xs italic">
-          No raster layers loaded. Upload a .tif file to begin.
-        </div>
+        isAdmin && (
+          <div className="p-4 border border-slate-700/50 bg-slate-800/30 rounded-lg text-center text-slate-500 text-xs italic">
+            No raster layers loaded. Upload a .tif file to begin.
+          </div>
+        )
       ) : (
         <div className="space-y-2 max-h-[300px] overflow-y-auto pr-1">
           {rasterLayers.map(layer => (

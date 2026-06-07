@@ -29,12 +29,10 @@ export function LayersPanel({ isAdmin = true }) {
   return (
     <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
 
-      {/* 1. Data Layers */}
+      {/* 1. Base Map Views */}
       <div>
-        <div className="text-xs text-slate-400 uppercase tracking-wider mb-2">Data Layers</div>
-
-        {/* GIS Boundary Layers */}
-        {GIS_BOUNDARY_LAYERS.map((key) => (
+        <div className="text-xs text-slate-400 uppercase tracking-wider mb-2">Base Map Views</div>
+        {BASE_LAYERS.map((key) => (
           <LayerRow
             key={key}
             label={LAYER_LABELS[key]}
@@ -46,15 +44,12 @@ export function LayersPanel({ isAdmin = true }) {
         ))}
       </div>
 
-      {/* 2. Raster Layer */}
-      <React.Suspense fallback={<div className="p-4 text-sm text-slate-400 italic">Loading Raster panel...</div>}>
-        <RasterLayersPanel isAdmin={isAdmin} />
-      </React.Suspense>
-
-      {/* 3. Base Layers */}
+      {/* 2. Data Layers */}
       <div>
-        <div className="text-xs text-slate-400 uppercase tracking-wider mb-2">Base Layers</div>
-        {BASE_LAYERS.map((key) => (
+        <div className="text-xs text-slate-400 uppercase tracking-wider mb-2">Data Layers</div>
+
+        {/* GIS Boundary Layers */}
+        {isAdmin && GIS_BOUNDARY_LAYERS.map((key) => (
           <LayerRow
             key={key}
             label={LAYER_LABELS[key]}
@@ -64,6 +59,11 @@ export function LayersPanel({ isAdmin = true }) {
             onOpacityChange={isAdmin ? (v) => setLayerOpacity(key, v) : undefined}
           />
         ))}
+
+        {/* Raster Layers */}
+        <React.Suspense fallback={<div className="p-4 text-sm text-slate-400 italic">Loading Raster panel...</div>}>
+          <RasterLayersPanel isAdmin={isAdmin} />
+        </React.Suspense>
       </div>
 
     </div>
