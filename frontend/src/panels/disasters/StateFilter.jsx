@@ -21,11 +21,11 @@ export function StateFilter() {
 
   return (
     <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-      <div className="text-xs text-slate-400 uppercase tracking-wider mb-2">State Isolation</div>
+      <div className="text-xs text-slate-200 font-semibold uppercase tracking-wider mb-2">State Isolation</div>
       <select
         value={selectedStateName || ''}
         onChange={(e) => setSelectedStateName(e.target.value || null)}
-        className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-500"
+        className="w-full bg-slate-950 border border-slate-600 text-white text-sm rounded px-2 py-1.5 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
       >
         <option value="">All States (Nationwide)</option>
         {sortedStateNames.map((name) => (

@@ -17,7 +17,7 @@ export function GmpeParamsGrid() {
   return (
     <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
       <div className="flex items-center justify-between mb-2">
-        <div className="text-xs text-slate-400 uppercase tracking-wider">Custom GMPE Overrides</div>
+        <div className="text-xs text-slate-200 font-semibold uppercase tracking-wider">Custom GMPE Overrides</div>
         <label className="flex items-center cursor-pointer">
           <div className="relative">
             <input 
@@ -33,21 +33,21 @@ export function GmpeParamsGrid() {
       </div>
       
       {!useCustomGmpe && (
-        <div className="text-[10px] text-slate-400 mb-2 italic">
+        <div className="text-xs text-slate-300 mb-2 italic leading-relaxed">
           GMPE will be auto-selected based on the tectonic region (Himalaya, Northeast, or Peninsular). Enable this toggle to manually override.
         </div>
       )}
 
-      <div className={`grid grid-cols-2 gap-2 transition-opacity ${useCustomGmpe ? 'opacity-100' : 'opacity-40 pointer-events-none'}`}>
+      <div className={`grid grid-cols-2 gap-2 transition-opacity ${useCustomGmpe ? 'opacity-100' : 'opacity-60 pointer-events-none'}`}>
         {PARAMS.map(({ key, label }) => (
           <div key={key} className="flex flex-col">
-            <label className="text-[10px] text-slate-500 mb-0.5">{label}</label>
+            <label className="text-[10px] text-slate-300 font-medium mb-0.5">{label}</label>
             <input
               type="number" step="0.001"
               value={gmpeParams[key]}
               onChange={(e) => { const v = parseFloat(e.target.value); updateGmpeParam(key, isNaN(v) ? 0 : v); }}
               disabled={!useCustomGmpe}
-              className="w-full bg-slate-900 border border-slate-700 text-slate-300 font-mono text-xs rounded px-2 py-1 focus:outline-none focus:border-cyan-500 disabled:opacity-50"
+              className="w-full bg-slate-950 border border-slate-600 text-white font-mono text-xs rounded px-2 py-1 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 disabled:bg-slate-900 disabled:text-slate-400 disabled:border-slate-700"
             />
           </div>
         ))}

@@ -9,14 +9,14 @@ export function HazardModules() {
 
   return (
     <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
-      <div className="text-xs text-slate-400 uppercase tracking-wider mb-3">Hazard Intelligence Modules</div>
+      <div className="text-xs text-slate-200 font-semibold uppercase tracking-wider mb-3">Hazard Intelligence Modules</div>
       <div className="space-y-3">
         {HAZARD_LAYERS.map((layer) => {
           const config = hazardLayers[layer.id];
           return (
             <div key={layer.id} className={`p-2 rounded border ${layer.placeholder ? 'opacity-50 grayscale border-slate-700' : 'border-slate-600 bg-slate-900/50'}`}>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-slate-300 font-medium flex items-center">
+                <span className="text-xs text-slate-100 font-semibold flex items-center">
                   {layer.label}
                   {layer.placeholder && (
                     <span className="ml-2 text-[9px] px-1 rounded border border-slate-600 text-slate-400 uppercase">Placeholder</span>

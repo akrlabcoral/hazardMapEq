@@ -28,7 +28,7 @@ export function DisastersPanel() {
       <div className="flex gap-3">
         <button
           onClick={clearSimulationState}
-          className="flex-1 flex justify-center items-center gap-2 px-5 py-3 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 hover:border-slate-500"
+          className="flex-1 flex justify-center items-center gap-2 px-5 py-3 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 bg-slate-700 hover:bg-slate-600 text-slate-100 border border-slate-500 hover:border-slate-400"
         >
           <RefreshCw size={16} />
           Clear Map
@@ -38,8 +38,8 @@ export function DisastersPanel() {
           disabled={!earthquakeEpicenter || isSimulationRunning}
           className={`flex-1 flex justify-center items-center gap-2 px-5 py-3 rounded-lg font-bold text-sm uppercase tracking-wider transition-all duration-300 ${
             !earthquakeEpicenter || isSimulationRunning
-              ? 'bg-slate-800 text-slate-600 border border-slate-700 cursor-not-allowed'
-              : 'bg-red-600/80 hover:bg-red-500 text-white border border-red-500/50 shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:shadow-[0_0_25px_rgba(239,68,68,0.5)]'
+              ? 'bg-slate-800 text-slate-400 border border-slate-700 cursor-not-allowed opacity-80'
+              : 'bg-red-600 hover:bg-red-500 text-white border border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.3)] hover:shadow-[0_0_25px_rgba(239,68,68,0.5)]'
           }`}
         >
           <Play size={16} />

@@ -39,14 +39,14 @@ export function EpicenterControl() {
   return (
     <div className="p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
       <div className="flex justify-between items-center">
-        <span className="font-semibold text-slate-300">Earthquake Epicenter</span>
+        <span className="font-semibold text-slate-100">Earthquake Epicenter</span>
         <div className="flex gap-2">
           {epicenterRegion && (
             <span className="text-[10px] px-2 py-1 rounded bg-cyan-900/40 text-white border border-cyan-700/50">
               {epicenterRegion}
             </span>
           )}
-          <span className={`text-xs px-2 py-1 rounded border ${epicenter ? 'bg-red-900/30 text-red-400 border-red-500/30' : 'bg-slate-900 text-slate-500 border-slate-700'}`}>
+          <span className={`text-xs px-2 py-1 rounded border ${epicenter ? 'bg-red-900/30 text-red-400 border-red-500/30' : 'bg-slate-700 text-slate-300 border-slate-500'}`}>
             {epicenter ? 'ACTIVE' : 'WAITING'}
           </span>
         </div>
@@ -55,22 +55,22 @@ export function EpicenterControl() {
 
       <div className="flex gap-2 mt-2">
         <div className="flex-1">
-          <label className="text-xs text-slate-500 block mb-1">Latitude</label>
+          <label className="text-xs text-slate-300 font-medium block mb-1">Latitude</label>
           <input
             type="number" step="0.0001"
             value={epicenter?.lat ?? ''}
             onChange={handleLatChange}
-            className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-slate-950 border border-slate-600 text-white placeholder:text-slate-500 text-sm rounded px-2 py-1 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
             placeholder="e.g. 22.5726"
           />
         </div>
         <div className="flex-1">
-          <label className="text-xs text-slate-500 block mb-1">Longitude</label>
+          <label className="text-xs text-slate-300 font-medium block mb-1">Longitude</label>
           <input
             type="number" step="0.0001"
             value={epicenter?.lng ?? ''}
             onChange={handleLngChange}
-            className="w-full bg-slate-900 border border-slate-700 text-white text-sm rounded px-2 py-1 focus:outline-none focus:border-cyan-500"
+            className="w-full bg-slate-950 border border-slate-600 text-white placeholder:text-slate-500 text-sm rounded px-2 py-1 focus:outline-none focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400"
             placeholder="e.g. 88.3639"
           />
         </div>
@@ -81,8 +81,8 @@ export function EpicenterControl() {
           onClick={() => setIsPlacing(!isPlacing)}
           className={`w-full flex justify-center items-center gap-2 py-2 rounded text-xs font-bold uppercase tracking-wider transition-all duration-300 ${
             isPlacing
-              ? 'bg-slate-700 text-white border border-slate-500'
-              : 'bg-slate-700/50 hover:bg-slate-600 text-slate-300 border border-slate-600'
+              ? 'bg-cyan-600 text-white border border-cyan-500'
+              : 'bg-slate-700 hover:bg-slate-600 text-slate-100 border border-slate-500'
           }`}
         >
           {isPlacing ? 'Cancel Pin Drop' : 'Drop Pin on Map'}
