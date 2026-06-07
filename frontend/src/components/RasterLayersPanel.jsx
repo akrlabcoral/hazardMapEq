@@ -3,7 +3,7 @@ import { Eye, EyeOff, Trash2, UploadCloud } from 'lucide-react';
 import useStore from '../store/useStore';
 import { rasterService } from '../services/rasterService';
 
-export default function RasterLayersPanel() {
+export default function RasterLayersPanel({ isAdmin = true }) {
   const fileInputRef = useRef(null);
   const rasterLayers = useStore((state) => state.rasterLayers);
   const addRasterLayer = useStore((state) => state.addRasterLayer);
@@ -158,7 +158,7 @@ export default function RasterLayersPanel() {
                 </div>
               </div>
 
-              {layer.visible && (
+              {layer.visible && isAdmin && (
                 <div className="flex items-center gap-3">
                   <span className="text-[10px] text-slate-500 uppercase tracking-wider w-12">Opacity</span>
                   <input 

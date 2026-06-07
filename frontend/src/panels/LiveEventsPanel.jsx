@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useStore from '../store/useStore';
+import { useSimulation } from '../hooks/useSimulation';
 import { Filter } from 'lucide-react';
 
 function timeAgo(isoString) {
@@ -32,6 +33,7 @@ export default function LiveEventsPanel() {
   const liveEvents  = useStore((s) => s.liveEvents);
   const setLiveEvents = useStore((s) => s.setLiveEvents);
   const wsConnected = useStore((s) => s.wsConnected);
+  const { handleRunSimulation } = useSimulation();
 
   const [minMag, setMinMag] = useState('');
   const [timeframe, setTimeframe] = useState('24h');
@@ -137,7 +139,17 @@ export default function LiveEventsPanel() {
           </div>
         ) : (
           filteredEvents.map((event, i) => (
-            <div key={event.id ?? i} className="flex items-center gap-3 p-3 border-b border-slate-700/30 hover:bg-slate-700/30 transition-colors rounded-lg group">
+            <div 
+              key={event.id ?? i} 
+              className="flex items-center gap-3 p-3 border-b border-slate-700/30 hover:bg-slate-700/30 hover:bg-slate-800 transition-colors rounded-lg group cursor-pointer"
+              onClick={() => {
+                const store = useStore.getState();
+                store.setEarthquakeEpicenter({ lat: event.latitude, lng: event.longitude });
+                store.setEarthquakeMagnitude(event.magnitude);
+                store.setEarthquakeDepth(event.depth_km || 10);
+                handleRunSimulation();
+              }}
+            >
               <MagBadge magnitude={event.magnitude} />
               <div className="flex-1 min-w-0">
                 <div className="text-slate-200 text-xs font-semibold whitespace-nowrap overflow-hidden text-ellipsis">

@@ -35,6 +35,8 @@ export default function PublicDashboard() {
     if (!current || current === 'disasters') {
       forceActiveSection('live_events');
     }
+    // Force light theme for public dashboard
+    useStore.setState({ mapStyle: 'light' });
   }, [forceActiveSection]);
 
   // Start WebSocket connection — real-time earthquake events + auto-sim results
@@ -44,7 +46,7 @@ export default function PublicDashboard() {
     <div className="relative w-full h-full flex flex-col">
       {/* Global alert banner for M≥5.0 auto-detected events */}
       <AlertBanner />
-      <Navbar />
+      <Navbar isAdmin={false} />
 
       <div className="flex-1 relative flex overflow-hidden">
         <Sidebar isAdmin={false} />
@@ -78,7 +80,7 @@ export default function PublicDashboard() {
                   ) : (
                     PANEL_TITLE[activeSection] && (
                       <ControlPanel title={PANEL_TITLE[activeSection]}>
-                        {activeSection === 'layers' && <LayersPanel />}
+                        {activeSection === 'layers' && <LayersPanel isAdmin={false} />}
                         {activeSection === 'alerts' && <AlertsPanel />}
                       </ControlPanel>
                     )

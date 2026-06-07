@@ -39,7 +39,7 @@ export default function AdminDashboard() {
     <div className="relative w-full h-full flex flex-col">
       {/* Global alert banner for M≥5.0 auto-detected events */}
       <AlertBanner />
-      <Navbar />
+      <Navbar isAdmin={true} />
 
       <div className="flex-1 relative flex overflow-hidden">
         <Sidebar isAdmin={true} />
@@ -74,7 +74,7 @@ export default function AdminDashboard() {
                   ) : (
                     <ControlPanel title={PANEL_TITLE[activeSection] ?? activeSection.toUpperCase()}>
                       {activeSection === 'disasters' && <DisastersPanel />}
-                      {activeSection === 'layers'    && <LayersPanel />}
+                      {activeSection === 'layers'    && <LayersPanel isAdmin={true} />}
                       {activeSection === 'alerts'    && <AlertsPanel />}
                     </ControlPanel>
                   )}

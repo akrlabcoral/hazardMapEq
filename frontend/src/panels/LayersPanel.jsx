@@ -20,7 +20,7 @@ const LAYER_LABELS = {
   terrain:          'Terrain',
 };
 
-export function LayersPanel() {
+export function LayersPanel({ isAdmin = true }) {
   const {
     gisLayers, toggleGisLayer,
     layerOpacities, setLayerOpacity,
@@ -41,14 +41,14 @@ export function LayersPanel() {
             visible={gisLayers[key]}
             opacity={layerOpacities[key]}
             onToggle={() => toggleGisLayer(key)}
-            onOpacityChange={(v) => setLayerOpacity(key, v)}
+            onOpacityChange={isAdmin ? (v) => setLayerOpacity(key, v) : undefined}
           />
         ))}
       </div>
 
       {/* 2. Raster Layer */}
       <React.Suspense fallback={<div className="p-4 text-sm text-slate-400 italic">Loading Raster panel...</div>}>
-        <RasterLayersPanel />
+        <RasterLayersPanel isAdmin={isAdmin} />
       </React.Suspense>
 
       {/* 3. Base Layers */}
@@ -61,7 +61,7 @@ export function LayersPanel() {
             visible={gisLayers[key]}
             opacity={layerOpacities[key]}
             onToggle={() => toggleGisLayer(key)}
-            onOpacityChange={(v) => setLayerOpacity(key, v)}
+            onOpacityChange={isAdmin ? (v) => setLayerOpacity(key, v) : undefined}
           />
         ))}
       </div>
