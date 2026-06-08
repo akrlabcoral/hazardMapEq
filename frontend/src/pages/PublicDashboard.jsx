@@ -6,12 +6,10 @@ import MapView from '../components/MapView';
 import MapLegend from '../components/MapLegend';
 import ControlPanel from '../components/ControlPanel';
 import StateHoverTooltip from '../components/StateHoverTooltip';
-import StateAnalysisPanel from '../components/StateAnalysisPanel';
 import AlertBanner from '../components/AlertBanner';
 import { LayersPanel } from '../panels/LayersPanel';
 import { AlertsPanel } from '../panels/AlertsPanel';
 import RightSidebar from '../components/RightSidebar';
-import RightControlPanel from '../components/RightControlPanel';
 import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 
@@ -50,7 +48,7 @@ export default function PublicDashboard() {
 
       <div className="flex-1 relative flex overflow-hidden">
         <Sidebar isAdmin={false} />
-        <RightSidebar />
+        <RightSidebar isAdmin={false} />
         <MapView isAdmin={false} />
         <StateHoverTooltip />
         <MapLegend />
@@ -93,19 +91,6 @@ export default function PublicDashboard() {
           {/* Right Control Panels (Center aligned vertically) */}
           <div className="flex flex-col justify-center gap-4 pointer-events-none [&>*]:pointer-events-auto h-full">
             <AnimatePresence mode="wait">
-              {activeRightSection === 'analysis' && (
-                <motion.div
-                  key="analysis"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="w-[400px]"
-                >
-                  <RightControlPanel title="STATE ANALYSIS">
-                    <StateAnalysisPanel />
-                  </RightControlPanel>
-                </motion.div>
-              )}
             </AnimatePresence>
           </div>
         </motion.div>

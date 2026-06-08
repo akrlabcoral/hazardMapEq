@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Menu, MousePointer2, Waves } from 'lucide-react';
 import useStore from '../store/useStore';
 
-export default function RightSidebar() {
+export default function RightSidebar({ isAdmin = true }) {
   const isRightSidebarOpen = useStore((state) => state.isRightSidebarOpen);
   const toggleRightSidebar = useStore((state) => state.toggleRightSidebar);
   const activeRightSection = useStore((state) => state.activeRightSection);
@@ -40,7 +40,7 @@ export default function RightSidebar() {
       isActive: activeRightSection === 'analysis', 
       onClick: () => setActiveRightSection('analysis') 
     },
-  ];
+  ].filter(item => isAdmin || item.id !== 'analysis');
 
   const [isHovered, setIsHovered] = useState(false);
   const isExpanded = isRightSidebarOpen || isHovered;
