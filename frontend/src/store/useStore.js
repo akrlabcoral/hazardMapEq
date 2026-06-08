@@ -97,6 +97,7 @@ const useStore = create((set) => ({
     indiaBoundary: true,
     stateBoundaries: true,
     tectonicPlates: true,
+    gpsVectors: false,
   },
   toggleGisLayer: (layer) => set((state) => ({
     gisLayers: { ...state.gisLayers, [layer]: !state.gisLayers[layer] }

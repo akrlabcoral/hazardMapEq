@@ -108,6 +108,55 @@ export const LAYER_CONFIGS = {
       }
     ]
   },
+  gpsVectors: {
+    sourceId: 'gps-vectors-source',
+    dataUrl: 'gps_vectors.geojson',
+    lazy: true,
+    layers: [
+      {
+        id: 'gps-vectors-circle',
+        type: 'circle',
+        source: 'gps-vectors-source',
+        filter: ['==', 'type', 'anchor'],
+        paint: {
+          'circle-radius': 3,
+          'circle-color': '#ef4444',
+          'circle-stroke-color': '#000000',
+          'circle-stroke-width': 1
+        }
+      },
+      {
+        id: 'gps-vectors-line',
+        type: 'line',
+        source: 'gps-vectors-source',
+        filter: ['==', 'type', 'vector'],
+        paint: {
+          'line-color': '#ef4444',
+          'line-width': 4.0,
+          'line-opacity': 0.9
+        }
+      },
+      {
+        id: 'gps-vectors-head',
+        type: 'symbol',
+        source: 'gps-vectors-source',
+        filter: ['==', 'type', 'head'],
+        layout: {
+          'text-field': '^',
+          'text-rotate': ['get', 'azimuth'],
+          'text-size': 20,
+          'text-allow-overlap': true,
+          'text-ignore-placement': true,
+          'text-offset': [0, 0.2]
+        },
+        paint: {
+          'text-color': '#ef4444',
+          'text-halo-color': '#0f172a',
+          'text-halo-width': 1
+        }
+      }
+    ]
+  },
 };
 
 // Raster layer configs (no GeoJSON)

@@ -11,7 +11,7 @@ import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 const RasterLayersPanel = React.lazy(() => import('../components/RasterLayersPanel'));
 
 const GIS_BOUNDARY_LAYERS = ['indiaBoundary', 'stateBoundaries'];
-const GLOBAL_LAYERS = ['tectonicPlates'];
+const GLOBAL_LAYERS = ['tectonicPlates', 'gpsVectors'];
 const BASE_LAYERS = ['satellite', 'terrain'];
 
 const LAYER_LABELS = {
@@ -20,6 +20,7 @@ const LAYER_LABELS = {
   tectonicPlates:   'Tectonic Plate Boundaries',
   satellite:        'Satellite',
   terrain:          'Terrain',
+  gpsVectors:       'GPS Velocity Vectors',
 };
 
 export function LayersPanel({ isAdmin = true }) {
