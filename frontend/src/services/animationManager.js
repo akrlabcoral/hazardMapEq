@@ -5,6 +5,9 @@ class AnimationManager {
     this.shockwaveAnimRef = null;
     this.timeoutId = null;
     this.map = null;
+    this.isLooping = false;
+    this.loopConfig = null;
+    this.loopTimeoutId = null;
     // We intentionally removed setIsSimulationRunning to prevent state deadlocks.
     // The UI 'Run' button state should strictly follow the API fetch request,
     // not the async drawing loops.
@@ -31,16 +34,30 @@ class AnimationManager {
       maxRadiusKm = 300; // fallback
     }
 
+    this.isLooping = true;
+    this.loopConfig = { epicenter, maxRadiusKm, duration };
+    this._runCycle();
+  }
+
+  _runCycle() {
+    if (!this.isLooping || !this.map || !this.map.getStyle()) return;
+
+    if (this.shockwaveAnimRef) cancelAnimationFrame(this.shockwaveAnimRef);
+
+    const { epicenter, maxRadiusKm, duration } = this.loopConfig;
     const startTime = performance.now();
 
-    // 10-second temporal failsafe. No matter what happens, kill it after 10s.
+    // Temporal failsafe. Force stop if it hangs for too long.
+    if (this.timeoutId) clearTimeout(this.timeoutId);
     this.timeoutId = setTimeout(() => {
-      console.warn('[AnimationManager] Animation exceeded temporal timeout. Force stopping.');
-      this.stopShockwave();
-    }, 10000);
+      console.warn('[AnimationManager] Animation cycle exceeded temporal timeout. Force ending cycle.');
+      this._endCycle();
+    }, duration + 5000);
 
     const animate = (now) => {
       try {
+        if (!this.isLooping) return; // double check
+
         const elapsed = now - startTime;
         const progress = Math.min(elapsed / duration, 1);
 
@@ -75,7 +92,7 @@ class AnimationManager {
         if (progress < 1) {
           this.shockwaveAnimRef = requestAnimationFrame(animate);
         } else {
-          this.stopShockwave();
+          this._endCycle();
         }
       } catch (err) {
         console.error('[AnimationManager] Crash detected in animation loop:', err);
@@ -86,7 +103,33 @@ class AnimationManager {
     this.shockwaveAnimRef = requestAnimationFrame(animate);
   }
 
+  _endCycle() {
+    if (this.timeoutId) {
+      clearTimeout(this.timeoutId);
+      this.timeoutId = null;
+    }
+
+    try {
+      if (this.map && this.map.getStyle()) {
+        const source = this.map.getSource('sim-shockwave-source');
+        if (source && source.setData) {
+          source.setData({ type: 'FeatureCollection', features: [] });
+        }
+      }
+    } catch (err) {
+      console.error('[AnimationManager] Failed to clear layer state:', err);
+    }
+
+    if (this.isLooping) {
+      this.loopTimeoutId = setTimeout(() => {
+        this._runCycle();
+      }, 2000); // 2-second pause before next loop
+    }
+  }
+
   stopShockwave() {
+    this.isLooping = false;
+
     if (this.shockwaveAnimRef) {
       cancelAnimationFrame(this.shockwaveAnimRef);
       this.shockwaveAnimRef = null;
@@ -95,6 +138,11 @@ class AnimationManager {
     if (this.timeoutId) {
       clearTimeout(this.timeoutId);
       this.timeoutId = null;
+    }
+
+    if (this.loopTimeoutId) {
+      clearTimeout(this.loopTimeoutId);
+      this.loopTimeoutId = null;
     }
 
     try {
