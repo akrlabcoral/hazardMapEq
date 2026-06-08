@@ -516,11 +516,12 @@ class RasterService {
         console.log(`Decoded: ${result.decodeWidth}x${result.decodeHeight} (from ${result.fullWidth}x${result.fullHeight})`);
         if (result.downsampled) console.warn(`⚠ Large raster was downsampled for memory safety.`);
 
+        const beforeId = map.getLayer('india-boundary-fill') ? 'india-boundary-fill' : undefined;
         map.addLayer({
           id: layerId, type: 'raster', source: sourceId,
           layout: { 'visibility': 'visible' },
           paint: { 'raster-opacity': 0.8, 'raster-fade-duration': 0 }
-        });
+        }, beforeId);
 
         console.log(`Layer "${layerId}" added successfully.`);
       }
@@ -570,6 +571,7 @@ class RasterService {
         console.log(`Adding built-in layer: ${layerId}`);
         console.log(`Decoded: ${result.decodeWidth}x${result.decodeHeight}`);
 
+        const beforeId = map.getLayer('india-boundary-fill') ? 'india-boundary-fill' : undefined;
         map.addLayer({
           id: layerId, type: 'raster', source: sourceId,
           layout: { 'visibility': options.visible !== false ? 'visible' : 'none' },
@@ -577,7 +579,7 @@ class RasterService {
             'raster-opacity': options.opacity !== undefined ? options.opacity : 0.8,
             'raster-fade-duration': 0
           }
-        });
+        }, beforeId);
 
         console.log(`Layer "${layerId}" added successfully.`);
       }

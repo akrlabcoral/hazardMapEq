@@ -264,6 +264,20 @@ export default function MapView({ isAdmin = false }) {
       mapLayerService.initializeSourcesAndLayers(map.current, useStore.getState().gisLayers);
       rasterService.setMap(map.current);
 
+      if (!isAdmin) {
+        const popLayer = useStore.getState().rasterLayers.find(l => l.id === 'population-exposure');
+        if (popLayer && !popLayer.visible && !popLayer.isLoaded) {
+          useStore.getState().updateRasterLayerVisibility('population-exposure', true);
+          rasterService.addGeoTiffFromUrl(popLayer.url, popLayer.id, {
+            opacity: popLayer.opacity,
+            visible: true,
+            renderingModeOverride: 'population'
+          }).then(() => {
+            useStore.getState().updateRasterLayerLoaded(popLayer.id, true);
+          }).catch(console.error);
+        }
+      }
+
       if (!isMapEventsInitialized) {
         isMapEventsInitialized = true;
         
