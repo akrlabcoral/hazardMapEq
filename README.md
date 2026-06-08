@@ -2,77 +2,89 @@
 
 # 🌍 HazardMap
 
-**Scientific Earthquake Hazard Simulation & Visualization Platform**
+**Real-Time Earthquake Hazard Mapping & Simulation Engine**
 
-*A full-stack geospatial application designed to model, simulate, and visualize seismic impacts, specifically engineered for West Bengal, India.*
+*A full-stack, scientific-grade geospatial application designed to monitor, model, and visualize real-time seismic impacts across the Indian Subcontinent.*
 
-![Python](https://img.shields.io/badge/backend-FastAPI%20%28Python%29-blue) ![React](https://img.shields.io/badge/frontend-React%20%2B%20Vite-cyan) ![GeoPandas](https://img.shields.io/badge/GIS-GeoPandas%20%2B%20Shapely-green) ![MapLibre](https://img.shields.io/badge/maps-MapLibre%20GL%20JS-purple)
+![Python](https://img.shields.io/badge/backend-FastAPI%20%28Python%29-blue) ![React](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-cyan) ![PostgreSQL](https://img.shields.io/badge/database-PostgreSQL%2016-blue) ![Docker](https://img.shields.io/badge/deployment-Docker%20Compose-2496ED) ![MapLibre](https://img.shields.io/badge/maps-MapLibre%20GL%20JS-purple)
 
 </div>
 
 ---
 
-## Overview
+## 📌 Overview
 
-HazardMap has evolved into a rigorous scientific simulation tool. It uses a **FastAPI (Python)** backend to run mathematical Ground Motion Prediction Equations (GMPEs) and a **React/Vite** frontend to visualize the resulting Peak Ground Acceleration (PGA) heatmaps using MapLibre GL JS. 
+HazardMap is a rigorous real-time seismic hazard platform. It actively monitors global and regional earthquake data feeds (USGS and India's NCS), immediately applies Ground Motion Prediction Equations (GMPEs) optimized for specific tectonic regions, and pushes interactive Peak Ground Acceleration (PGA) heatmaps directly to connected browsers via WebSockets in a matter of seconds.
 
-The current implementation focuses on simulating earthquakes affecting **West Bengal**, calculating impacts across a 5x5 km spatial grid, dynamically adjusting for local soil types, and estimating district-level damage.
+The system evaluates hazard over a continuous 20-kilometer hexagonal grid across the entire nation, incorporating local `Vs30` soil data to apply realistic site-specific amplification factors.
 
 ---
 
 ## 🔬 Scientific Engine Features
 
-- **Multiple GMPE Attenuation Models**: Choose between distinct regional attenuation behaviors:
-  - `Indian Shield`: Balanced attenuation for peninsular India (Default).
-  - `Himalayan Region`: Strong near-source shaking with rapid attenuation for complex tectonic boundaries.
-  - `Stable Continental`: Slower attenuation typical of cratonic shields.
-- **Magnitude & Depth Scaling**: The engine rigorously scales shaking intensity based on earthquake magnitude (Mw) and hypocentral depth ($R = \sqrt{D_{epi}^2 + depth^2}$).
-- **Soil Amplification (Vs30 Proxy)**: The spatial grid intersects with geological raster data to apply precise amplification factors (e.g., Soft Sediment 2.0x, Rock 0.8x) to the base PGA.
-- **Damage Classification**: Translates PGA values (`g`) into structural damage categories (Negligible, Light, Moderate, Strong, Severe).
-- **Automated District Summaries**: Automatically aggregates severe cell counts and average PGA values per district for rapid response planning.
+- **Real-Time Automated Ingestion**: Continuous polling of the USGS and National Center for Seismology (NCS) feeds. Incoming events are spatially and temporally deduplicated.
+- **Tectonic Region Detection**: The engine automatically classifies the epicenter into distinct tectonic zones (`Himalayan`, `Northeast India`, `Peninsular Shield`) and selects the appropriate empirical GMPE model.
+- **High-Performance Vectorized Math**: Replaces slow Python loops with vectorized NumPy math to evaluate Ground Motion on 6,500+ grid cells instantly.
+- **Soil Amplification (Vs30 Proxy)**: Directly samples a national GeoTIFF raster to extract local Vs30 values, assign NEHRP site classifications, and compute non-linear soil amplification factors on the fly.
+- **Contour Polygon Generation**: Utilizes `scipy.interpolate.griddata` and `matplotlib` to convert scattered cell data into smoothed, USGS ShakeMap-compliant GeoJSON contour polygons.
+- **WebSocket Broadcast**: Employs an ultra-fast asynchronous `orjson` WebSocket broadcaster to push live simulation results directly to all connected users.
 
 ## 🗺️ Frontend Capabilities
 
-- **Interactive Cinematic Map**: A highly polished, glassmorphism-styled command center interface.
-- **Dynamic Scientific Visualization**: Instantly toggle the heatmap rendering between **Raw Base PGA** and **Soil Amplified PGA**.
-- **Vector & Raster Layers**: Superimpose critical infrastructure (hospitals, shelters, roads) and environmental rasters (precipitation, elevation) on top of the simulation.
-- **Data Export**: Export simulation results directly to CSV or JSON formats.
+- **Interactive GIS Dashboard**: Built using React 19, MapLibre GL JS, and Zustand state management. Features dark/light themes and collapsible data panels.
+- **Live Event Feeds**: View real-time incoming earthquakes. Earthquakes of Magnitude $\ge$ 6.0 trigger automatic red-alert banners across the UI.
+- **Manual "What-If" Simulations**: Users can drop a pin anywhere on the map, set a custom magnitude and depth, and run an instant manual simulation.
+- **Dynamic Layers & Data Export**: Toggle satellite/terrain overlays, regional boundaries, and the raw soil amplification overlay. Export simulation results to JSON, CSV, or GeoJSON directly from the browser.
 
 ---
 
 ## 🛠️ Architecture & Tech Stack
 
-### `backend/` (FastAPI + Python)
-The scientific engine is strictly separated into modular domains:
-- **`api/`**: Pydantic validated REST endpoints.
-- **`seismic/`**: GMPE mathematical formulas and distance calculations.
-- **`soil/`**: Amplification factors and soil-type mapping.
-- **`damage/`**: Fragility curves and impact classification.
-- **`gis/`**: GeoPandas dataframes, spatial joins, raster sampling, and bounding boxes.
+### `backend/` (FastAPI + Python 3.10+)
+The core scientific computation and ingestion engine:
+- **`ingest/`**: Async HTTP pollers for USGS and NCS with spatial-temporal deduplication.
+- **`layers/pga/`**: Region definitions and GMPE mathematical equations.
+- **`soil/`**: Rasterio-powered GeoTIFF caching and batch coordinate sampling for Vs30.
+- **`jobs/`**: Background AsyncIO queue and blocking thread dispatch (for matplotlib).
+- **`models/`**: Thread-safe `psycopg2` PostgreSQL connection pooling for persistence.
 
-**Running the Backend:**
-```bash
-cd backend
-python -m uvicorn app.main:app --reload
-```
-*(Runs on `http://localhost:8000`)*
+### `frontend/` (React 19 + Vite)
+The real-time MapLibre GL presentation layer:
+- **`hooks/`**: Custom hooks for WebSocket management (`useWebSocket`) and simulation data handling.
+- **`store/`**: Centralized `useStore` (Zustand) for global Map and UI state.
+- **`services/`**: Map layer toggling, raster injection, and GeoJSON polygon styling logic.
 
-### `frontend/` (React + Vite + TailwindCSS)
-The presentation layer handling pure rendering and user state.
-- **`store/`**: Zustand for global state management.
-- **`components/`**: Modular MapLibre panels, cinematic legends, and scientific toggles.
-
-**Running the Frontend:**
-```bash
-cd frontend
-npm install
-npm run dev
-```
-*(Runs on `http://localhost:5173`)*
+### Database
+- **PostgreSQL 16**: Relational storage of all ingested events and computed simulations.
 
 ---
 
-## 🚀 Future Roadmap
-- Integration with live USGS and IMD (India Meteorological Department) GeoJSON earthquake feeds.
-- Integration of PostGIS for advanced network routing (evacuation paths) around severe damage zones.
-- Support for detailed fragility curves based on building typologies (e.g., unreinforced masonry vs RC frames).
+## 🚀 Getting Started
+
+The entire application is fully dockerized for single-command orchestration.
+
+### Prerequisites
+- Docker & Docker Compose installed.
+
+### Quick Start
+
+1. Clone the repository and navigate to the project root:
+   ```bash
+   cd hazardmap-realtime
+   ```
+2. Build and start the cluster:
+   ```bash
+   docker compose up --build
+   ```
+3. Access the Application:
+   - **Frontend UI**: `http://localhost:5173`
+   - **Backend API Docs**: `http://localhost:8000/docs`
+
+> **Note**: The backend initializes a one-time connection to the PostgreSQL database and loads the 6,500-cell GeoJSON grid into memory at startup. The first initialization may take a few seconds.
+
+---
+
+## 🏗️ Future Roadmap
+- Integration of finite fault models (rupture geometry) rather than point-source hypocenters for M > 7.0 events.
+- Advanced PostGIS integration for dynamic routing of emergency evacuation vehicles around high-PGA zones.
+- Support for structural building typologies to compute precise localized damage fragility curves rather than generic intensity indicators.
