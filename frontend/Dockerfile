@@ -11,7 +11,7 @@ RUN npm install
 # Copy source code and config files
 COPY src/ ./src/
 COPY public/ ./public/
-COPY index.html vite.config.js tailwind.config.js postcss.config.js ./
+COPY index.html admin.html vite.config.js tailwind.config.js postcss.config.js ./
 
 # Expose Vite dev server port
 EXPOSE 5173
