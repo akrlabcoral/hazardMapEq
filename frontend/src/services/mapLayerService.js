@@ -1,6 +1,16 @@
 import { LAYER_CONFIGS, RASTER_CONFIGS } from './layerManager';
 import { fetchGeoJson } from './geoJsonLoader';
-import { mapLayerManager } from './mapLayerManager';
+
+const SIMULATION_LAYER_ORDER = [
+  'sim-soil-amp-layer',
+  'sim-wb-grid-fill',
+  'sim-contour-fill',
+  'sim-contour-stroke',
+  'sim-shockwave',
+  'sim-epicenter-glow',
+  'sim-epicenter-ring',
+  'sim-epicenter',
+];
 
 class MapLayerService {
   constructor() {
@@ -8,6 +18,81 @@ class MapLayerService {
     this.initialized = false;
     this.dataLoaded = {};
   }
+
+  // --- Safe MapLibre Layer Management ---
+
+  layerExists(map, layerId) {
+    if (!map || !map.getStyle()) return false;
+    return !!map.getLayer(layerId);
+  }
+
+  sourceExists(map, sourceId) {
+    if (!map || !map.getStyle()) return false;
+    return !!map.getSource(sourceId);
+  }
+
+  addSourceSafe(map, sourceId, sourceConfig) {
+    if (!map || !map.getStyle()) return;
+    if (this.sourceExists(map, sourceId)) {
+      console.warn(`[MapLayerService] Source ${sourceId} already exists. Skipping.`);
+      return;
+    }
+    console.debug(`[MapLayerService] Adding source: ${sourceId}`);
+    map.addSource(sourceId, sourceConfig);
+  }
+
+  removeSourceSafe(map, sourceId) {
+    if (!map || !map.getStyle()) return;
+    if (this.sourceExists(map, sourceId)) {
+      console.debug(`[MapLayerService] Removing source: ${sourceId}`);
+      map.removeSource(sourceId);
+    }
+  }
+
+  addLayerSafe(map, layerConfig, beforeId = undefined) {
+    if (!map || !map.getStyle()) return;
+    if (this.layerExists(map, layerConfig.id)) {
+      console.warn(`[MapLayerService] Layer ${layerConfig.id} already exists. Skipping.`);
+      return;
+    }
+    console.debug(`[MapLayerService] Adding layer: ${layerConfig.id}`);
+    if (beforeId && this.layerExists(map, beforeId)) {
+      map.addLayer(layerConfig, beforeId);
+    } else {
+      map.addLayer(layerConfig);
+    }
+  }
+
+  removeLayerSafe(map, layerId) {
+    if (!map || !map.getStyle()) return;
+    if (this.layerExists(map, layerId)) {
+      console.debug(`[MapLayerService] Removing layer: ${layerId}`);
+      map.removeLayer(layerId);
+    }
+  }
+
+  clearSourcesData(map, sourceIds) {
+    if (!map || !map.isStyleLoaded()) return;
+    const emptyData = { type: 'FeatureCollection', features: [] };
+    sourceIds.forEach(id => {
+      const source = map.getSource(id);
+      if (source && source.setData) {
+        console.debug(`[MapLayerService] Clearing data for source: ${id}`);
+        source.setData(emptyData);
+      }
+    });
+  }
+
+  bringSimulationLayersToFront(map) {
+    if (!map || !map.getStyle()) return;
+    SIMULATION_LAYER_ORDER.forEach(layerId => {
+      if (this.layerExists(map, layerId)) {
+        map.moveLayer(layerId);
+      }
+    });
+  }
+
+  // --- Stateful Layer Visibility & Data Loading ---
 
   loadGeoJsonData(config) {
     if (this.dataLoaded[config.sourceId]) return;
@@ -27,9 +112,6 @@ class MapLayerService {
     if (this.initialized && this.map === mapInstance) return;
     this.map = mapInstance;
     
-    // Add raster sources and layers BELOW simulation layers.
-    // We insert them before 'sim-soil-amp-layer' (the bottommost sim layer)
-    // so satellite/terrain never cover the heatmap.
     const BASE_LAYER_ANCHOR = 'sim-soil-amp-layer';
 
     for (const [key, config] of Object.entries(RASTER_CONFIGS)) {
@@ -51,10 +133,8 @@ class MapLayerService {
       }
     }
 
-    // Add GeoJSON sources and layers
     for (const [key, config] of Object.entries(LAYER_CONFIGS)) {
       if (!this.map.getSource(config.sourceId)) {
-        // Init with empty data
         const sourceConfig = {
           type: 'geojson',
           data: { type: 'FeatureCollection', features: [] },
@@ -68,12 +148,10 @@ class MapLayerService {
         
         this.map.addSource(config.sourceId, sourceConfig);
 
-        // Fetch data asynchronously (unless lazy and initially hidden)
         if (!config.lazy || initialVisibilityState[key]) {
           this.loadGeoJsonData(config);
         }
 
-        // Add layers
         config.layers.forEach(layer => {
           if (!this.map.getLayer(layer.id)) {
             const { beforeId, ...layerConfig } = layer;
@@ -88,7 +166,7 @@ class MapLayerService {
     }
     
     this.initialized = true;
-    mapLayerManager.bringSimulationLayersToFront(this.map);
+    this.bringSimulationLayersToFront(this.map);
   }
 
   setLayerVisibility(layerKey, isVisible) {
@@ -96,7 +174,6 @@ class MapLayerService {
     
     const visibility = isVisible ? 'visible' : 'none';
     
-    // Check GeoJSON configs
     if (LAYER_CONFIGS[layerKey]) {
       const config = LAYER_CONFIGS[layerKey];
       if (isVisible && config.lazy && !this.dataLoaded[config.sourceId]) {
@@ -109,7 +186,6 @@ class MapLayerService {
       });
     }
     
-    // Check Raster configs
     if (RASTER_CONFIGS[layerKey]) {
       RASTER_CONFIGS[layerKey].layers.forEach(layer => {
         if (this.map.getLayer(layer.id)) {
@@ -118,9 +194,8 @@ class MapLayerService {
       });
     }
 
-    mapLayerManager.bringSimulationLayersToFront(this.map);
+    this.bringSimulationLayersToFront(this.map);
   }
-
 }
 
 export const mapLayerService = new MapLayerService();

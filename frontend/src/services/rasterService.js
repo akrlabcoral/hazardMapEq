@@ -1,6 +1,6 @@
 import * as GeoTIFF from 'geotiff';
 import proj4 from 'proj4';
-import { mapLayerManager } from './mapLayerManager';
+import { mapLayerService } from './mapLayerService';
 
 // ─── Memory Safety Constants ────────────────────────────────────────────────
 // Reading large GeoTIFFs in one shot crashes the browser because geotiff.js
@@ -527,7 +527,7 @@ class RasterService {
       }
 
       this.rasterCache.set(layerId, { sourceId, layerId });
-      mapLayerManager.bringSimulationLayersToFront(this.map);
+      mapLayerService.bringSimulationLayersToFront(this.map);
 
     } catch (error) {
       console.error('Failed to add GeoTIFF layer:', error);
@@ -585,7 +585,7 @@ class RasterService {
       }
 
       this.rasterCache.set(layerId, { sourceId, layerId });
-      mapLayerManager.bringSimulationLayersToFront(this.map);
+      mapLayerService.bringSimulationLayersToFront(this.map);
       if (onStateChange) onStateChange('completed');
 
     } catch (error) {
@@ -613,7 +613,7 @@ class RasterService {
     if (!map || !map.getLayer(layerId)) return;
     map.setLayoutProperty(layerId, 'visibility', isVisible ? 'visible' : 'none');
     if (isVisible) {
-      mapLayerManager.bringSimulationLayersToFront(map);
+      mapLayerService.bringSimulationLayersToFront(map);
     }
   }
 }
