@@ -108,7 +108,19 @@ class SimulationRunner:
         # Determine the appropriate GMPE model for this region
         gmpe, region = GMPESelector.select(latitude, longitude, gmpe_params)
 
-        grid     = copy.deepcopy(_NATIONWIDE_GRID)
+        # Shallow copy the grid and features list.
+        # We also shallow copy each feature and its properties dict so we can safely mutate properties.
+        # CRITICAL MEMORY OPTIMIZATION: We pass geometry by reference! No cloning coordinate arrays!
+        grid = {
+            "type": _NATIONWIDE_GRID["type"],
+            "features": []
+        }
+        for feat in _NATIONWIDE_GRID["features"]:
+            grid["features"].append({
+                "type": feat["type"],
+                "geometry": feat["geometry"],  # Pass-by-reference
+                "properties": feat["properties"].copy() # Shallow copy for mutation
+            })
         features = grid["features"]
 
         raw_pga  = _pga_engine.compute(features, magnitude, latitude, longitude, depth_km, gmpe)

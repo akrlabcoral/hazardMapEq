@@ -5,7 +5,7 @@
  * provides debugging insights into the map rendering lifecycle.
  */
 
-export const SIMULATION_LAYER_ORDER = [
+const SIMULATION_LAYER_ORDER = [
   'sim-soil-amp-layer',
   'sim-wb-grid-fill',
   'sim-contour-fill',

@@ -1,4 +1,4 @@
-export const RISK_THRESHOLDS = {
+const RISK_THRESHOLDS = {
   EXTREME:  0.8,
   SEVERE:   0.6,
   HIGH:     0.4,
@@ -6,7 +6,7 @@ export const RISK_THRESHOLDS = {
 };
 
 // Based on backend/app/config.py
-export const PGA_LEVELS = [
+const PGA_LEVELS = [
   0.001,   // < 0.001g : essentially zero shaking
   0.02,    // I–III    : No perceptible effect
   0.115,   // IV–V     : Light
@@ -16,7 +16,7 @@ export const PGA_LEVELS = [
   1.39,    // IX       : Severe
 ];
 
-export const PGA_LABELS = [
+const PGA_LABELS = [
   "No Effect",     // < 0.02
   "Light",         // 0.02 – 0.115
   "Moderate",      // 0.115 – 0.215

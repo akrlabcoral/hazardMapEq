@@ -14,7 +14,7 @@ Environment variable:
 """
 from __future__ import annotations
 
-import json
+import orjson
 import logging
 import os
 from typing import Any
@@ -168,8 +168,8 @@ def save_simulation(
                     lon,
                     mag,
                     depth,
-                    json.dumps(district_summary),
-                    json.dumps(grid_geojson) if grid_geojson is not None else None,
+                    orjson.dumps(district_summary).decode('utf-8'),
+                    orjson.dumps(grid_geojson).decode('utf-8') if grid_geojson is not None else None,
                     event_id,
                     triggered_by,
                 ),

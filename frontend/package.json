@@ -2,7 +2,6 @@
   "name": "hazardmap",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
@@ -18,11 +17,8 @@
   "type": "module",
   "dependencies": {
     "@turf/circle": "^7.3.5",
-    "@turf/helpers": "^7.3.5",
-    "@turf/isolines": "^7.3.5",
     "framer-motion": "^12.38.0",
     "geotiff": "^3.0.5",
-    "lodash": "^4.17.21",
     "lucide-react": "^1.16.0",
     "maplibre-gl": "^5.24.0",
     "proj4": "^2.20.8",

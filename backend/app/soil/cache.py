@@ -14,7 +14,7 @@ logger = logging.getLogger("hazardmap.soil.cache")
 BoundingBox = namedtuple("BoundingBox", ["left", "bottom", "right", "top"])
 
 # Internal registries
-_REGISTRY: dict[str, rasterio.DatasetReader] = {}
+_REGISTRY: dict[str, str] = {}
 _BOUNDS:   dict[str, BoundingBox] = {}
 
 
@@ -26,15 +26,15 @@ def register(state_name: str, path: str) -> None:
     if state_name in _REGISTRY:
         return
     try:
-        src = rasterio.open(path)
-        _REGISTRY[state_name] = src
-        b = src.bounds
-        _BOUNDS[state_name] = BoundingBox(b.left, b.bottom, b.right, b.top)
+        with rasterio.open(path) as src:
+            b = src.bounds
+            _BOUNDS[state_name] = BoundingBox(b.left, b.bottom, b.right, b.top)
+        _REGISTRY[state_name] = path
     except Exception as e:
         logger.warning("[SoilCache] Could not open raster for '%s': %s", state_name, e)
 
 
-def get_handle(state_name: str) -> rasterio.DatasetReader | None:
+def get_path(state_name: str) -> str | None:
     return _REGISTRY.get(state_name)
 
 
@@ -48,12 +48,7 @@ def get_all_states() -> list[str]:
 
 
 def close_all() -> None:
-    """Close all open raster handles (call on application shutdown)."""
-    for name, src in _REGISTRY.items():
-        try:
-            src.close()
-        except Exception:
-            pass
+    """Clear registry (no open handles anymore)."""
     _REGISTRY.clear()
     _BOUNDS.clear()
-    logger.info("[SoilCache] All raster handles closed.")
+    logger.info("[SoilCache] Cache cleared.")

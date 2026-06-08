@@ -13,7 +13,7 @@ Clients connect once and receive:
 from __future__ import annotations
 
 import asyncio
-import json
+import orjson
 import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
@@ -60,12 +60,12 @@ async def broadcast(message: dict) -> None:
     if not _CLIENTS:
         return
 
-    payload = json.dumps(message, default=str)
+    payload_bytes = orjson.dumps(message, default=str)
     dead: set[WebSocket] = set()
 
     for client in _CLIENTS:
         try:
-            await client.send_text(payload)
+            await client.send_text(payload_bytes.decode('utf-8'))
         except Exception:
             dead.add(client)
 
