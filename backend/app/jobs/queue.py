@@ -17,7 +17,7 @@ from __future__ import annotations
 import asyncio
 import logging
 
-from app.ingest.normalizer import EarthquakeEvent
+from app.ingest.normalizer import EarthquakeEvent, event_to_payload
 from app.jobs.simulation_worker import SimulationRunner
 from app.models.repository import mark_event_simulated, mark_event_sim_failed
 
@@ -58,16 +58,7 @@ async def run_worker() -> None:
 
         try:
             # Broadcast "simulation running" before starting
-            await broadcast({
-                "type":     "simulation_running",
-                "event_id": event.db_id,
-                "event": {
-                    "magnitude": event.magnitude,
-                    "latitude":  event.latitude,
-                    "longitude": event.longitude,
-                    "place":     event.place,
-                },
-            })
+            await _broadcast_running(broadcast, event)
 
             # Derive trigger label from event source so NCS events aren't mislabeled
             triggered_by = f"auto_{event.source}" if event.source else "auto_unknown"
@@ -84,17 +75,11 @@ async def run_worker() -> None:
                 triggered_by,
             )
 
-            # Broadcast complete result to all browser clients
-            await broadcast({
-                "type":          "simulation_complete",
-                "event_id":      event.db_id,
-                "simulation_id": result["simulation_id"],
-                "simulation":    result,
-            })
+            await _broadcast_complete(broadcast, event, result)
 
             # Mark in DB
             if event.db_id is not None:
-                mark_event_simulated(event.db_id, result["simulation_id"])
+                _mark_success(event, result)
 
             logger.info(
                 f"[Worker] Done: sim_id={result['simulation_id']} "
@@ -104,12 +89,41 @@ async def run_worker() -> None:
         except Exception as exc:
             logger.exception(f"[Worker] Simulation FAILED for {event.source_id}: {exc}")
             if event.db_id is not None:
-                mark_event_sim_failed(event.db_id, str(exc))
-            await broadcast({
-                "type":     "simulation_error",
-                "event_id": event.db_id,
-                "error":    str(exc),
-            })
+                _mark_failure(event, str(exc))
+            await _broadcast_error(broadcast, event, str(exc))
 
         finally:
             _queue.task_done()
+
+
+async def _broadcast_running(broadcast, event: EarthquakeEvent) -> None:
+    await broadcast({
+        "type": "simulation_running",
+        "event_id": event.db_id,
+        "event": event_to_payload(event),
+    })
+
+
+async def _broadcast_complete(broadcast, event: EarthquakeEvent, result: dict) -> None:
+    await broadcast({
+        "type": "simulation_complete",
+        "event_id": event.db_id,
+        "simulation_id": result["simulation_id"],
+        "simulation": result,
+    })
+
+
+async def _broadcast_error(broadcast, event: EarthquakeEvent, error: str) -> None:
+    await broadcast({
+        "type": "simulation_error",
+        "event_id": event.db_id,
+        "error": error,
+    })
+
+
+def _mark_success(event: EarthquakeEvent, result: dict) -> None:
+    mark_event_simulated(event.db_id, result["simulation_id"])
+
+
+def _mark_failure(event: EarthquakeEvent, error: str) -> None:
+    mark_event_sim_failed(event.db_id, error)

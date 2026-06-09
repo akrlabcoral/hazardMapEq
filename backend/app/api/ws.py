@@ -13,12 +13,17 @@ Clients connect once and receive:
 from __future__ import annotations
 
 import asyncio
-import orjson
+import json
 import logging
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
 logger = logging.getLogger("hazardmap.ws")
+
+try:
+    import orjson
+except ImportError:  # pragma: no cover - exercised only in lightweight test envs
+    orjson = None
 
 router = APIRouter()
 
@@ -60,12 +65,15 @@ async def broadcast(message: dict) -> None:
     if not _CLIENTS:
         return
 
-    payload_bytes = orjson.dumps(message, default=str)
+    if orjson is not None:
+        payload = orjson.dumps(message, default=str).decode("utf-8")
+    else:
+        payload = json.dumps(message, default=str)
     dead: set[WebSocket] = set()
 
     for client in _CLIENTS:
         try:
-            await client.send_text(payload_bytes.decode('utf-8'))
+            await client.send_text(payload)
         except Exception:
             dead.add(client)
 

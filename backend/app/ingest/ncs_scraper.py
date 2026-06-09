@@ -9,8 +9,11 @@ from __future__ import annotations
 import re
 import json
 import logging
-import aiohttp
 from datetime import datetime, timezone, timedelta
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    import aiohttp
 
 from app.ingest.normalizer import EarthquakeEvent, compute_fingerprint
 
@@ -20,7 +23,7 @@ NCS_URL = "https://riseq.seismo.gov.in/"
 IST_OFFSET = timedelta(hours=5, minutes=30)
 
 
-async def fetch_ncs_events(session: aiohttp.ClientSession) -> list[EarthquakeEvent]:
+async def fetch_ncs_events(session: "aiohttp.ClientSession") -> list[EarthquakeEvent]:
     """
     Fetches the NCS homepage, extracts data-json attributes, and parses them.
     Returns a list of EarthquakeEvent objects. Returns empty list on failure.

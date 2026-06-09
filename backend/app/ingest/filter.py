@@ -14,10 +14,11 @@ from __future__ import annotations
 from shapely.geometry import Point
 
 from app.ingest.normalizer import EarthquakeEvent
+from app.config import settings
 from app.gis.boundary import BUFFERED_INDIA
 
-MIN_MAGNITUDE = 0.0   # Raise to e.g. 4.0 to suppress micro-tremors and reduce simulation load
-MAX_DEPTH_KM  = 300.0
+MIN_MAGNITUDE = settings.auto_sim_min_magnitude
+MAX_DEPTH_KM  = settings.auto_sim_max_depth_km
 
 
 def is_relevant(event: EarthquakeEvent) -> bool:

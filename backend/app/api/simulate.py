@@ -7,28 +7,15 @@ Thin route handler — delegates all heavy computation to SimulationRunner.
 """
 from __future__ import annotations
 
+from fastapi import APIRouter, HTTPException
+
 import asyncio
 
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
-
+from app.api.schemas import EarthquakeInput
 from app.gis.boundary import is_epicenter_valid
 from app.jobs.simulation_worker import SimulationRunner
 
 router = APIRouter()
-
-
-class EarthquakeInput(BaseModel):
-    magnitude:   float            = Field(..., ge=1.0, le=10.0)
-    depth:       float            = Field(..., gt=0,   le=10000)
-    latitude:    float            = Field(..., ge=-90.0,  le=90.0)
-    longitude:   float            = Field(..., ge=-180.0, le=180.0)
-    # weights: reserved for future multi-layer fusion (infrastructure, liquefaction, etc.)
-    # Not yet implemented — only the PGA layer is currently active.
-    gmpe_params: dict[str, float] | None = Field(
-        default=None,
-        description="Optional custom GMPE polynomial parameters. If omitted, automatically selects based on region."
-    )
 
 
 @router.post("/simulate-earthquake")

@@ -2,7 +2,7 @@
 # Generated from running container: 2026-05-31
 # To update: docker exec <container> pip freeze > requirements.txt
 
-aiohttp==3.13.5
+aiohttp
 anyio==4.13.0
 certifi==2026.5.20
 click==8.4.1
@@ -16,7 +16,9 @@ numpy==2.2.6
 packaging==26.2
 psycopg2-binary==2.9.10
 pydantic==2.13.4
+pytest==8.4.2
 rasterio==1.4.4
+rasterstats==0.20.0
 scipy==1.15.3
 shapely==2.1.2
 starlette==1.2.0

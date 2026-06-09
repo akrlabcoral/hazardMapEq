@@ -7,14 +7,12 @@ simulation request is served.
 """
 import logging
 import os
+from app.config import settings
 from app.soil import cache
 
 logger = logging.getLogger("hazardmap.soil.loader")
 
-VS30_RASTER_PATH = os.environ.get(
-    "VS30_RASTER_PATH",
-    "/app/data/soil/india_vs30.tif",   # default: Docker container path
-)
+VS30_RASTER_PATH = settings.vs30_raster_path
 
 def load_all_soil_rasters() -> None:
     """
@@ -29,7 +27,7 @@ def load_all_soil_rasters() -> None:
         cache.register("India", VS30_RASTER_PATH)
         logger.info("[SoilLoader] Successfully loaded Vs30 raster from %s.", VS30_RASTER_PATH)
     except Exception as e:
-        logger.error("[SoilLoader] FAIL %s: %s", os.path.basename(VS30_RASTER_PATH), e)
+        logger.error("[SoilLoader] FAIL %s: %s", VS30_RASTER_PATH, e)
 
     states = cache.get_all_states()
     logger.info("[SoilLoader] States registered: %s", sorted(states))

@@ -1,47 +1,59 @@
 #!/usr/bin/env python3
-"""
-Phase 1: Stage all state soil GeoTIFF files from Desktop into the backend
-data directory so they are accessible inside the Docker container.
+from __future__ import annotations
 
-Run from the project root:
-    python3 backend/scripts/stage_soil_rasters.py
-"""
-
-import os
+import argparse
 import shutil
-import glob
 
-SRC_ROOT = "/Users/manasrai/Desktop/DATA/states/Soils"
-DST_DIR  = os.path.join(os.path.dirname(__file__), "..", "data", "soil", "states")
+from common import DATA_DIR, path_arg
 
-def stage_rasters():
-    os.makedirs(DST_DIR, exist_ok=True)
 
-    tif_paths = sorted(glob.glob(os.path.join(SRC_ROOT, "**", "*.tif"), recursive=True))
-    print(f"Found {len(tif_paths)} raster files in source directory.\n")
+def parse_args() -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Stage state soil GeoTIFF files into backend/data.")
+    parser.add_argument(
+        "--source",
+        type=path_arg,
+        default=path_arg("~/Desktop/DATA/states/Soils"),
+        help="Directory containing source .tif files.",
+    )
+    parser.add_argument(
+        "--dest",
+        type=path_arg,
+        default=DATA_DIR / "soil" / "states",
+        help="Destination directory for staged .tif files.",
+    )
+    parser.add_argument("--overwrite", action="store_true", help="Replace existing files even when sizes match.")
+    return parser.parse_args()
+
+
+def stage_rasters(source, dest, overwrite: bool = False) -> None:
+    dest.mkdir(parents=True, exist_ok=True)
+    tif_paths = sorted(source.rglob("*.tif"))
+    print(f"Found {len(tif_paths)} raster files in {source}.\n")
 
     copied, skipped, failed = 0, 0, 0
-
     for src_path in tif_paths:
-        filename = os.path.basename(src_path)
-        dst_path = os.path.join(DST_DIR, filename)
-
-        # Skip if already exists with same size (avoid redundant copies)
-        if os.path.exists(dst_path) and os.path.getsize(dst_path) == os.path.getsize(src_path):
-            print(f"  [SKIP]  {filename} (already staged)")
+        dst_path = dest / src_path.name
+        if (
+            dst_path.exists()
+            and not overwrite
+            and dst_path.stat().st_size == src_path.stat().st_size
+        ):
+            print(f"  [SKIP]  {src_path.name} (already staged)")
             skipped += 1
             continue
 
         try:
             shutil.copy2(src_path, dst_path)
-            print(f"  [COPY]  {filename}")
+            print(f"  [COPY]  {src_path.name}")
             copied += 1
-        except Exception as e:
-            print(f"  [FAIL]  {filename}: {e}")
+        except Exception as exc:
+            print(f"  [FAIL]  {src_path.name}: {exc}")
             failed += 1
 
     print(f"\nDone. Copied: {copied}  Skipped: {skipped}  Failed: {failed}")
-    print(f"Staged rasters available at: {os.path.abspath(DST_DIR)}")
+    print(f"Staged rasters available at: {dest}")
+
 
 if __name__ == "__main__":
-    stage_rasters()
+    args = parse_args()
+    stage_rasters(args.source, args.dest, args.overwrite)

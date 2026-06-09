@@ -35,8 +35,8 @@ def aggregate_impact(
         props        = feature["properties"]
         district_name = props.get("district", "Unknown")
         state_name    = props.get("state",    "Unknown")
-        raw_score  = float(raw_pga[i])
-        norm_score = float(norm_pga[i])
+        raw_score = float(props.get("pga_final", raw_pga[i]))
+        norm_score = float(props.get("fused_hazard", norm_pga[i]))
 
         # --- District aggregation ---
         if district_name not in _UNKNOWN:

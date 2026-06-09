@@ -1,5 +1,7 @@
 ml-service/
 hazardmap/
+venv/
+.venv/
 __pycache__/
 *.pyc
 *.pyo

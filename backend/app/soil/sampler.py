@@ -7,7 +7,6 @@ Supports thousands of grid cells efficiently.
 """
 import logging
 import numpy as np
-import rasterio
 from app.soil import cache
 
 logger = logging.getLogger("hazardmap.soil.sampler")
@@ -50,18 +49,14 @@ def sample_batch(lons: np.ndarray, lats: np.ndarray) -> np.ndarray:
 
     # Sample each state group in a single rasterio call
     for state_name, indices in state_groups.items():
-        path = cache.get_path(state_name)
-        if not path:
-            continue
         try:
-            with rasterio.open(path) as src:
-                coords = [(float(lons[i]), float(lats[i])) for i in indices]
-                sampled = list(src.sample(coords))
-                for j, idx in enumerate(indices):
-                    raw = sampled[j][0]  # band 1
-                    # Negative values or <= 0 often indicate nodata in rasters
-                    if raw > 0:
-                        result[idx] = np.float32(raw)
+            coords = [(float(lons[i]), float(lats[i])) for i in indices]
+            sampled = cache.sample_points(state_name, coords)
+            for j, idx in enumerate(indices):
+                raw = sampled[j][0]  # band 1
+                # Negative values or <= 0 often indicate nodata in rasters
+                if raw > 0:
+                    result[idx] = np.float32(raw)
         except Exception as e:
             logger.warning("[SoilSampler] Sampling failed for '%s': %s", state_name, e)
 

@@ -31,10 +31,21 @@ class PGAEngine(BaseHazardLayer):
         Returns a 1-D numpy array of raw PGA values (in g) for every grid cell.
         """
 
-        # Extract coordinates as numpy arrays in one pass
         lons = np.array([f["properties"]["centroid_lon"] for f in grid_features], dtype=np.float64)
         lats = np.array([f["properties"]["centroid_lat"] for f in grid_features], dtype=np.float64)
+        return self.compute_from_arrays(lons, lats, magnitude, epicenter_lat, epicenter_lon, depth, gmpe)
 
+    def compute_from_arrays(
+        self,
+        lons: np.ndarray,
+        lats: np.ndarray,
+        magnitude: float,
+        epicenter_lat: float,
+        epicenter_lon: float,
+        depth: float,
+        gmpe: 'BaseGMPE',
+    ) -> np.ndarray:
+        """Compute PGA using pre-extracted centroid arrays."""
         # Vectorized haversine distance (km)
         surface_dist = self._haversine_vec(epicenter_lon, epicenter_lat, lons, lats)
 

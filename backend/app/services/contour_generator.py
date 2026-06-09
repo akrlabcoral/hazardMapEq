@@ -17,6 +17,7 @@ from __future__ import annotations
 import logging
 import warnings
 import json
+from contextlib import contextmanager
 
 import numpy as np
 import matplotlib
@@ -41,6 +42,15 @@ logger = logging.getLogger("hazardmap.contour")
 # Pre-build GeoSeries mask once at import time for maximum speed
 # (avoids rebuilding the 400x400 mask on every request)
 _GRID_CACHE: dict = {}
+
+
+@contextmanager
+def _contour_figure():
+    fig, ax = plt.subplots(figsize=(8, 8))
+    try:
+        yield fig, ax
+    finally:
+        plt.close(fig)
 
 
 def generate_contour_geojson(
@@ -81,7 +91,7 @@ def generate_contour_geojson(
             grid_z *= original_max / new_max
 
         # Mask cells outside India boundary
-        cache_key = (round(x_min, 2), round(x_max, 2), round(y_min, 2), round(y_max, 2), N)
+        cache_key = _mask_cache_key(x_min, x_max, y_min, y_max, N)
         if cache_key not in _GRID_CACHE:
             pts = gpd.GeoSeries.from_xy(grid_x.flatten(), grid_y.flatten(), crs="EPSG:4326")
             _GRID_CACHE[cache_key] = pts.within(get_india_geom()).values.reshape(grid_x.shape)
@@ -94,23 +104,26 @@ def generate_contour_geojson(
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            fig, ax = plt.subplots(figsize=(8, 8))
-            contour = ax.contourf(
-                grid_x, grid_y, grid_z,
-                levels=levels,
-                colors=PGA_COLORS,
-                extend="max",
-            )
-            contour_geojson_str = geojsoncontour.contourf_to_geojson(
-                contourf=contour,
-                ndigits=4,
-                stroke_width=1,
-                fill_opacity=CONTOUR_FILL_OPACITY,
-            )
-            plt.close(fig)
+            with _contour_figure() as (_fig, ax):
+                contour = ax.contourf(
+                    grid_x, grid_y, grid_z,
+                    levels=levels,
+                    colors=PGA_COLORS,
+                    extend="max",
+                )
+                contour_geojson_str = geojsoncontour.contourf_to_geojson(
+                    contourf=contour,
+                    ndigits=4,
+                    stroke_width=1,
+                    fill_opacity=CONTOUR_FILL_OPACITY,
+                )
 
         return json.loads(contour_geojson_str)
 
     except Exception as exc:
         logger.warning("[ContourGenerator] Failed to generate contour: %s", exc)
         return {"type": "FeatureCollection", "features": []}
+
+
+def _mask_cache_key(x_min: float, x_max: float, y_min: float, y_max: float, size: int) -> tuple:
+    return (round(x_min, 2), round(x_max, 2), round(y_min, 2), round(y_max, 2), size)

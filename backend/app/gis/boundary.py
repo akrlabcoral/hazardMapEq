@@ -8,20 +8,34 @@ logger = logging.getLogger("hazardmap.gis.boundary")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INDIA_GEOJSON_PATH = os.path.abspath(os.path.join(BASE_DIR, '..', '..', 'data', 'india', 'india_boundary.geojson'))
 
-# Load the actual India boundary and buffer it for validation
-try:
-    _india_gdf = gpd.read_file(INDIA_GEOJSON_PATH)
-    # The dissolved geometry is typically in the first row
-    _india_geom = _india_gdf.geometry.iloc[0]
-except Exception as e:
-    logger.warning(
-        "Failed to load India boundary GeoJSON — falling back to bounding box. Error: %s", e
-    )
-    _india_geom = box(68.7, 8.4, 97.25, 37.6)
-
-# Pre-compute the buffered boundary (1 degree ≈ 111 km at the equator; 9 degrees ≈ 1000 km)
 BUFFER_DEG = 9.0
-BUFFERED_INDIA = _india_geom.buffer(BUFFER_DEG)
+
+
+class BoundaryProvider:
+    def __init__(self, path: str = INDIA_GEOJSON_PATH, buffer_deg: float = BUFFER_DEG) -> None:
+        self.path = path
+        self.buffer_deg = buffer_deg
+        self.geometry = self._load_geometry()
+        self.buffered_geometry = self.geometry.buffer(buffer_deg)
+
+    def _load_geometry(self):
+        try:
+            india_gdf = gpd.read_file(self.path)
+            return india_gdf.geometry.iloc[0]
+        except Exception as exc:
+            logger.warning(
+                "Failed to load India boundary GeoJSON; falling back to bounding box. Error: %s",
+                exc,
+            )
+            return box(68.7, 8.4, 97.25, 37.6)
+
+    def contains_supported_epicenter(self, lat: float, lon: float) -> bool:
+        return self.buffered_geometry.contains(Point(lon, lat))
+
+
+_provider = BoundaryProvider()
+_india_geom = _provider.geometry
+BUFFERED_INDIA = _provider.buffered_geometry
 
 
 def get_india_geom():
@@ -35,5 +49,4 @@ def is_epicenter_valid(lat: float, lon: float) -> bool:
     (9-degree buffer ≈ 1000 km at the equator).
     Uses the real GeoJSON polygon of India's borders.
     """
-    epicenter = Point(lon, lat)
-    return BUFFERED_INDIA.contains(epicenter)
+    return _provider.contains_supported_epicenter(lat, lon)

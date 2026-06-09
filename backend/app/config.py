@@ -1,14 +1,47 @@
 """
 app/config.py
 
-Centralized configuration for all HazardMap backend constants.
-Import from here instead of hardcoding magic numbers inline.
+Centralized configuration for HazardMap.
+
+The module still exposes the historical constants used across the codebase,
+but those values now come from a typed Settings object so runtime configuration
+can be moved to environment variables without changing public imports.
 """
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass, field
 
 # ---------------------------------------------------------------------------
 # Data Paths
 # ---------------------------------------------------------------------------
-GRID_PATH = "data/grids/nationwide_20km.geojson"
+def _csv_env(name: str, default: str) -> list[str]:
+    raw = os.environ.get(name, default)
+    return [item.strip() for item in raw.split(",") if item.strip()]
+
+
+@dataclass(frozen=True)
+class Settings:
+    database_url: str = os.environ.get(
+        "DATABASE_URL",
+        "postgresql://hazardmap:hazardmap_dev@localhost:5432/hazardmap",
+    )
+    cors_allowed_origins: list[str] = field(
+        default_factory=lambda: _csv_env("CORS_ALLOWED_ORIGINS", "*")
+    )
+    grid_path: str = os.environ.get("GRID_PATH", "data/grids/nationwide_20km.geojson")
+    vs30_raster_path: str = os.environ.get("VS30_RASTER_PATH", "/app/data/soil/india_vs30.tif")
+    usgs_poll_interval_seconds: int = int(os.environ.get("USGS_POLL_INTERVAL_SECONDS", "60"))
+    ncs_poll_interval_seconds: int = int(os.environ.get("NCS_POLL_INTERVAL_SECONDS", "60"))
+    auto_sim_min_magnitude: float = float(os.environ.get("AUTO_SIM_MIN_MAGNITUDE", "0.0"))
+    auto_sim_max_depth_km: float = float(os.environ.get("AUTO_SIM_MAX_DEPTH_KM", "300.0"))
+    db_min_connections: int = int(os.environ.get("DB_MIN_CONNECTIONS", "2"))
+    db_max_connections: int = int(os.environ.get("DB_MAX_CONNECTIONS", "10"))
+
+
+settings = Settings()
+
+GRID_PATH = settings.grid_path
 
 # ---------------------------------------------------------------------------
 # PGA Intensity Scale — thresholds in units of g (gravitational acceleration)

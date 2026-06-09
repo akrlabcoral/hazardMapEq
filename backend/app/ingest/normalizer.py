@@ -99,3 +99,21 @@ def is_valid(event: EarthquakeEvent) -> bool:
         1.0    <= event.magnitude <= 10.0,
         (now - event.origin_time).total_seconds() <= 7200,  # not older than 2 hours
     ])
+
+
+def event_to_payload(event: EarthquakeEvent) -> dict:
+    """Frontend/WebSocket-safe event payload."""
+    return {
+        "id": event.db_id,
+        "source_id": event.source_id,
+        "source": event.source,
+        "magnitude": event.magnitude,
+        "latitude": event.latitude,
+        "longitude": event.longitude,
+        "depth_km": event.depth_km,
+        "mag_type": event.mag_type,
+        "origin_time": event.origin_time.isoformat(),
+        "place": event.place,
+        "status": event.status,
+        "alert_level": event.alert_level,
+    }
