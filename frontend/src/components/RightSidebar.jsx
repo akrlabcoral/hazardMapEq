@@ -63,7 +63,7 @@ export default function RightSidebar({ isAdmin = true }) {
               exit={{ opacity: 0, x: 10 }}
               className="mr-2 font-bold text-slate-200 tracking-wider whitespace-nowrap overflow-hidden"
             >
-              DATA<span className="text-white">VIEW</span>
+              <span className="text-white">TOOLS</span>
             </motion.div>
           )}
         </AnimatePresence>

@@ -22,7 +22,6 @@ export default function MapView({ isAdmin = false }) {
   const soilAmpVisible = useStore((state) => state.soilAmpVisible);
   
   const simulationResults = useStore((state) => state.simulationResults);
-  const mapStyle          = useStore((state) => state.mapStyle);
 
   // Initialize simulation sources and layers on a loaded map
   const setupSimulation = useCallback((mapInstance) => {
@@ -234,9 +233,7 @@ export default function MapView({ isAdmin = false }) {
     if (!map.current) return;
     const applyStyle = async () => {
       try {
-        const url = mapStyle === 'dark' 
-          ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
-          : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+        const url = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
         const res = await fetch(url);
         const styleJson = await res.json();
         
@@ -256,7 +253,7 @@ export default function MapView({ isAdmin = false }) {
       }
     };
     applyStyle();
-  }, [mapStyle]);
+  }, []);
 
   // Sync GIS layer visibility
   useEffect(() => {

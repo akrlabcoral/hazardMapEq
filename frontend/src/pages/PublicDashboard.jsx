@@ -33,8 +33,8 @@ export default function PublicDashboard() {
     if (!current || current === 'disasters') {
       forceActiveSection('live_events');
     }
-    // Force light theme for public dashboard
-    useStore.setState({ mapStyle: 'light' });
+    // Enable hover tool by default for public dashboard
+    useStore.setState({ isHoverTooltipEnabled: true });
   }, [forceActiveSection]);
 
   // Start WebSocket connection — real-time earthquake events + auto-sim results
