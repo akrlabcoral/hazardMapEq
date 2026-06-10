@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import useStore from '../store/useStore';
 import { useSimulation } from '../hooks/useSimulation';
+import { mapLayerService } from '../services/mapLayerService';
 
 // Simple time formatter
 const formatDate = (isoString) => {
@@ -35,23 +36,6 @@ export default function HistoricPanel() {
   useEffect(() => {
     // Enable layer on mount
     useStore.setState((state) => ({ gisLayers: { ...state.gisLayers, historicEarthquakes: true } }));
-    
-    // Fetch data for the panel
-    fetch('/scientific-api/historic')
-      .then(res => res.json())
-      .then(json => {
-        if (json && json.features) {
-          setData(json.features);
-        } else {
-          setData([]);
-        }
-        setLoading(false);
-      })
-      .catch(err => {
-        console.error("Failed to load historic events:", err);
-        setError(err.message);
-        setLoading(false);
-      });
 
     return () => {
       // Disable layer on unmount
@@ -59,9 +43,41 @@ export default function HistoricPanel() {
     };
   }, []);
 
+  useEffect(() => {
+    const controller = new AbortController();
+    let isCurrent = true;
+    const mag = parseFloat(minMag);
+    const dataUrl = `/scientific-api/historic?min_magnitude=${mag}`;
+
+    setLoading(true);
+    setError(null);
+
+    mapLayerService.loadLayerData('historicEarthquakes', {
+      dataUrl,
+      cacheKey: `historicEarthquakes:${mag}`,
+      signal: controller.signal,
+    })
+      .then(json => {
+        if (!isCurrent) return;
+        setData(json && json.features ? json.features : []);
+        setLoading(false);
+      })
+      .catch(err => {
+        if (!isCurrent || err.name === 'AbortError') return;
+        console.error("Failed to load historic events:", err);
+        setError(err.message);
+        setLoading(false);
+      });
+
+    return () => {
+      isCurrent = false;
+      controller.abort();
+    };
+  }, [minMag]);
+
   // Update map filter when minMag changes
   useEffect(() => {
-    useStore.setState({ historicMinMag: parseFloat(minMag) });
+    useStore.getState().setHistoricMinMag(parseFloat(minMag));
   }, [minMag]);
 
   const filteredFeatures = useMemo(() => {
@@ -150,9 +166,6 @@ export default function HistoricPanel() {
                       zoom: 6
                     });
 
-                    // Switch to the disasters panel to run simulation
-                    store.forceActiveSection('disasters');
-                    
                     // Auto-run simulation
                     handleRunSimulation();
                   }}

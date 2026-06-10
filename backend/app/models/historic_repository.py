@@ -1,6 +1,14 @@
 from __future__ import annotations
 
+import time
+from threading import Lock
+
 from app.models.database import get_conn
+
+_CACHE_TTL_SECONDS = 300
+_cache_lock = Lock()
+_geojson_cache: dict[tuple[float | None, int | None, str | None], tuple[float, dict]] = {}
+
 
 def save_historic_event(event) -> int | None:
     with get_conn() as conn:
@@ -32,45 +40,108 @@ def save_historic_event(event) -> int | None:
                 ),
             )
             row = cur.fetchone()
+            clear_historic_cache()
             return row[0] if row else None
 
 
-def get_historic_events_geojson() -> dict:
-    import psycopg2.extras
+def clear_historic_cache() -> None:
+    with _cache_lock:
+        _geojson_cache.clear()
+
+
+def _parse_bbox(bbox: str) -> tuple[float, float, float, float]:
+    try:
+        west, south, east, north = (float(value.strip()) for value in bbox.split(","))
+    except ValueError as exc:
+        raise ValueError("bbox must be four comma-separated numbers: west,south,east,north") from exc
+
+    if west > east or south > north:
+        raise ValueError("bbox coordinates must be ordered as west,south,east,north")
+    return west, south, east, north
+
+
+def get_historic_events_geojson(
+    min_magnitude: float | None = None,
+    limit: int | None = None,
+    bbox: str | None = None,
+) -> dict:
+    cache_key = (min_magnitude, limit, bbox)
+    now = time.monotonic()
+    with _cache_lock:
+        cached = _geojson_cache.get(cache_key)
+        if cached and now - cached[0] < _CACHE_TTL_SECONDS:
+            return cached[1]
+
+    where_clauses: list[str] = []
+    params: list[object] = []
+
+    if min_magnitude is not None:
+        where_clauses.append("magnitude >= %s")
+        params.append(min_magnitude)
+
+    if bbox:
+        west, south, east, north = _parse_bbox(bbox)
+        where_clauses.append("longitude BETWEEN %s AND %s")
+        where_clauses.append("latitude BETWEEN %s AND %s")
+        params.extend([west, east, south, north])
+
+    where_sql = f"WHERE {' AND '.join(where_clauses)}" if where_clauses else ""
+    limit_sql = ""
+    if limit is not None:
+        limit_sql = "LIMIT %s"
+        params.append(limit)
 
     with get_conn() as conn:
-        with conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor) as cur:
+        with conn.cursor() as cur:
             cur.execute(
-                """
+                f"""
                 SELECT source_id, source, latitude, longitude, depth_km,
                        magnitude, mag_type, origin_time, place, status
                 FROM historic_events
+                {where_sql}
                 ORDER BY origin_time DESC
-                """
+                {limit_sql}
+                """,
+                params,
             )
             rows = cur.fetchall()
 
-    features = []
-    for row in rows:
-        features.append({
+    features = [
+        {
             "type": "Feature",
             "geometry": {
                 "type": "Point",
-                "coordinates": [row["longitude"], row["latitude"]],
+                "coordinates": [longitude, latitude],
             },
             "properties": {
-                "id": row["source_id"],
-                "source": row["source"],
-                "mag": row["magnitude"],
-                "mag_type": row["mag_type"],
-                "depth": row["depth_km"],
-                "time": row["origin_time"].isoformat(),
-                "place": row["place"],
-                "status": row["status"]
-            }
-        })
+                "id": source_id,
+                "source": source,
+                "mag": magnitude,
+                "mag_type": mag_type,
+                "depth": depth_km,
+                "time": origin_time.isoformat(),
+                "place": place,
+                "status": status,
+            },
+        }
+        for (
+            source_id,
+            source,
+            latitude,
+            longitude,
+            depth_km,
+            magnitude,
+            mag_type,
+            origin_time,
+            place,
+            status,
+        ) in rows
+    ]
 
-    return {
+    data = {
         "type": "FeatureCollection",
-        "features": features
+        "features": features,
     }
+    with _cache_lock:
+        _geojson_cache[cache_key] = (now, data)
+    return data

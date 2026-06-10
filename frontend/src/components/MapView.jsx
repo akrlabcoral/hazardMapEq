@@ -25,7 +25,6 @@ export default function MapView({ isAdmin = false }) {
   
   const simulationResults = useStore((state) => state.simulationResults);
   const mapStyle          = useStore((state) => state.mapStyle);
-  const historicMinMag    = useStore((state) => state.historicMinMag);
   const isPlacingEpicenter = useStore((state) => state.isPlacingEpicenter);
 
   // Initialize simulation sources and layers on a loaded map
@@ -283,20 +282,6 @@ export default function MapView({ isAdmin = false }) {
       mapLayerService.setLayerVisibility(layerKey, gisLayers[layerKey]);
     });
   }, [gisLayers]);
-
-  // Sync Historic Earthquakes magnitude filter on the map
-  useEffect(() => {
-    if (!map.current || !mapLayerService.initialized) return;
-    const sourceId = 'historic-earthquakes-source';
-    const source = map.current.getSource(sourceId);
-    const cachedData = mapLayerService.dataCache?.[sourceId];
-    
-    if (source && cachedData) {
-      const mag = historicMinMag || 4.0;
-      const filteredFeatures = cachedData.features.filter(f => f.properties.mag >= mag);
-      source.setData({ ...cachedData, features: filteredFeatures });
-    }
-  }, [historicMinMag]);
 
   // Update epicenter marker
   useEffect(() => {

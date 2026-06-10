@@ -161,9 +161,10 @@ export const LAYER_CONFIGS = {
     sourceId: 'historic-earthquakes-source',
     dataUrl: '/scientific-api/historic',
     lazy: true,
+    manualLoad: true,
     cluster: true,
-    clusterMaxZoom: 14,
-    clusterRadius: 50,
+    clusterMaxZoom: 12,
+    clusterRadius: 45,
     layers: [
       {
         id: 'historic-clusters',
@@ -185,8 +186,8 @@ export const LAYER_CONFIGS = {
             20, 200,
             25
           ],
-          'circle-stroke-width': 2,
-          'circle-stroke-color': '#ffffff'
+          'circle-stroke-width': 1,
+          'circle-stroke-color': 'rgba(255,255,255,0.85)'
         }
       },
       {
@@ -209,8 +210,16 @@ export const LAYER_CONFIGS = {
         filter: ['!', ['has', 'point_count']],
         paint: {
           'circle-color': '#f97316',
-          'circle-radius': 6,
-          'circle-stroke-width': 1.5,
+          'circle-radius': [
+            'interpolate',
+            ['linear'],
+            ['get', 'mag'],
+            4, 4,
+            6, 7,
+            8, 10
+          ],
+          'circle-opacity': 0.85,
+          'circle-stroke-width': 1,
           'circle-stroke-color': '#ffffff'
         }
       }

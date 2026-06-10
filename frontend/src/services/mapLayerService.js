@@ -17,6 +17,8 @@ class MapLayerService {
     this.map = null;
     this.initialized = false;
     this.dataLoaded = {};
+    this.dataCache = {};
+    this.dataPromises = {};
   }
 
   // --- Safe MapLibre Layer Management ---
@@ -94,29 +96,51 @@ class MapLayerService {
 
   // --- Stateful Layer Visibility & Data Loading ---
 
-  loadGeoJsonData(config) {
-    if (this.dataLoaded[config.sourceId] === 'loading') return;
+  loadGeoJsonData(config, options = {}) {
+    const dataUrl = options.dataUrl || config.dataUrl;
+    const cacheKey = options.cacheKey || dataUrl;
+    const { dataUrl: _dataUrl, cacheKey: _cacheKey, ...fetchOptions } = options;
 
-    if (this.dataCache && this.dataCache[config.sourceId]) {
+    if (this.dataCache[cacheKey]) {
       if (this.map && this.map.getSource(config.sourceId)) {
-        this.map.getSource(config.sourceId).setData(this.dataCache[config.sourceId]);
+        this.map.getSource(config.sourceId).setData(this.dataCache[cacheKey]);
         this.dataLoaded[config.sourceId] = 'loaded';
       }
-      return;
+      return Promise.resolve(this.dataCache[cacheKey]);
+    }
+
+    if (this.dataPromises[cacheKey]) {
+      return this.dataPromises[cacheKey];
     }
 
     this.dataLoaded[config.sourceId] = 'loading';
-    fetchGeoJson(config.dataUrl).then(data => {
-      this.dataCache = this.dataCache || {};
+    this.dataPromises[cacheKey] = fetchGeoJson(dataUrl, fetchOptions).then(data => {
+      this.dataCache[cacheKey] = data;
       this.dataCache[config.sourceId] = data;
       if (this.map && this.map.getSource(config.sourceId)) {
         this.map.getSource(config.sourceId).setData(data);
-        this.dataLoaded[config.sourceId] = 'loaded';
       }
+      this.dataLoaded[config.sourceId] = 'loaded';
+      return data;
     }).catch(err => {
-      console.error(`Failed to lazy load ${config.sourceId}`, err);
+      if (err.name !== 'AbortError') {
+        console.error(`Failed to lazy load ${config.sourceId}`, err);
+      }
       this.dataLoaded[config.sourceId] = false;
+      throw err;
+    }).finally(() => {
+      delete this.dataPromises[cacheKey];
     });
+
+    return this.dataPromises[cacheKey];
+  }
+
+  loadLayerData(layerKey, options = {}) {
+    const config = LAYER_CONFIGS[layerKey];
+    if (!config) {
+      return Promise.reject(new Error(`Unknown layer: ${layerKey}`));
+    }
+    return this.loadGeoJsonData(config, options);
   }
 
   async initializeSourcesAndLayers(mapInstance, initialVisibilityState) {
@@ -159,8 +183,8 @@ class MapLayerService {
         
         this.map.addSource(config.sourceId, sourceConfig);
 
-        if (!config.lazy || initialVisibilityState[key]) {
-          this.loadGeoJsonData(config);
+        if (!config.manualLoad && (!config.lazy || initialVisibilityState[key])) {
+          this.loadGeoJsonData(config).catch(() => {});
         }
 
         config.layers.forEach(layer => {
@@ -187,8 +211,8 @@ class MapLayerService {
     
     if (LAYER_CONFIGS[layerKey]) {
       const config = LAYER_CONFIGS[layerKey];
-      if (isVisible && config.lazy && !this.dataLoaded[config.sourceId]) {
-        this.loadGeoJsonData(config);
+      if (isVisible && config.lazy && !config.manualLoad && !this.dataLoaded[config.sourceId]) {
+        this.loadGeoJsonData(config).catch(() => {});
       }
       config.layers.forEach(layer => {
         if (this.map.getLayer(layer.id)) {

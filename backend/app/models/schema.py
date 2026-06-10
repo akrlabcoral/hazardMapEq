@@ -87,6 +87,14 @@ def init_db() -> None:
                 ON historic_events(magnitude DESC)
             """)
             cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_historic_mag_time
+                ON historic_events(magnitude DESC, origin_time DESC)
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_historic_lon_lat
+                ON historic_events(longitude, latitude)
+            """)
+            cur.execute("""
                 ALTER TABLE earthquake_events
                 ADD COLUMN IF NOT EXISTS sim_id INTEGER DEFAULT NULL
             """)
