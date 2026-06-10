@@ -12,6 +12,7 @@ import { debugLog } from '../utils/debug';
 export default function MapView({ isAdmin = false }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
+  const isInitialMount = useRef(true);
   const mapViewport = useStore((state) => state.mapViewport);
   
   const earthquakeEpicenter    = useStore((state) => state.earthquakeEpicenter);
@@ -24,6 +25,7 @@ export default function MapView({ isAdmin = false }) {
   
   const simulationResults = useStore((state) => state.simulationResults);
   const mapStyle          = useStore((state) => state.mapStyle);
+  const historicMinMag    = useStore((state) => state.historicMinMag);
   const isPlacingEpicenter = useStore((state) => state.isPlacingEpicenter);
 
   // Initialize simulation sources and layers on a loaded map
@@ -39,20 +41,23 @@ export default function MapView({ isAdmin = false }) {
   useEffect(() => {
     if (map.current) return;
 
+    const initialViewport = useStore.getState().mapViewport;
     map.current = new maplibregl.Map({
       container: mapContainer.current,
       style: { version: 8, sources: {}, layers: [] },
-      center: [mapViewport.longitude, mapViewport.latitude],
-      zoom: mapViewport.zoom,
+      center: [initialViewport.longitude, initialViewport.latitude],
+      zoom: initialViewport.zoom,
       pitch: 0,
       bearing: 0,
       antialias: true
     });
 
-    map.current.fitBounds([
-      [68.7, 8.4],
-      [97.25, 37.6]
-    ], { padding: 50, duration: 1500 });
+    map.current.once('load', () => {
+      map.current.fitBounds([
+        [68.7, 8.4],
+        [97.25, 37.6]
+      ], { padding: 50, duration: 2000 });
+    });
 
     map.current.addControl(new maplibregl.NavigationControl(), 'bottom-right');
     map.current.addControl(new maplibregl.FullscreenControl(), 'top-right');
@@ -224,7 +229,23 @@ export default function MapView({ isAdmin = false }) {
         map.current = null;
       }
     };
-  }, [mapViewport, setEarthquakeEpicenter, initSimulationLayers]);
+  }, [setEarthquakeEpicenter, initSimulationLayers]);
+
+  // Fly to new viewport when it changes
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
+      return;
+    }
+    if (map.current && mapViewport) {
+      map.current.flyTo({
+        center: [mapViewport.longitude, mapViewport.latitude],
+        zoom: mapViewport.zoom,
+        essential: true,
+        duration: 1000
+      });
+    }
+  }, [mapViewport]);
 
   // Sync Map Theme (Dark/Light) using vector styles to color the oceans light blue
   useEffect(() => {
@@ -257,11 +278,25 @@ export default function MapView({ isAdmin = false }) {
 
   // Sync GIS layer visibility
   useEffect(() => {
-    if (!map.current || !mapLayerService.initialized) return;
-    Object.entries(gisLayers).forEach(([key, isVisible]) => {
-      mapLayerService.setLayerVisibility(key, isVisible);
+    if (!mapLayerService.initialized) return;
+    Object.keys(gisLayers).forEach(layerKey => {
+      mapLayerService.setLayerVisibility(layerKey, gisLayers[layerKey]);
     });
   }, [gisLayers]);
+
+  // Sync Historic Earthquakes magnitude filter on the map
+  useEffect(() => {
+    if (!map.current || !mapLayerService.initialized) return;
+    const sourceId = 'historic-earthquakes-source';
+    const source = map.current.getSource(sourceId);
+    const cachedData = mapLayerService.dataCache?.[sourceId];
+    
+    if (source && cachedData) {
+      const mag = historicMinMag || 4.0;
+      const filteredFeatures = cachedData.features.filter(f => f.properties.mag >= mag);
+      source.setData({ ...cachedData, features: filteredFeatures });
+    }
+  }, [historicMinMag]);
 
   // Update epicenter marker
   useEffect(() => {

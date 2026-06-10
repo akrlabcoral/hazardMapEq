@@ -24,6 +24,7 @@ from app.api import simulate
 from app.api import ws as ws_module
 from app.api import events as events_module
 from app.api import dev as dev_module
+from app.api import historic as historic_module
 from app.config import settings
 from app.soil import cache as soil_cache
 from app.soil.loader import load_all_soil_rasters
@@ -104,6 +105,7 @@ app.include_router(simulate.router,       prefix="/api")
 app.include_router(ws_module.router,      prefix="/api")
 app.include_router(events_module.router,  prefix="/api")
 app.include_router(dev_module.router,     prefix="/api")
+app.include_router(historic_module.router, prefix="/api/historic")
 
 if __name__ == "__main__":
     import uvicorn

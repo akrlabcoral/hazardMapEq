@@ -60,6 +60,33 @@ def init_db() -> None:
                 ON earthquake_events(magnitude DESC)
             """)
             cur.execute("""
+                CREATE TABLE IF NOT EXISTS historic_events (
+                    id              SERIAL PRIMARY KEY,
+                    source_id       TEXT NOT NULL UNIQUE,
+                    source          TEXT NOT NULL,
+                    fingerprint     TEXT NOT NULL UNIQUE,
+                    latitude        REAL NOT NULL,
+                    longitude       REAL NOT NULL,
+                    depth_km        REAL NOT NULL,
+                    magnitude       REAL NOT NULL,
+                    mag_type        TEXT DEFAULT 'Mw',
+                    origin_time     TIMESTAMP NOT NULL,
+                    place           TEXT,
+                    status          TEXT DEFAULT 'reviewed',
+                    alert_level     TEXT,
+                    ingested_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_historic_origin_time
+                ON historic_events(origin_time DESC)
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_historic_magnitude
+                ON historic_events(magnitude DESC)
+            """)
+            cur.execute("""
                 ALTER TABLE earthquake_events
                 ADD COLUMN IF NOT EXISTS sim_id INTEGER DEFAULT NULL
             """)

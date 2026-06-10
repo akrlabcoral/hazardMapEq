@@ -157,6 +157,65 @@ export const LAYER_CONFIGS = {
       }
     ]
   },
+  historicEarthquakes: {
+    sourceId: 'historic-earthquakes-source',
+    dataUrl: '/scientific-api/historic',
+    lazy: true,
+    cluster: true,
+    clusterMaxZoom: 14,
+    clusterRadius: 50,
+    layers: [
+      {
+        id: 'historic-clusters',
+        type: 'circle',
+        source: 'historic-earthquakes-source',
+        filter: ['has', 'point_count'],
+        paint: {
+          'circle-color': [
+            'step',
+            ['get', 'point_count'],
+            '#f97316', 50,    
+            '#f59e0b', 200,   
+            '#ef4444'         
+          ],
+          'circle-radius': [
+            'step',
+            ['get', 'point_count'],
+            15, 50,
+            20, 200,
+            25
+          ],
+          'circle-stroke-width': 2,
+          'circle-stroke-color': '#ffffff'
+        }
+      },
+      {
+        id: 'historic-cluster-count',
+        type: 'symbol',
+        source: 'historic-earthquakes-source',
+        filter: ['has', 'point_count'],
+        layout: {
+          'text-field': '{point_count_abbreviated}',
+          'text-size': 12
+        },
+        paint: {
+          'text-color': '#ffffff'
+        }
+      },
+      {
+        id: 'historic-unclustered-point',
+        type: 'circle',
+        source: 'historic-earthquakes-source',
+        filter: ['!', ['has', 'point_count']],
+        paint: {
+          'circle-color': '#f97316',
+          'circle-radius': 6,
+          'circle-stroke-width': 1.5,
+          'circle-stroke-color': '#ffffff'
+        }
+      }
+    ]
+  },
 };
 
 // Raster layer configs (no GeoJSON)

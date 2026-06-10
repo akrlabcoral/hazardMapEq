@@ -14,6 +14,7 @@ import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 
 import LiveEventsPanel from '../panels/LiveEventsPanel';
+import HistoricPanel from '../panels/HistoricPanel';
 
 const PANEL_TITLE = {
   layers:    'MAP LAYERS',
@@ -72,6 +73,10 @@ export default function PublicDashboard() {
                   {activeSection === 'live_events' ? (
                     <div className="h-[500px]">
                       <LiveEventsPanel />
+                    </div>
+                  ) : activeSection === 'historic_events' ? (
+                    <div className="h-[500px]">
+                      <HistoricPanel />
                     </div>
                   ) : (
                     PANEL_TITLE[activeSection] && (

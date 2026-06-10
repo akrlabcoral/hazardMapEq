@@ -21,11 +21,13 @@ import RightControlPanel from '../components/RightControlPanel';
 import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import LiveEventsPanel from '../panels/LiveEventsPanel';
+import HistoricPanel from '../panels/HistoricPanel';
 
 const PANEL_TITLE = {
   disasters: 'DISASTERS PANEL',
   layers:    'MAP LAYERS',
   alerts:    'ALERTS',
+  historic_events: 'HISTORIC EVENTS',
 };
 
 export default function AdminDashboard() {
@@ -70,6 +72,10 @@ export default function AdminDashboard() {
                   {activeSection === 'live_events' ? (
                     <div className="h-[500px]">
                       <LiveEventsPanel />
+                    </div>
+                  ) : activeSection === 'historic_events' ? (
+                    <div className="h-[500px]">
+                      <HistoricPanel />
                     </div>
                   ) : (
                     <ControlPanel title={PANEL_TITLE[activeSection] ?? activeSection.toUpperCase()}>

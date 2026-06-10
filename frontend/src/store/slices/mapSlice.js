@@ -17,7 +17,7 @@ export const createMapSlice = (set) => ({
   mousePos: { x: 0, y: 0 },
   setMousePos: (pos) => set({ mousePos: pos }),
 
-  gisLayers: { satellite: false, terrain: false, indiaBoundary: true, stateBoundaries: true, tectonicPlates: true, gpsVectors: false },
+  gisLayers: { satellite: false, terrain: false, indiaBoundary: true, stateBoundaries: true, tectonicPlates: true, gpsVectors: false, historicEarthquakes: false },
   toggleGisLayer: (layer) => set((state) => ({ gisLayers: { ...state.gisLayers, [layer]: !state.gisLayers[layer] } })),
 
   soilAmpVisible: false,
