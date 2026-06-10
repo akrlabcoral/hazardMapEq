@@ -8,7 +8,7 @@ logger = logging.getLogger("hazardmap.gis.boundary")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 INDIA_GEOJSON_PATH = os.path.abspath(os.path.join(BASE_DIR, '..', '..', 'data', 'india', 'india_boundary.geojson'))
 
-BUFFER_DEG = 9.0
+BUFFER_DEG = 1.8  # ~200 km (1 deg ≈ 111 km)
 
 
 class BoundaryProvider:
@@ -45,8 +45,8 @@ def get_india_geom():
 
 def is_epicenter_valid(lat: float, lon: float) -> bool:
     """
-    Validates if the epicenter is inside India or within ~1000 km of the boundary
-    (9-degree buffer ≈ 1000 km at the equator).
+    Validates if the epicenter is inside India or within ~200 km of the boundary
+    (1.8-degree buffer ≈ 200 km at the equator).
     Uses the real GeoJSON polygon of India's borders.
     """
     return _provider.contains_supported_epicenter(lat, lon)

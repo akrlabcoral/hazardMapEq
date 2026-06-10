@@ -30,6 +30,8 @@ async def fetch_ncs_events(session: "aiohttp.ClientSession") -> list[EarthquakeE
     """
     events = []
     try:
+        import aiohttp
+
         timeout = aiohttp.ClientTimeout(total=15.0)
         async with session.get(NCS_URL, timeout=timeout) as resp:
             resp.raise_for_status()

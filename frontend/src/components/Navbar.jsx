@@ -1,9 +1,11 @@
 import React from 'react';
-import { Shield, Bell,Earth, UserCircle, Menu } from 'lucide-react';
+import { Shield, Bell,Earth, UserCircle, Menu, Moon, Sun } from 'lucide-react';
 import useStore from '../store/useStore';
 
 export default function Navbar({ isAdmin = true }) {
   const toggleSidebar  = useStore((state) => state.toggleSidebar);
+  const mapStyle       = useStore((state) => state.mapStyle);
+  const toggleMapStyle = useStore((state) => state.toggleMapStyle);
   const activeAlert    = useStore((state) => state.activeAlert);
   const dismissAlert   = useStore((state) => state.dismissAlert);
 
@@ -24,6 +26,15 @@ export default function Navbar({ isAdmin = true }) {
       </div>
 
       <div className="flex items-center gap-6">
+        {isAdmin && (
+          <button 
+            onClick={toggleMapStyle}
+            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+            title={mapStyle === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+          >
+            {mapStyle === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-white" />}
+          </button>
+        )}
         <button
           className="relative p-2 hover:bg-slate-800 rounded-lg transition-colors"
           onClick={activeAlert ? dismissAlert : undefined}

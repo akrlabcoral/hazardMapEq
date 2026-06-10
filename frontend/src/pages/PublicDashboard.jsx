@@ -22,9 +22,7 @@ const PANEL_TITLE = {
 
 export default function PublicDashboard() {
   const activeSection = useStore((s) => s.activeSection);
-  const setActiveSection = useStore((s) => s.setActiveSection);
   const forceActiveSection = useStore((s) => s.forceActiveSection);
-  const activeRightSection = useStore((s) => s.activeRightSection);
 
   // On mount, if no section is active (or if an admin-only section like disasters leaked over), default to live_events
   useEffect(() => {

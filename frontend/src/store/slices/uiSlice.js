@@ -9,4 +9,6 @@ export const createUiSlice = (set) => ({
   activeRightSection: null,
   setActiveRightSection: (section) => set((state) => ({ activeRightSection: state.activeRightSection === section ? null : section })),
 
+  mapStyle: 'light',
+  toggleMapStyle: () => set((state) => ({ mapStyle: state.mapStyle === 'dark' ? 'light' : 'dark' })),
 });

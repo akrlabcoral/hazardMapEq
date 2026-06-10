@@ -23,6 +23,8 @@ export default function MapView({ isAdmin = false }) {
   const soilAmpVisible = useStore((state) => state.soilAmpVisible);
   
   const simulationResults = useStore((state) => state.simulationResults);
+  const mapStyle          = useStore((state) => state.mapStyle);
+  const isPlacingEpicenter = useStore((state) => state.isPlacingEpicenter);
 
   // Initialize simulation sources and layers on a loaded map
   const setupSimulation = useCallback((mapInstance) => {
@@ -62,11 +64,6 @@ export default function MapView({ isAdmin = false }) {
         debugLog('[Epicenter] Map click => setting epicenter:', coords);
         setEarthquakeEpicenter(coords);
         useStore.getState().setIsPlacingEpicenter(false);
-        // Verify store was updated
-        setTimeout(() => {
-          const stored = useStore.getState().earthquakeEpicenter;
-          debugLog('[Epicenter] Store verification (10ms later):', stored);
-        }, 10);
       }
     };
     
@@ -234,7 +231,9 @@ export default function MapView({ isAdmin = false }) {
     if (!map.current) return;
     const applyStyle = async () => {
       try {
-        const url = 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
+        const url = mapStyle === 'dark' 
+          ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
+          : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
         const res = await fetch(url);
         const styleJson = await res.json();
         
@@ -254,7 +253,7 @@ export default function MapView({ isAdmin = false }) {
       }
     };
     applyStyle();
-  }, []);
+  }, [mapStyle]);
 
   // Sync GIS layer visibility
   useEffect(() => {
@@ -416,7 +415,7 @@ export default function MapView({ isAdmin = false }) {
 
   return (
     <div className="absolute inset-0 z-0">
-      <div ref={mapContainer} className={`w-full h-full ${useStore((state) => state.isPlacingEpicenter) ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`} />
+      <div ref={mapContainer} className={`w-full h-full ${isPlacingEpicenter ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`} />
       {/* Cinematic vignette overlay */}
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-slate-950/30 to-slate-950/90 mix-blend-multiply" />
     </div>

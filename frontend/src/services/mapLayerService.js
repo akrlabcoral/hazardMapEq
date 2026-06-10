@@ -95,9 +95,20 @@ class MapLayerService {
   // --- Stateful Layer Visibility & Data Loading ---
 
   loadGeoJsonData(config) {
-    if (this.dataLoaded[config.sourceId]) return;
+    if (this.dataLoaded[config.sourceId] === 'loading') return;
+
+    if (this.dataCache && this.dataCache[config.sourceId]) {
+      if (this.map && this.map.getSource(config.sourceId)) {
+        this.map.getSource(config.sourceId).setData(this.dataCache[config.sourceId]);
+        this.dataLoaded[config.sourceId] = 'loaded';
+      }
+      return;
+    }
+
     this.dataLoaded[config.sourceId] = 'loading';
     fetchGeoJson(config.dataUrl).then(data => {
+      this.dataCache = this.dataCache || {};
+      this.dataCache[config.sourceId] = data;
       if (this.map && this.map.getSource(config.sourceId)) {
         this.map.getSource(config.sourceId).setData(data);
         this.dataLoaded[config.sourceId] = 'loaded';

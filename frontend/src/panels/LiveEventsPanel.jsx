@@ -63,9 +63,9 @@ export default function LiveEventsPanel() {
     }
 
     if (regionFilter === 'india') {
-      // Rough bounding box covering India + ~1000km buffer
-      // Latitude: 0 to 45N | Longitude: 60E to 105E
-      if (event.latitude < 0 || event.latitude > 45 || event.longitude < 60 || event.longitude > 105) {
+      // Bounding box covering India + ~200km buffer
+      // Latitude: 6.6 to 39.4N | Longitude: 66.9 to 99.1E
+      if (event.latitude < 6.6 || event.latitude > 39.4 || event.longitude < 66.9 || event.longitude > 99.1) {
         return false;
       }
     }

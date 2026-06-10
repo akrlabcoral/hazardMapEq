@@ -3,10 +3,6 @@ import useStore from '../store/useStore';
 import { debugLog } from '../utils/debug';
 
 export function useSimulation() {
-  const earthquakeEpicenter  = useStore((s) => s.earthquakeEpicenter);
-  const earthquakeMagnitude  = useStore((s) => s.earthquakeMagnitude);
-  const earthquakeDepth      = useStore((s) => s.earthquakeDepth);
-  
   const setSimulationResults   = useStore((s) => s.setSimulationResults);
   const setIsSimulationRunning = useStore((s) => s.setIsSimulationRunning);
   

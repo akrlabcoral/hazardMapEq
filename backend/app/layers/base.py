@@ -20,10 +20,9 @@ class BaseHazardLayer(ABC):
         Normalizes the raw values to a scale of 0.0 to 1.0 independently.
         Uses min-max scaling, safely handling zero-variance arrays.
         """
-        if not raw_values:
-            return []
-        
         arr = np.array(raw_values, dtype=float)
+        if arr.size == 0:
+            return []
         min_val, max_val = np.min(arr), np.max(arr)
         
         if max_val - min_val == 0:
