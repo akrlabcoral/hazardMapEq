@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import useStore from '../store/useStore';
+import { debugLog } from '../utils/debug';
 
 export function useSimulation() {
   const earthquakeEpicenter  = useStore((s) => s.earthquakeEpicenter);
@@ -50,7 +51,7 @@ export function useSimulation() {
         body: JSON.stringify(payload)
       });
       
-      console.log('[Sim] API payload sent:', { lat: epicenter.lat, lng: epicenter.lng, magnitude, depth });
+      debugLog('[Sim] API payload sent:', { lat: epicenter.lat, lng: epicenter.lng, magnitude, depth });
 
       if (!response.ok) {
         const errData = await response.json().catch(() => null);

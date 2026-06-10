@@ -92,10 +92,6 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# TODO (production): replace allow_origins=["*"] with an explicit origin list.
-# Browsers reject credentialed cross-origin requests when the origin is a wildcard.
-# Before deploying to staging/production, set CORS_ALLOWED_ORIGINS env var and
-# replace allow_origins=["*"] with allow_origins=_CORS_ORIGINS.split(",").
 app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.cors_allowed_origins,

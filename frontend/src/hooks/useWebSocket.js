@@ -1,5 +1,6 @@
 import { useEffect, useRef, useCallback } from 'react';
 import useStore from '../store/useStore';
+import { debugLog } from '../utils/debug';
 
 /**
  * useWebSocket — manages a single WebSocket connection to /scientific-api/ws/live.
@@ -76,14 +77,14 @@ export function useWebSocket() {
     // LAN, or localhost — the Vite proxy handles routing to the backend.
     const url = `${protocol}//${location.host}/scientific-api/ws/live`;
 
-    console.log('[WS] Connecting to', url);
+    debugLog('[WS] Connecting to', url);
     const ws = new WebSocket(url);
     wsRef.current = ws;
 
     ws.onopen = () => {
       if (!mountedRef.current) return;
       setWsConnected(true);
-      console.log('[WS] Connected');
+      debugLog('[WS] Connected');
     };
 
     ws.onmessage = (e) => {
@@ -98,7 +99,7 @@ export function useWebSocket() {
     ws.onclose = () => {
       setWsConnected(false);
       if (mountedRef.current) {
-        console.log('[WS] Disconnected — reconnecting in 3s...');
+        debugLog('[WS] Disconnected — reconnecting in 3s...');
         retryRef.current = setTimeout(connect, 3000);
       }
     };

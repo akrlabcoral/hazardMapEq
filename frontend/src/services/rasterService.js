@@ -1,6 +1,7 @@
 import * as GeoTIFF from 'geotiff';
 import proj4 from 'proj4';
 import { mapLayerService } from './mapLayerService';
+import { debugLog } from '../utils/debug';
 
 // ─── Memory Safety Constants ────────────────────────────────────────────────
 // Reading large GeoTIFFs in one shot crashes the browser because geotiff.js
@@ -25,13 +26,13 @@ class RasterService {
   transformBoundsRaw(projection, xmin, ymin, xmax, ymax) {
     const crs = projection;
 
-    console.log(`%c[GeoTIFF CRS Audit]`, 'color: #0ea5e9; font-weight: bold;');
-    console.log(`Detected CRS: EPSG:${crs || 'Unknown'}`);
-    console.log(`Original Bounds: [${xmin}, ${ymin}, ${xmax}, ${ymax}]`);
+    debugLog(`%c[GeoTIFF CRS Audit]`, 'color: #0ea5e9; font-weight: bold;');
+    debugLog(`Detected CRS: EPSG:${crs || 'Unknown'}`);
+    debugLog(`Original Bounds: [${xmin}, ${ymin}, ${xmax}, ${ymax}]`);
 
     if (crs === 4326) {
-      console.log(`Projection Type: Geographic (WGS84)`);
-      console.log(`Coordinate Conversion: Skipped (Already EPSG:4326)`);
+      debugLog(`Projection Type: Geographic (WGS84)`);
+      debugLog(`Coordinate Conversion: Skipped (Already EPSG:4326)`);
       return { xmin, ymin, xmax, ymax };
     }
 
@@ -58,13 +59,13 @@ class RasterService {
         return { xmin, ymin, xmax, ymax };
       }
 
-      console.log(`Projection Type: ${projectionType}`);
+      debugLog(`Projection Type: ${projectionType}`);
 
       const [lonMin, latMin] = proj4(sourceProj, 'EPSG:4326', [xmin, ymin]);
       const [lonMax, latMax] = proj4(sourceProj, 'EPSG:4326', [xmax, ymax]);
 
-      console.log(`Transformed Bounds (EPSG:4326): [${lonMin}, ${latMin}, ${lonMax}, ${latMax}]`);
-      console.log(`Coordinate Conversion: Success`);
+      debugLog(`Transformed Bounds (EPSG:4326): [${lonMin}, ${latMin}, ${lonMax}, ${latMax}]`);
+      debugLog(`Coordinate Conversion: Success`);
 
       return { xmin: lonMin, ymin: latMin, xmax: lonMax, ymax: latMax };
     } catch (error) {
@@ -150,19 +151,19 @@ class RasterService {
 
     const fullMemMB = (fullWidth * fullHeight * bandCount * 8) / (1024 * 1024);
 
-    console.log(`%c[GeoTIFF Rendering Audit]`, 'color: #f59e0b; font-weight: bold;');
-    console.log(`Raster Width: ${fullWidth}`);
-    console.log(`Raster Height: ${fullHeight}`);
-    console.log(`Band Count: ${bandCount}`);
-    console.log(`BitsPerSample: ${bitsPerSample}`);
-    console.log(`Photometric Interpretation: ${photometric} (${['WhiteIsZero','BlackIsZero','RGB','Palette'][photometric] || 'Other'})`);
-    console.log(`ColorMap Detected: ${rawColorMap ? `Yes (${rawColorMap.length / 3} entries)` : 'No'}`);
-    console.log(`Palette Applied: ${palette ? 'Yes' : 'No'}`);
-    console.log(`Rendering Mode: ${renderingMode}`);
-    console.log(`Compression: ${fileDir.actualizedFields?.get(259) || 'Unknown'}`);
-    console.log(`Estimated Full Decoded Memory: ${fullMemMB.toFixed(1)} MB`);
-    console.log(`Image Count (overviews): ${imageCount}`);
-    console.log(`NoData Value: ${noDataValue}`);
+    debugLog(`%c[GeoTIFF Rendering Audit]`, 'color: #f59e0b; font-weight: bold;');
+    debugLog(`Raster Width: ${fullWidth}`);
+    debugLog(`Raster Height: ${fullHeight}`);
+    debugLog(`Band Count: ${bandCount}`);
+    debugLog(`BitsPerSample: ${bitsPerSample}`);
+    debugLog(`Photometric Interpretation: ${photometric} (${['WhiteIsZero','BlackIsZero','RGB','Palette'][photometric] || 'Other'})`);
+    debugLog(`ColorMap Detected: ${rawColorMap ? `Yes (${rawColorMap.length / 3} entries)` : 'No'}`);
+    debugLog(`Palette Applied: ${palette ? 'Yes' : 'No'}`);
+    debugLog(`Rendering Mode: ${renderingMode}`);
+    debugLog(`Compression: ${fileDir.actualizedFields?.get(259) || 'Unknown'}`);
+    debugLog(`Estimated Full Decoded Memory: ${fullMemMB.toFixed(1)} MB`);
+    debugLog(`Image Count (overviews): ${imageCount}`);
+    debugLog(`NoData Value: ${noDataValue}`);
 
     // ── Strategy 1: Try overview images (pre-downsampled pyramids) ──
     // Many GeoTIFFs (especially Cloud Optimized) contain overview images
@@ -176,7 +177,7 @@ class RasterService {
           const omem = (ow * oh * bandCount * 8) / (1024 * 1024);
 
           if (omem <= MAX_SAFE_MEMORY_MB && ow <= MAX_OUTPUT_DIM * 2 && oh <= MAX_OUTPUT_DIM * 2) {
-            console.log(`Using overview image #${i}: ${ow}x${oh} (${omem.toFixed(1)} MB)`);
+            debugLog(`Using overview image #${i}: ${ow}x${oh} (${omem.toFixed(1)} MB)`);
 
             const outW = Math.min(ow, MAX_OUTPUT_DIM);
             const outH = Math.min(oh, MAX_OUTPUT_DIM);
@@ -204,7 +205,7 @@ class RasterService {
 
     // ── Strategy 2: Small raster — single-shot decode ──
     if (fullMemMB <= MAX_SAFE_MEMORY_MB) {
-      console.log(`Raster fits in memory. Decoding at constrained resolution.`);
+      debugLog(`Raster fits in memory. Decoding at constrained resolution.`);
       const outW = Math.min(fullWidth, MAX_OUTPUT_DIM);
       const outH = Math.min(fullHeight, MAX_OUTPUT_DIM);
 
@@ -233,8 +234,8 @@ class RasterService {
     // (TILE_READ_SIZE x TILE_READ_SIZE pixels from the source) one at a time.
     // Each window only requires geotiff.js to decompress the strips/tiles
     // that intersect it, keeping peak memory usage bounded.
-    console.log(`%c[GeoTIFF Tiled Decode]`, 'color: #ef4444; font-weight: bold;');
-    console.log(`Using tiled window reading (${TILE_READ_SIZE}px windows)`);
+    debugLog(`%c[GeoTIFF Tiled Decode]`, 'color: #ef4444; font-weight: bold;');
+    debugLog(`Using tiled window reading (${TILE_READ_SIZE}px windows)`);
 
     // Calculate output dimensions maintaining aspect ratio
     let outW, outH;
@@ -260,7 +261,7 @@ class RasterService {
     const totalTiles = tilesX * tilesY;
     let tilesProcessed = 0;
 
-    console.log(`Tile grid: ${tilesX} x ${tilesY} = ${totalTiles} tiles`);
+    debugLog(`Tile grid: ${tilesX} x ${tilesY} = ${totalTiles} tiles`);
 
     for (let ty = 0; ty < tilesY; ty++) {
       for (let tx = 0; tx < tilesX; tx++) {
@@ -309,14 +310,14 @@ class RasterService {
 
         tilesProcessed++;
         if (tilesProcessed % 10 === 0 || tilesProcessed === totalTiles) {
-          console.log(`Tiles processed: ${tilesProcessed}/${totalTiles}`);
+          debugLog(`Tiles processed: ${tilesProcessed}/${totalTiles}`);
         }
       }
     }
 
     const dataUrl = canvas.toDataURL('image/png');
 
-    console.log(`Tiled decode complete: ${outW}x${outH} from ${fullWidth}x${fullHeight}`);
+    debugLog(`Tiled decode complete: ${outW}x${outH} from ${fullWidth}x${fullHeight}`);
 
     return {
       dataUrl, projection,
@@ -511,9 +512,9 @@ class RasterService {
           type: 'image', url: result.dataUrl, coordinates
         });
 
-        console.log(`%c[GeoTIFF Render]`, 'color: #22c55e; font-weight: bold;');
-        console.log(`Adding layer: ${layerId}`);
-        console.log(`Decoded: ${result.decodeWidth}x${result.decodeHeight} (from ${result.fullWidth}x${result.fullHeight})`);
+        debugLog(`%c[GeoTIFF Render]`, 'color: #22c55e; font-weight: bold;');
+        debugLog(`Adding layer: ${layerId}`);
+        debugLog(`Decoded: ${result.decodeWidth}x${result.decodeHeight} (from ${result.fullWidth}x${result.fullHeight})`);
         if (result.downsampled) console.warn(`⚠ Large raster was downsampled for memory safety.`);
 
         const beforeId = map.getLayer('india-boundary-fill') ? 'india-boundary-fill' : undefined;
@@ -523,7 +524,7 @@ class RasterService {
           paint: { 'raster-opacity': 0.8, 'raster-fade-duration': 0 }
         }, beforeId);
 
-        console.log(`Layer "${layerId}" added successfully.`);
+        debugLog(`Layer "${layerId}" added successfully.`);
       }
 
       this.rasterCache.set(layerId, { sourceId, layerId });
@@ -567,9 +568,9 @@ class RasterService {
           type: 'image', url: result.dataUrl, coordinates
         });
 
-        console.log(`%c[GeoTIFF Render]`, 'color: #22c55e; font-weight: bold;');
-        console.log(`Adding built-in layer: ${layerId}`);
-        console.log(`Decoded: ${result.decodeWidth}x${result.decodeHeight}`);
+        debugLog(`%c[GeoTIFF Render]`, 'color: #22c55e; font-weight: bold;');
+        debugLog(`Adding built-in layer: ${layerId}`);
+        debugLog(`Decoded: ${result.decodeWidth}x${result.decodeHeight}`);
 
         const beforeId = map.getLayer('india-boundary-fill') ? 'india-boundary-fill' : undefined;
         map.addLayer({
@@ -581,7 +582,7 @@ class RasterService {
           }
         }, beforeId);
 
-        console.log(`Layer "${layerId}" added successfully.`);
+        debugLog(`Layer "${layerId}" added successfully.`);
       }
 
       this.rasterCache.set(layerId, { sourceId, layerId });

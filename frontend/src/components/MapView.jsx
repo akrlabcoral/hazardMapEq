@@ -7,6 +7,7 @@ import { rasterService } from '../services/rasterService';
 import { animationManager } from '../services/animationManager';
 
 import { initSimulationLayers, attachSimulationPopups, SIM_LAYERS } from '../config/simulationLayers';
+import { debugLog } from '../utils/debug';
 
 export default function MapView({ isAdmin = false }) {
   const mapContainer = useRef(null);
@@ -58,13 +59,13 @@ export default function MapView({ isAdmin = false }) {
     const onMapClick = (e) => {
       if (useStore.getState().isPlacingEpicenter) {
         const coords = { lng: e.lngLat.lng, lat: e.lngLat.lat };
-        console.log('[Epicenter] Map click => setting epicenter:', coords);
+        debugLog('[Epicenter] Map click => setting epicenter:', coords);
         setEarthquakeEpicenter(coords);
         useStore.getState().setIsPlacingEpicenter(false);
         // Verify store was updated
         setTimeout(() => {
           const stored = useStore.getState().earthquakeEpicenter;
-          console.log('[Epicenter] Store verification (10ms later):', stored);
+          debugLog('[Epicenter] Store verification (10ms later):', stored);
         }, 10);
       }
     };
@@ -74,7 +75,7 @@ export default function MapView({ isAdmin = false }) {
       if (e.originalEvent && e.originalEvent.button === 1) { // Middle mouse button
         e.originalEvent.preventDefault();
         const coords = { lng: e.lngLat.lng, lat: e.lngLat.lat };
-        console.log('[Epicenter] Middle-click => setting epicenter:', coords);
+        debugLog('[Epicenter] Middle-click => setting epicenter:', coords);
         setEarthquakeEpicenter(coords);
       }
     };
@@ -320,7 +321,7 @@ export default function MapView({ isAdmin = false }) {
 
         if (!simulationResults) {
           // simulationResults=null means simulation was just triggered or cleared
-          console.log('[MapView] simulationResults cleared — hiding layers and clearing data');
+          debugLog('[MapView] simulationResults cleared — hiding layers and clearing data');
           if (map.current.getLayer(SIM_LAYERS.CONTOUR_FILL))   map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL,   'visibility', 'none');
           if (map.current.getLayer(SIM_LAYERS.CONTOUR_STROKE)) map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'none');
           if (map.current.getLayer(SIM_LAYERS.WB_GRID_FILL))   map.current.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL,   'visibility', 'none');
@@ -344,8 +345,8 @@ export default function MapView({ isAdmin = false }) {
 
         // Log the epicenter the backend used (embedded in features) vs current store
         const currentEpicenter = useStore.getState().earthquakeEpicenter;
-        console.log('[MapView] Rendering new simulation results. Current store epicenter:', currentEpicenter);
-        console.log('[MapView] Grid features count:', simulationResults.grid_geojson.features?.length);
+        debugLog('[MapView] Rendering new simulation results. Current store epicenter:', currentEpicenter);
+        debugLog('[MapView] Grid features count:', simulationResults.grid_geojson.features?.length);
 
         wbGridSrc.setData(simulationResults.grid_geojson);
         if (simulationResults.contour_geojson) {
@@ -355,7 +356,7 @@ export default function MapView({ isAdmin = false }) {
         if (map.current.getLayer(SIM_LAYERS.CONTOUR_FILL))   map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL,   'visibility', 'visible');
         if (map.current.getLayer(SIM_LAYERS.CONTOUR_STROKE)) map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'visible');
         if (map.current.getLayer(SIM_LAYERS.WB_GRID_FILL))   map.current.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL,   'visibility', 'visible');
-        console.log('[MapView] Layers made visible:', SIM_LAYERS.CONTOUR_FILL, SIM_LAYERS.CONTOUR_STROKE, SIM_LAYERS.WB_GRID_FILL);
+        debugLog('[MapView] Layers made visible:', SIM_LAYERS.CONTOUR_FILL, SIM_LAYERS.CONTOUR_STROKE, SIM_LAYERS.WB_GRID_FILL);
 
         if (simulationResults.state_summary) {
           const mapping = useStore.getState().stateIdMapping;
@@ -379,7 +380,7 @@ export default function MapView({ isAdmin = false }) {
         }
 
         if (earthquakeEpicenter) {
-          console.log('[MapView] Starting shockwave at epicenter:', earthquakeEpicenter);
+          debugLog('[MapView] Starting shockwave at epicenter:', earthquakeEpicenter);
           animationManager.startShockwave(map.current, earthquakeEpicenter, 300);
         }
       } catch (err) {

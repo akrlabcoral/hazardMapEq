@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, Star } from 'lucide-react';
 
 import { useShallow } from 'zustand/react/shallow';
 import useStore from '../store/useStore';
@@ -39,7 +39,7 @@ export default function MapLegend() {
       <div className="space-y-2.5">
         {/* Layer symbology items */}
         <div className="flex items-center gap-2.5 mt-1">
-          <div className="w-3 h-3 rounded-full bg-red-500 border-2 border-white/80 shadow-[0_0_8px_rgba(239,68,68,0.5)]"></div>
+          <Star className="w-4 h-4 fill-red-500 text-white stroke-[1.5px] drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" style={{ filter: 'drop-shadow(0 0 4px rgba(239,68,68,0.8))' }} />
           <span className="text-slate-400">Earthquake origin point</span>
         </div>
 

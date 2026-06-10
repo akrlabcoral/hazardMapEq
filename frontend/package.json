@@ -5,11 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview",
-    "generate-data": "node scripts/generateData.cjs",
-    "server:dev": "cd server && npm run dev",
-    "server:migrate": "cd server && npm run migrate",
-    "server:seed": "cd server && npm run seed"
+    "preview": "vite preview"
   },
   "keywords": [],
   "author": "",

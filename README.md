@@ -16,7 +16,7 @@
 
 HazardMap is a rigorous real-time seismic hazard platform. It actively monitors global and regional earthquake data feeds (USGS and India's NCS), immediately applies Ground Motion Prediction Equations (GMPEs) optimized for specific tectonic regions, and pushes interactive Peak Ground Acceleration (PGA) heatmaps directly to connected browsers via WebSockets in a matter of seconds.
 
-The system evaluates hazard over a continuous 20-kilometer hexagonal grid across the entire nation, incorporating local `Vs30` soil data to apply realistic site-specific amplification factors.
+The system evaluates hazard over a nationwide 20-kilometer analysis grid, incorporating local `Vs30` soil data to apply realistic site-specific amplification factors.
 
 ---
 
@@ -81,6 +81,19 @@ The entire application is fully dockerized for single-command orchestration.
    - **Backend API Docs**: `http://localhost:8000/docs`
 
 > **Note**: The backend initializes a one-time connection to the PostgreSQL database and loads the 6,500-cell GeoJSON grid into memory at startup. The first initialization may take a few seconds.
+
+### Runtime Configuration
+
+The Docker Compose defaults are development-friendly. For staging or production, set these backend environment variables explicitly:
+
+- `CORS_ALLOWED_ORIGINS`: comma-separated browser origins allowed to call the API, for example `https://hazardmap.example.com`.
+- `DATABASE_URL`: PostgreSQL connection URL.
+- `VS30_RASTER_PATH`: path to the national Vs30 GeoTIFF inside the backend container.
+- `GRID_PATH`: path to the analysis grid GeoJSON.
+- `USGS_POLL_INTERVAL_SECONDS` and `NCS_POLL_INTERVAL_SECONDS`: feed polling cadence.
+- `AUTO_SIM_MIN_MAGNITUDE` and `AUTO_SIM_MAX_DEPTH_KM`: automatic simulation thresholds.
+
+Frontend debug audit logs are disabled by default. Set `VITE_DEBUG_LOGS=true` when running Vite if you need detailed map, WebSocket, or raster diagnostics in the browser console.
 
 ---
 

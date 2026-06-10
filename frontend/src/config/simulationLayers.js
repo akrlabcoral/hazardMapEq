@@ -128,16 +128,27 @@ export const initSimulationLayers = (mapInstance) => {
     }
   });
 
+  if (!mapInstance.hasImage('star-icon')) {
+    const img = new Image();
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#ef4444" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+    img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+    img.onload = () => {
+      if (!mapInstance.hasImage('star-icon')) {
+        mapInstance.addImage('star-icon', img);
+      }
+    };
+  }
+
   // --- Epicenter marker ---
   mapLayerService.addLayerSafe(mapInstance, {
     id: SIM_LAYERS.EPICENTER,
-    type: 'circle',
+    type: 'symbol',
     source: 'sim-epicenter-source',
-    paint: {
-      'circle-radius': 8,
-      'circle-color': '#ef4444',
-      'circle-stroke-width': 3,
-      'circle-stroke-color': '#ffffff'
+    layout: {
+      'icon-image': 'star-icon',
+      'icon-size': 1.0,
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true
     }
   });
 };
