@@ -31,7 +31,8 @@ export default function HistoricPanel() {
   const [error, setError] = useState(null);
 
   // Filters
-  const [minMag, setMinMag] = useState('4.0');
+  const [minMag, setMinMag] = useState('7.0');
+  const [regionFilter, setRegionFilter] = useState('all');
 
   useEffect(() => {
     // Enable layer on mount
@@ -44,7 +45,6 @@ export default function HistoricPanel() {
   }, []);
 
   useEffect(() => {
-    const controller = new AbortController();
     let isCurrent = true;
     const mag = parseFloat(minMag);
     const dataUrl = `/scientific-api/historic?min_magnitude=${mag}`;
@@ -55,7 +55,6 @@ export default function HistoricPanel() {
     mapLayerService.loadLayerData('historicEarthquakes', {
       dataUrl,
       cacheKey: `historicEarthquakes:${mag}`,
-      signal: controller.signal,
     })
       .then(json => {
         if (!isCurrent) return;
@@ -63,7 +62,7 @@ export default function HistoricPanel() {
         setLoading(false);
       })
       .catch(err => {
-        if (!isCurrent || err.name === 'AbortError') return;
+        if (!isCurrent) return;
         console.error("Failed to load historic events:", err);
         setError(err.message);
         setLoading(false);
@@ -71,7 +70,6 @@ export default function HistoricPanel() {
 
     return () => {
       isCurrent = false;
-      controller.abort();
     };
   }, [minMag]);
 
@@ -80,11 +78,36 @@ export default function HistoricPanel() {
     useStore.getState().setHistoricMinMag(parseFloat(minMag));
   }, [minMag]);
 
+  const topRegions = useMemo(() => {
+    if (!data) return [];
+    const counts = {};
+    data.forEach(f => {
+      const place = f.properties.place || "";
+      const parts = place.split(',');
+      if (parts.length > 1) {
+        const r = parts[parts.length - 1].trim();
+        counts[r] = (counts[r] || 0) + 1;
+      }
+    });
+    // Sort by frequency, take top 30
+    return Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 30)
+      .map(entry => entry[0]);
+  }, [data]);
+
   const filteredFeatures = useMemo(() => {
     if (!data) return [];
     const mag = parseFloat(minMag);
-    return data.filter(f => f.properties.mag >= mag);
-  }, [data, minMag]);
+    return data.filter(f => {
+      if (f.properties.mag < mag) return false;
+      if (regionFilter !== 'all') {
+        const place = f.properties.place || "";
+        if (!place.toLowerCase().includes(regionFilter.toLowerCase())) return false;
+      }
+      return true;
+    });
+  }, [data, minMag, regionFilter]);
 
   // Only show top 100 in the UI list to avoid DOM lag
   const displayFeatures = filteredFeatures.slice(0, 100);
@@ -113,7 +136,17 @@ export default function HistoricPanel() {
         </div>
         
         <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-400">Min Mag:</span>
+          <select
+            value={regionFilter}
+            onChange={(e) => setRegionFilter(e.target.value)}
+            className="w-[100px] bg-slate-900/50 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-orange-500 overflow-hidden text-ellipsis"
+          >
+            <option value="all">All Regions</option>
+            {topRegions.map(r => (
+              <option key={r} value={r}>{r}</option>
+            ))}
+          </select>
+
           <select
             value={minMag}
             onChange={(e) => setMinMag(e.target.value)}

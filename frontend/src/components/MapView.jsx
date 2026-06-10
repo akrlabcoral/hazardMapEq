@@ -9,6 +9,26 @@ import { animationManager } from '../services/animationManager';
 import { initSimulationLayers, attachSimulationPopups, SIM_LAYERS } from '../config/simulationLayers';
 import { debugLog } from '../utils/debug';
 
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
+
+const formatEventTime = (value) => {
+  if (!value) return 'Unknown';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Unknown';
+  return date.toLocaleString([], {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+};
+
 export default function MapView({ isAdmin = false }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -215,6 +235,50 @@ export default function MapView({ isAdmin = false }) {
             );
             hoveredPlateId = null;
           }
+        });
+
+        const historicPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, offset: 12 });
+
+        map.current.on('mouseenter', 'historic-unclustered-point', () => {
+          map.current.getCanvas().style.cursor = 'pointer';
+        });
+
+        map.current.on('mouseleave', 'historic-unclustered-point', () => {
+          map.current.getCanvas().style.cursor = '';
+        });
+
+        map.current.on('click', 'historic-unclustered-point', (e) => {
+          if (!e.features?.length) return;
+          const feature = e.features[0];
+          const props = feature.properties || {};
+          const coordinates = feature.geometry?.coordinates || [e.lngLat.lng, e.lngLat.lat];
+          const longitude = Number(coordinates[0]);
+          const latitude = Number(coordinates[1]);
+          const magnitude = Number(props.mag);
+          const depth = Number(props.depth);
+          const location = props.place || `${latitude.toFixed(2)}°N, ${longitude.toFixed(2)}°E`;
+
+          historicPopup
+            .setLngLat([longitude, latitude])
+            .setHTML(`
+              <div style="background:#0f172a;border:1px solid #334155;padding:10px 14px;border-radius:8px;font-family:monospace;font-size:12px;color:#e2e8f0;min-width:220px">
+                <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;margin-bottom:4px">Historic Earthquake</div>
+                <div style="color:#fb923c;font-weight:700;font-size:15px;margin-bottom:8px">${Number.isFinite(magnitude) ? `M ${magnitude.toFixed(1)}` : 'Magnitude unknown'}</div>
+                <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:5px">
+                  <span style="color:#94a3b8">Time</span>
+                  <span style="text-align:right;color:#e2e8f0">${escapeHtml(formatEventTime(props.time))}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:5px">
+                  <span style="color:#94a3b8">Location</span>
+                  <span style="text-align:right;color:#e2e8f0">${escapeHtml(location)}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;gap:12px">
+                  <span style="color:#94a3b8">Depth</span>
+                  <span style="text-align:right;color:#e2e8f0">${Number.isFinite(depth) ? `${depth.toFixed(1)} km` : 'Unknown'}</span>
+                </div>
+              </div>
+            `)
+            .addTo(map.current);
         });
       }
     });
