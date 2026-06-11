@@ -59,6 +59,18 @@
   filter: invert(1) hue-rotate(180deg);
 }
 
+.maplibregl-ctrl-scale {
+  position: fixed !important;
+  bottom: 20px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  background-color: rgba(15, 23, 42, 0.8) !important;
+  border-color: #64748b !important;
+  color: #f8fafc !important;
+  border-radius: 0 0 4px 4px;
+  backdrop-filter: blur(4px);
+}
+
 /* Shockwave pulse animation for aftershock markers */
 @keyframes shockwave-pulse {
   0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.6); }

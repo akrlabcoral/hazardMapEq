@@ -94,7 +94,7 @@ export default function MapView({ isAdmin = false }) {
 
     map.current.addControl(new maplibregl.NavigationControl(), 'bottom-right');
     map.current.addControl(new maplibregl.FullscreenControl(), 'top-right');
-    map.current.addControl(new maplibregl.ScaleControl(), 'bottom-left');
+    map.current.addControl(new maplibregl.ScaleControl(), 'bottom-right');
 
     const onMapClick = (e) => {
       if (useStore.getState().isPlacingEpicenter) {
@@ -175,7 +175,6 @@ export default function MapView({ isAdmin = false }) {
             );
             useStore.getState().setHoveredStateId(hoveredStateId);
             useStore.getState().setHoveredStateName(getStateName(feature));
-            useStore.getState().setMousePos({ x: e.originalEvent.clientX, y: e.originalEvent.clientY });
             
             if (cellHoverTimeout) clearTimeout(cellHoverTimeout);
             cellHoverTimeout = setTimeout(() => {
