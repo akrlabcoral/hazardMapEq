@@ -6,6 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import json
 import logging
+import time
 
 import numpy as np
 
@@ -156,10 +157,17 @@ class SimulationRunner:
         event_id: int | None = None,
         triggered_by: str = "manual",
     ) -> dict:
+        total_started = time.perf_counter()
+        t_region = time.perf_counter()
         gmpe, region = GMPESelector.select(latitude, longitude, gmpe_params)
+        region_ms = (time.perf_counter() - t_region) * 1000
+
+        t_clone = time.perf_counter()
         grid = self.grid_context.clone_grid()
         features = grid["features"]
+        clone_ms = (time.perf_counter() - t_clone) * 1000
 
+        t_pga = time.perf_counter()
         raw_pga = self.pga_engine.compute_from_arrays(
             self.grid_context.centroid_lons,
             self.grid_context.centroid_lats,
@@ -170,7 +178,11 @@ class SimulationRunner:
             gmpe,
         )
         norm_pga = self.pga_engine.normalize(raw_pga)
+        pga_ms = (time.perf_counter() - t_pga) * 1000
+
+        t_annotate = time.perf_counter()
         pga_final = self._annotate_features(features, raw_pga, norm_pga)
+        annotate_ms = (time.perf_counter() - t_annotate) * 1000
 
         max_idx = np.argmax(pga_final)
         max_feat = features[max_idx]["properties"]
@@ -183,9 +195,15 @@ class SimulationRunner:
             max_feat["pga_final"],
         )
 
+        t_aggregate = time.perf_counter()
         district_summary, state_summary = aggregate_impact(features, raw_pga, norm_pga)
-        contour_geojson = generate_contour_geojson(features, pga_final)
+        aggregate_ms = (time.perf_counter() - t_aggregate) * 1000
 
+        t_contour = time.perf_counter()
+        contour_geojson = generate_contour_geojson(features, pga_final)
+        contour_ms = (time.perf_counter() - t_contour) * 1000
+
+        t_save = time.perf_counter()
         sim_id = save_simulation(
             lat=latitude,
             lon=longitude,
@@ -196,14 +214,21 @@ class SimulationRunner:
             event_id=event_id,
             triggered_by=triggered_by,
         )
+        save_ms = (time.perf_counter() - t_save) * 1000
 
         logger.info(
-            "[SimRunner] sim_id=%s triggered_by=%s mag=%s lat=%.3f lon=%.3f",
+            "[SimTiming] sim_id=%s triggered_by=%s region_ms=%.0f clone_ms=%.0f pga_ms=%.0f "
+            "annotate_ms=%.0f aggregate_ms=%.0f contour_ms=%.0f save_ms=%.0f total_ms=%.0f",
             sim_id,
             triggered_by,
-            magnitude,
-            latitude,
-            longitude,
+            region_ms,
+            clone_ms,
+            pga_ms,
+            annotate_ms,
+            aggregate_ms,
+            contour_ms,
+            save_ms,
+            (time.perf_counter() - total_started) * 1000,
         )
 
         return {

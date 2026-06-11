@@ -7,6 +7,8 @@ simulation request is served.
 """
 import logging
 import os
+from urllib.parse import urlparse
+
 from app.config import settings
 from app.soil import cache
 
@@ -14,11 +16,19 @@ logger = logging.getLogger("hazardmap.soil.loader")
 
 VS30_RASTER_PATH = settings.vs30_raster_path
 
+
+def _is_remote_raster(path: str) -> bool:
+    parsed = urlparse(path)
+    return (
+        path.startswith("/vsi")
+        or parsed.scheme in {"http", "https", "s3", "gs", "az"}
+    )
+
 def load_all_soil_rasters() -> None:
     """
     Load the single India Vs30 raster and register it in the cache as 'India'.
     """
-    if not os.path.isfile(VS30_RASTER_PATH):
+    if not _is_remote_raster(VS30_RASTER_PATH) and not os.path.isfile(VS30_RASTER_PATH):
         logger.warning("[SoilLoader] Vs30 raster not found at %s", VS30_RASTER_PATH)
         logger.warning("[SoilLoader] Soil amplification will use default fallback factor 1.0 for all cells.")
         return

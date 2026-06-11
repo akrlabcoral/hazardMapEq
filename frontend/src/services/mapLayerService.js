@@ -172,9 +172,13 @@ class MapLayerService {
       if (!this.map.getSource(config.sourceId)) {
         const sourceConfig = {
           type: 'geojson',
-          data: { type: 'FeatureCollection', features: [] },
-          generateId: true
+          data: { type: 'FeatureCollection', features: [] }
         };
+        if (config.promoteId) {
+          sourceConfig.promoteId = config.promoteId;
+        } else {
+          sourceConfig.generateId = true;
+        }
         if (config.cluster) {
           sourceConfig.cluster = true;
           sourceConfig.clusterMaxZoom = config.clusterMaxZoom;

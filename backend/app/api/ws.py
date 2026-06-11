@@ -19,6 +19,7 @@ import logging
 import time
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 
+from app.config import settings
 from app.services.redis_client import redis_manager
 
 logger = logging.getLogger("hazardmap.ws")
@@ -34,7 +35,8 @@ router = APIRouter()
 _CLIENTS: set[WebSocket] = set()
 _CLIENT_LOCKS: dict[WebSocket, asyncio.Lock] = {}
 
-MAX_CLIENTS = 10000  # Increased capacity guard
+MAX_CLIENTS = settings.ws_max_clients
+SEND_TIMEOUT_SECONDS = settings.ws_send_timeout_seconds
 
 
 @router.websocket("/ws/live")
@@ -53,7 +55,7 @@ async def ws_live(ws: WebSocket):
             while True:
                 await asyncio.sleep(25)
                 async with _CLIENT_LOCKS[ws]:
-                    await ws.send_text('{"type":"ping"}')
+                    await asyncio.wait_for(ws.send_text('{"type":"ping"}'), timeout=SEND_TIMEOUT_SECONDS)
         except Exception:
             pass
 
@@ -81,7 +83,7 @@ async def _send_safe(client: WebSocket, payload: str, dead: set[WebSocket]) -> N
             dead.add(client)
             return
         async with lock:
-            await client.send_text(payload)
+            await asyncio.wait_for(client.send_text(payload), timeout=SEND_TIMEOUT_SECONDS)
     except Exception:
         dead.add(client)
 
@@ -144,6 +146,8 @@ async def _broadcast_local(message: dict) -> None:
 
     if dead:
         _CLIENTS.difference_update(dead)
+        for client in dead:
+            _CLIENT_LOCKS.pop(client, None)
         logger.debug(f"[WS] Removed {len(dead)} dead connection(s)")
 
     logger.debug(f"[WS] Broadcast type={message.get('type')} to {len(_CLIENTS)} clients")

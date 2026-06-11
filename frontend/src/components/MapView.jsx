@@ -29,6 +29,20 @@ const formatEventTime = (value) => {
   });
 };
 
+const getStateName = (feature) => feature?.properties?.state || feature?.properties?.STATE || null;
+const mapStyleCache = new Map();
+
+const loadMapStyle = async (url) => {
+  if (!mapStyleCache.has(url)) {
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(`Map style request failed: ${res.status}`);
+    }
+    mapStyleCache.set(url, await res.json());
+  }
+  return structuredClone(mapStyleCache.get(url));
+};
+
 export default function MapView({ isAdmin = false }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -133,7 +147,11 @@ export default function MapView({ isAdmin = false }) {
           .then(data => {
             const mapping = {};
             data.features.forEach(f => {
-              mapping[f.properties.state || f.properties.STATE] = f.id;
+              const stateName = getStateName(f);
+              const stateId = f.properties.id ?? f.id;
+              if (stateName && stateId !== undefined) {
+                mapping[stateName] = stateId;
+              }
             });
             useStore.getState().setStateIdMapping(mapping);
           });
@@ -143,18 +161,20 @@ export default function MapView({ isAdmin = false }) {
 
         map.current.on('mousemove', 'state-boundaries-fill', (e) => {
           if (e.features.length > 0) {
+            const feature = e.features[0];
             if (hoveredStateId !== null) {
               map.current.setFeatureState(
                 { source: 'state-boundaries-source', id: hoveredStateId },
                 { hover: false }
               );
             }
-            hoveredStateId = e.features[0].id;
+            hoveredStateId = feature.properties.id ?? feature.id;
             map.current.setFeatureState(
               { source: 'state-boundaries-source', id: hoveredStateId },
               { hover: true }
             );
             useStore.getState().setHoveredStateId(hoveredStateId);
+            useStore.getState().setHoveredStateName(getStateName(feature));
             useStore.getState().setMousePos({ x: e.originalEvent.clientX, y: e.originalEvent.clientY });
             
             if (cellHoverTimeout) clearTimeout(cellHoverTimeout);
@@ -186,6 +206,7 @@ export default function MapView({ isAdmin = false }) {
           }
           hoveredStateId = null;
           useStore.getState().setHoveredStateId(null);
+          useStore.getState().setHoveredStateName(null);
           
           if (cellHoverTimeout) clearTimeout(cellHoverTimeout);
           useStore.getState().setHoveredCellData(null);
@@ -219,7 +240,7 @@ export default function MapView({ isAdmin = false }) {
             platePopup.setLngLat(e.lngLat).setHTML(`
               <div style="background:#0f172a;border:1px solid #334155;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px;color:#e2e8f0;">
                 <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;margin-bottom:2px">Plate Boundary</div>
-                <div style="color:#fb923c;font-weight:700;font-size:14px">${type}</div>
+                <div style="color:#fb923c;font-weight:700;font-size:14px">${escapeHtml(type)}</div>
               </div>
             `).addTo(map.current);
           }
@@ -318,8 +339,7 @@ export default function MapView({ isAdmin = false }) {
         const url = mapStyle === 'dark' 
           ? 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json'
           : 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json';
-        const res = await fetch(url);
-        const styleJson = await res.json();
+        const styleJson = await loadMapStyle(url);
         
         // Find the water layer and mutate its color to light blue
         const waterLayer = styleJson.layers.find(l => l.id === 'water');
@@ -395,6 +415,7 @@ export default function MapView({ isAdmin = false }) {
   // Render simulation results and trigger shockwave
   useEffect(() => {
     if (!map.current) return;
+    let styleWaitInterval = null;
 
     const updateSimulationResults = () => {
       try {
@@ -480,13 +501,15 @@ export default function MapView({ isAdmin = false }) {
       } else {
         // Poll every 50ms until the style finishes processing (max 2s safety)
         let attempts = 0;
-        const interval = setInterval(() => {
+        styleWaitInterval = setInterval(() => {
           attempts++;
           if (map.current && map.current.isStyleLoaded()) {
-            clearInterval(interval);
+            clearInterval(styleWaitInterval);
+            styleWaitInterval = null;
             updateSimulationResults();
           } else if (attempts > 40) {
-            clearInterval(interval);
+            clearInterval(styleWaitInterval);
+            styleWaitInterval = null;
             console.warn('[MapView] Style never loaded after 2s, forcing update.');
             updateSimulationResults();
           }
@@ -495,6 +518,11 @@ export default function MapView({ isAdmin = false }) {
     };
 
     waitForStyleAndUpdate();
+    return () => {
+      if (styleWaitInterval) {
+        clearInterval(styleWaitInterval);
+      }
+    };
   }, [simulationResults, earthquakeEpicenter]);
 
   return (

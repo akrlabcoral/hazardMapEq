@@ -20,6 +20,10 @@ def _csv_env(name: str, default: str) -> list[str]:
     return [item.strip() for item in raw.split(",") if item.strip()]
 
 
+def _bool_env(name: str, default: str = "false") -> bool:
+    return os.environ.get(name, default).strip().lower() in {"1", "true", "yes", "on"}
+
+
 @dataclass(frozen=True)
 class Settings:
     database_url: str = os.environ.get(
@@ -38,7 +42,11 @@ class Settings:
     db_min_connections: int = int(os.environ.get("DB_MIN_CONNECTIONS", "2"))
     db_max_connections: int = int(os.environ.get("DB_MAX_CONNECTIONS", "10"))
     redis_url: str = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
-    redis_lock_fail_open: bool = os.environ.get("REDIS_LOCK_FAIL_OPEN", "false").lower() == "true"
+    redis_lock_fail_open: bool = _bool_env("REDIS_LOCK_FAIL_OPEN")
+    enable_dev_routes: bool = _bool_env("ENABLE_DEV_ROUTES")
+    ws_max_clients: int = int(os.environ.get("WS_MAX_CLIENTS", "10000"))
+    ws_send_timeout_seconds: float = float(os.environ.get("WS_SEND_TIMEOUT_SECONDS", "5.0"))
+    contour_grid_size: int = int(os.environ.get("CONTOUR_GRID_SIZE", "300"))
 
 
 settings = Settings()
@@ -95,7 +103,7 @@ RISK_THRESHOLDS = {
 # ---------------------------------------------------------------------------
 # Contour Generation Settings
 # ---------------------------------------------------------------------------
-CONTOUR_GRID_SIZE = 400    # resolution of the interpolation meshgrid (NxN)
+CONTOUR_GRID_SIZE = settings.contour_grid_size    # resolution of the interpolation meshgrid (NxN)
 CONTOUR_BLUR_SIGMA = 1.5   # Gaussian blur sigma — smooths jagged contour edges
 CONTOUR_FILL_OPACITY = 0.6
 

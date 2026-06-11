@@ -37,11 +37,14 @@ export const createSimulationSlice = (set) => ({
   
   isSimulationRunning: false,
   setIsSimulationRunning: (val) => set({ isSimulationRunning: val }),
+  pendingSimulationRequestId: null,
+  setPendingSimulationRequestId: (requestId) => set({ pendingSimulationRequestId: requestId }),
   
   clearSimulationState: () => set((state) => ({
     earthquakeEpicenter: null,
     simulationResults: null,
     isSimulationRunning: false,
+    pendingSimulationRequestId: null,
     selectedStateName: null,
     activeAlert: null,
   })),

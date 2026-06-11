@@ -11,6 +11,13 @@ export const SIM_LAYERS = {
   SOIL_AMP:       'sim-soil-amp-layer',
 };
 
+const escapeHtml = (value) => String(value ?? '')
+  .replace(/&/g, '&amp;')
+  .replace(/</g, '&lt;')
+  .replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;')
+  .replace(/'/g, '&#039;');
+
 export const initSimulationLayers = (mapInstance) => {
   const emptyFC = { type: 'FeatureCollection', features: [] };
 
@@ -162,20 +169,22 @@ export const attachSimulationPopups = (mapInstance) => {
     const siteColors = { A: '#3b82f6', B: '#60a5fa', C: '#22c55e', D: '#f97316', E: '#ef4444' };
     const cls = p.site_class || '–';
     const color = siteColors[cls] || '#94a3b8';
+    const vs30 = p.vs30 ?? '–';
+    const soilFactor = p.soil_factor ?? '–';
     popup.setLngLat(e.lngLat).setHTML(`
       <div style="background:#0f172a;border:1px solid #334155;padding:10px 14px;border-radius:10px;font-family:monospace;font-size:12px;color:#e2e8f0;min-width:160px">
         <div style="font-weight:700;font-size:13px;border-bottom:1px solid #334155;padding-bottom:6px;margin-bottom:8px;color:#fff">Soil Site Data</div>
         <div style="display:flex;justify-content:space-between;margin-bottom:4px">
           <span style="color:#94a3b8">Vs30:</span>
-          <span style="color:#22d3ee;font-weight:600">${p.vs30 ?? '–'} m/s</span>
+          <span style="color:#22d3ee;font-weight:600">${escapeHtml(vs30)} m/s</span>
         </div>
         <div style="display:flex;justify-content:space-between;margin-bottom:4px">
           <span style="color:#94a3b8">Site Class:</span>
-          <span style="color:${color};font-weight:700">NEHRP ${cls}</span>
+          <span style="color:${color};font-weight:700">NEHRP ${escapeHtml(cls)}</span>
         </div>
         <div style="display:flex;justify-content:space-between">
           <span style="color:#94a3b8">Amplification:</span>
-          <span style="color:#a78bfa;font-weight:600">${p.soil_factor ?? '–'}×</span>
+          <span style="color:#a78bfa;font-weight:600">${escapeHtml(soilFactor)}×</span>
         </div>
       </div>
     `).addTo(mapInstance);

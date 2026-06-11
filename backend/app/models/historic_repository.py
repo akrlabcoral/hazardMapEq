@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 import time
+from collections import OrderedDict
 from threading import Lock
 
 from app.models.database import get_conn
 
 _CACHE_TTL_SECONDS = 300
+_CACHE_MAX_ENTRIES = 12
 _cache_lock = Lock()
-_geojson_cache: dict[tuple[float | None, int | None, str | None], tuple[float, dict]] = {}
+_geojson_cache: OrderedDict[tuple[float | None, int | None, str | None], tuple[float, dict]] = OrderedDict()
 
 
 def save_historic_event(event) -> int | None:
@@ -70,7 +72,10 @@ def get_historic_events_geojson(
     with _cache_lock:
         cached = _geojson_cache.get(cache_key)
         if cached and now - cached[0] < _CACHE_TTL_SECONDS:
+            _geojson_cache.move_to_end(cache_key)
             return cached[1]
+        if cached:
+            _geojson_cache.pop(cache_key, None)
 
     where_clauses: list[str] = []
     params: list[object] = []
@@ -144,4 +149,7 @@ def get_historic_events_geojson(
     }
     with _cache_lock:
         _geojson_cache[cache_key] = (now, data)
+        _geojson_cache.move_to_end(cache_key)
+        while len(_geojson_cache) > _CACHE_MAX_ENTRIES:
+            _geojson_cache.popitem(last=False)
     return data

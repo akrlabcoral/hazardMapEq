@@ -25,10 +25,17 @@ export function useWebSocket() {
   const setActiveAlert     = useStore((s) => s.setActiveAlert);
   const setSimulationResults   = useStore((s) => s.setSimulationResults);
   const setIsSimulationRunning = useStore((s) => s.setIsSimulationRunning);
+  const setPendingSimulationRequestId = useStore((s) => s.setPendingSimulationRequestId);
   // autoSimEnabled is read via useStore.getState() inside handleMessage
   // to avoid causing a WebSocket reconnect when the toggle changes.
 
   const handleMessage = useCallback((msg) => {
+    const state = useStore.getState();
+    const pendingRequestId = state.pendingSimulationRequestId;
+    const isManualSimulation =
+      msg.request_id?.startsWith('manual:') || msg.simulation?.triggered_by === 'manual' || msg.triggered_by === 'manual';
+    const isOwnManualSimulation = isManualSimulation && msg.request_id === pendingRequestId;
+
     switch (msg.type) {
       case 'ping':
         // Heartbeat — ignore
@@ -43,28 +50,37 @@ export function useWebSocket() {
 
       case 'simulation_running':
         // Read autoSimEnabled at call time to avoid stale closure / reconnect loop
-        if (useStore.getState().autoSimEnabled) {
+        if (isOwnManualSimulation || (!isManualSimulation && state.autoSimEnabled)) {
           setIsSimulationRunning(true);
         }
         break;
 
       case 'simulation_complete':
-        setIsSimulationRunning(false);
-        if (useStore.getState().autoSimEnabled) {
+        if (isOwnManualSimulation) {
+          setIsSimulationRunning(false);
+          setPendingSimulationRequestId(null);
+          setSimulationResults(msg.simulation);
+        } else if (!isManualSimulation && state.autoSimEnabled) {
+          setIsSimulationRunning(false);
           // Exact same setter used by manual simulation — zero map code changes
           setSimulationResults(msg.simulation);
         }
         break;
 
       case 'simulation_error':
-        setIsSimulationRunning(false);
+        if (isOwnManualSimulation || (!isManualSimulation && !msg.request_id)) {
+          setIsSimulationRunning(false);
+          if (isOwnManualSimulation) {
+            setPendingSimulationRequestId(null);
+          }
+        }
         console.warn('[WS] Auto-simulation error:', msg.error);
         break;
 
       default:
         break;
     }
-  }, [addLiveEvent, setActiveAlert, setSimulationResults, setIsSimulationRunning]);
+  }, [addLiveEvent, setActiveAlert, setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId]);
   // Note: autoSimEnabled intentionally omitted from deps — read via getState() above
   // to avoid triggering a WebSocket reconnect every time the toggle changes.
 

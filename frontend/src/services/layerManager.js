@@ -31,6 +31,7 @@ export const LAYER_CONFIGS = {
   stateBoundaries: {
     sourceId: 'state-boundaries-source',
     dataUrl: 'india_states.geojson',
+    promoteId: 'id',
     layers: [
       {
         id: 'state-boundaries-fill',

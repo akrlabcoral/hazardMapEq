@@ -4,6 +4,8 @@ export const createMapSlice = (set) => ({
   
   hoveredStateId: null,
   setHoveredStateId: (id) => set({ hoveredStateId: id }),
+  hoveredStateName: null,
+  setHoveredStateName: (name) => set({ hoveredStateName: name }),
   
   hoveredCellData: null,
   setHoveredCellData: (data) => set({ hoveredCellData: data }),

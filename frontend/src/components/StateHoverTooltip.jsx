@@ -3,19 +3,14 @@ import useStore from '../store/useStore';
 import { classifyRisk, getDamageIndex, getIntensityLabel, getRiskColorText } from '../utils/hazardCalculations';
 
 export default function StateHoverTooltip() {
-  const hoveredStateId = useStore((state) => state.hoveredStateId);
+  const hoveredStateName = useStore((state) => state.hoveredStateName);
   const hoveredCellData = useStore((state) => state.hoveredCellData);
   const isHoverTooltipEnabled = useStore((state) => state.isHoverTooltipEnabled);
   const mousePos = useStore((state) => state.mousePos);
-  const stateIdMapping = useStore((state) => state.stateIdMapping);
 
-  if (!isHoverTooltipEnabled || !hoveredStateId || !stateIdMapping) {
+  if (!isHoverTooltipEnabled || !hoveredStateName) {
     return null;
   }
-
-  // Find the state name from the mapping
-  const stateName = Object.keys(stateIdMapping).find(k => stateIdMapping[k] === hoveredStateId);
-  if (!stateName) return null;
 
   return (
     <div 
@@ -23,7 +18,7 @@ export default function StateHoverTooltip() {
       style={{ left: mousePos.x, top: mousePos.y }}
     >
       <div className="bg-slate-900/90 backdrop-blur-md border border-slate-700 p-4 rounded-xl shadow-2xl min-w-[220px] text-white font-sans tracking-wide">
-        <h3 className="text-lg font-bold border-b border-slate-700 pb-2 mb-2">{stateName}</h3>
+        <h3 className="text-lg font-bold border-b border-slate-700 pb-2 mb-2">{hoveredStateName}</h3>
         
         {!hoveredCellData ? (
           <div className="text-sm text-slate-400 italic py-1">

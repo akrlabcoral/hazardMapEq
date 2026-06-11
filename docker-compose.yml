@@ -49,6 +49,9 @@ services:
       - AUTO_SIM_MIN_MAGNITUDE=0.0
       - AUTO_SIM_MAX_DEPTH_KM=300.0
       - VS30_RASTER_PATH=/app/data/soil/india_vs30.tif
+      - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
+      - CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif,.tiff
+      - GDAL_CACHEMAX=256
     depends_on:
       db:
         condition: service_healthy
@@ -64,7 +67,7 @@ services:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    command: ["rq", "worker", "hazard_simulations", "--url", "redis://redis:6379/0"]
+    command: ["rq", "worker", "hazard_manual", "hazard_auto", "--url", "redis://redis:6379/0"]
     env_file: .env
     environment:
       - REDIS_URL=redis://redis:6379/0
@@ -73,8 +76,13 @@ services:
       - OMP_NUM_THREADS=1
       - MKL_NUM_THREADS=1
       - OPENBLAS_NUM_THREADS=1
+      - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
+      - CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif,.tiff
+      - GDAL_CACHEMAX=256
     volumes:
       - ./backend:/app
+    deploy:
+      replicas: 3
     depends_on:
       db:
         condition: service_healthy

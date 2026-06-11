@@ -52,6 +52,22 @@ def init_db() -> None:
                 ON simulations(timestamp DESC)
             """)
             cur.execute("""
+                CREATE TABLE IF NOT EXISTS simulation_jobs (
+                    request_id     TEXT PRIMARY KEY,
+                    status         TEXT NOT NULL,
+                    simulation_id  INTEGER DEFAULT NULL,
+                    payload_json   JSONB DEFAULT NULL,
+                    result_json    JSONB DEFAULT NULL,
+                    error          TEXT DEFAULT NULL,
+                    created_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            cur.execute("""
+                CREATE INDEX IF NOT EXISTS idx_simulation_jobs_status_updated
+                ON simulation_jobs(status, updated_at DESC)
+            """)
+            cur.execute("""
                 CREATE INDEX IF NOT EXISTS idx_events_origin_time
                 ON earthquake_events(origin_time DESC)
             """)

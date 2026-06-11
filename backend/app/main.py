@@ -25,7 +25,6 @@ from app.api import simulate
 from app.api import ws as ws_module
 from app.api.ws import redis_listener
 from app.api import events as events_module
-from app.api import dev as dev_module
 from app.api import historic as historic_module
 from app.config import settings
 from app.soil import cache as soil_cache
@@ -110,8 +109,10 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.include_router(simulate.router,       prefix="/api")
 app.include_router(ws_module.router,      prefix="/api")
 app.include_router(events_module.router,  prefix="/api")
-app.include_router(dev_module.router,     prefix="/api")
 app.include_router(historic_module.router, prefix="/api/historic", tags=["historic"])
+if settings.enable_dev_routes:
+    from app.api import dev as dev_module
+    app.include_router(dev_module.router, prefix="/api")
 
 @app.get("/health", tags=["system"])
 def health_check():

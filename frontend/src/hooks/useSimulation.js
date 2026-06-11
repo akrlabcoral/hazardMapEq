@@ -5,8 +5,46 @@ import { debugLog } from '../utils/debug';
 export function useSimulation() {
   const setSimulationResults   = useStore((s) => s.setSimulationResults);
   const setIsSimulationRunning = useStore((s) => s.setIsSimulationRunning);
+  const setPendingSimulationRequestId = useStore((s) => s.setPendingSimulationRequestId);
   
   const [error, setError] = useState(null);
+
+  const pollSimulationStatus = useCallback((requestId) => {
+    const startedAt = Date.now();
+    const nextPollDelay = () => (Date.now() - startedAt < 10 * 1000 ? 500 : 2000);
+    const poll = async () => {
+      if (useStore.getState().pendingSimulationRequestId !== requestId) return;
+      if (Date.now() - startedAt > 5 * 60 * 1000) {
+        setError('Simulation timed out. Please try again.');
+        setIsSimulationRunning(false);
+        setPendingSimulationRequestId(null);
+        return;
+      }
+
+      try {
+        const response = await fetch(`/scientific-api/simulate-earthquake/status/${encodeURIComponent(requestId)}`);
+        if (!response.ok) throw new Error(`Status request failed: ${response.status}`);
+        const status = await response.json();
+
+        if (status.status === 'completed' && status.result_json) {
+          setSimulationResults(status.result_json);
+          setIsSimulationRunning(false);
+          setPendingSimulationRequestId(null);
+          return;
+        }
+
+        if (status.status === 'failed') {
+          throw new Error(status.error || 'Simulation failed');
+        }
+      } catch (err) {
+        console.warn('[Sim] Status polling error:', err);
+      }
+
+      setTimeout(poll, nextPollDelay());
+    };
+
+    setTimeout(poll, 500);
+  }, [setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId]);
 
   const handleRunSimulation = useCallback(async () => {
     const state = useStore.getState();
@@ -54,16 +92,21 @@ export function useSimulation() {
         throw new Error(errData?.detail || `Server returned ${response.status}`);
       }
 
-      const geojsonData = await response.json();
-      setSimulationResults(geojsonData);
+      const result = await response.json();
+      if (result.request_id) {
+        setPendingSimulationRequestId(result.request_id);
+        pollSimulationStatus(result.request_id);
+      } else {
+        setSimulationResults(result);
+        setIsSimulationRunning(false);
+      }
       
     } catch (err) {
       console.error('[Sim] Scientific API error:', err);
       setError(err.message);
-    } finally {
       setIsSimulationRunning(false);
     }
-  }, [setSimulationResults, setIsSimulationRunning]);
+  }, [setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId, pollSimulationStatus]);
 
   return { handleRunSimulation, error };
 }

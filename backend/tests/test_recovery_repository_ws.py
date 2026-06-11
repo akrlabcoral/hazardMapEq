@@ -32,9 +32,18 @@ def test_recovery_reconstructs_required_event_fields(monkeypatch):
         "status": None,
         "alert_level": None,
     }])
+
+    async def acquire_lock_token(*args, **kwargs):
+        return "test-lock"
+
+    async def release_lock(*args, **kwargs):
+        return True
+
+    monkeypatch.setattr(recovery.redis_manager, "acquire_lock_token", acquire_lock_token)
+    monkeypatch.setattr(recovery.redis_manager, "release_lock", release_lock)
     queue = asyncio.Queue()
 
-    assert recovery.recover_unsimulated_events(queue) == 1
+    assert asyncio.run(recovery.recover_unsimulated_events(queue)) == 1
     event = queue.get_nowait()
     assert event.db_id == 7
     assert event.status == "automatic"
