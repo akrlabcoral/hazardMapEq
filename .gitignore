@@ -6,6 +6,9 @@ venv/
 
 # Build output
 dist/
+build/
+*.egg-info/
+*.egg
 
 # Logs
 npm-debug.log*
@@ -26,6 +29,9 @@ Thumbs.db
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
 
 # IDE/editor files
 .vscode/

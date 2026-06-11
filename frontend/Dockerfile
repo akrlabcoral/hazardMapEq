@@ -5,13 +5,17 @@ WORKDIR /app
 # Copy package management files
 COPY package.json package-lock.json* ./
 
-# Install dependencies
-RUN npm install
+# Install dependencies cleanly
+RUN npm ci
 
 # Copy source code and config files
 COPY src/ ./src/
 COPY public/ ./public/
 COPY index.html admin.html vite.config.js tailwind.config.js postcss.config.js ./
+
+# Use the built-in non-root node user
+RUN chown -R node:node /app
+USER node
 
 # Expose Vite dev server port
 EXPOSE 5173

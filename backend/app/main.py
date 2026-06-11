@@ -23,6 +23,7 @@ from fastapi.middleware.gzip import GZipMiddleware
 
 from app.api import simulate
 from app.api import ws as ws_module
+from app.api.ws import redis_listener
 from app.api import events as events_module
 from app.api import dev as dev_module
 from app.api import historic as historic_module
@@ -31,11 +32,12 @@ from app.soil import cache as soil_cache
 from app.soil.loader import load_all_soil_rasters
 from app.models.repository import close_pool, init_db, init_pool
 from app.ingest.poller import run_poller, run_ncs_poller
-from app.jobs.queue import run_worker, get_queue
+from app.jobs.queue import get_queue
 from app.jobs.simulation_worker import SimulationRunner
 from app.services.background_tasks import BackgroundTaskManager
 from app.services.cleanup_scheduler import run_daily_cleanup
 from app.services.recovery import recover_unsimulated_events
+from app.services.redis_client import redis_manager
 
 
 logging.basicConfig(
@@ -50,6 +52,7 @@ _background_tasks = BackgroundTaskManager()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # ── Startup ──────────────────────────────────────────────────────
+    await redis_manager.connect()
     logger.info("[Startup] Initializing database...")
     init_pool()
     init_db()
@@ -68,13 +71,13 @@ async def lifespan(app: FastAPI):
     # Start background tasks
     _background_tasks.start(lambda: run_poller(queue), "usgs_poller")
     _background_tasks.start(lambda: run_ncs_poller(queue), "ncs_poller")
-    _background_tasks.start(run_worker, "sim_worker")
+    _background_tasks.start(redis_listener, "redis_ws_listener")
     _background_tasks.start(run_daily_cleanup, "db_cleanup")
-    logger.info("[Startup] USGS poller, NCS poller, simulation worker, and daily cleanup started.")
+    logger.info("[Startup] USGS poller, NCS poller, and daily cleanup started.")
 
     # Startup recovery: re-enqueue events that were ingested but not simulated
-    # before the last crash or container restart.
-    recover_unsimulated_events(queue)
+    # (Only one container will execute this due to distributed lock)
+    await recover_unsimulated_events(queue)
 
     yield
 
@@ -86,6 +89,7 @@ async def lifespan(app: FastAPI):
 
     logger.info("[Shutdown] Closing DB connection pool...")
     close_pool()
+    await redis_manager.disconnect()
 
 
 app = FastAPI(
@@ -107,7 +111,11 @@ app.include_router(simulate.router,       prefix="/api")
 app.include_router(ws_module.router,      prefix="/api")
 app.include_router(events_module.router,  prefix="/api")
 app.include_router(dev_module.router,     prefix="/api")
-app.include_router(historic_module.router, prefix="/api/historic")
+app.include_router(historic_module.router, prefix="/api/historic", tags=["historic"])
+
+@app.get("/health", tags=["system"])
+def health_check():
+    return {"status": "ok"}
 
 if __name__ == "__main__":
     import uvicorn

@@ -1,129 +1,83 @@
 """
 app/jobs/queue.py
 
-asyncio.Queue + single worker loop for auto-triggered simulations.
-
-Worker design:
-  - Dequeues one EarthquakeEvent at a time
-  - Runs SimulationRunner.run() via asyncio.to_thread() — CRITICAL:
-    matplotlib's contourf is synchronous and takes 2-3s. Without to_thread(),
-    it blocks the entire event loop (WebSocket pings drop, poller stalls).
-  - Broadcasts result to all WebSocket clients on success
-  - Marks event as simulated/failed in PostgreSQL
-  - Never crashes — exceptions are caught and logged
+Distributed job queue interface for simulation workers.
+Wraps RQ (Redis Queue) to replace the legacy local asyncio.Queue.
 """
 from __future__ import annotations
 
 import asyncio
 import logging
+import redis
+from rq import Retry
+from rq import Queue
 
 from app.ingest.normalizer import EarthquakeEvent, event_to_payload
-from app.jobs.simulation_worker import SimulationRunner
-from app.models.repository import mark_event_simulated, mark_event_sim_failed
+from app.jobs.rq_worker import run_simulation_job
+from app.services.redis_client import redis_manager
 
 logger = logging.getLogger("hazardmap.queue")
 
-# ---------------------------------------------------------------------------
-# Shared queue — poller puts events in, worker takes them out
-# ---------------------------------------------------------------------------
-_queue: asyncio.Queue[EarthquakeEvent] = asyncio.Queue(maxsize=500)
+class SimulationQueue:
+    def __init__(self):
+        self._rq_queue = None
+        self._redis_conn = None
 
+    def _get_rq_queue(self) -> Queue:
+        if self._rq_queue is None:
+            # RQ requires a synchronous redis connection
+            # We derive the URL from our shared redis_manager
+            url = redis_manager.url if hasattr(redis_manager, 'url') else "redis://localhost:6379"
+            self._redis_conn = redis.Redis.from_url(url)
+            self._rq_queue = Queue('hazard_simulations', connection=self._redis_conn)
+        return self._rq_queue
 
-def get_queue() -> asyncio.Queue:
-    return _queue
-
-
-async def enqueue(event: EarthquakeEvent) -> None:
-    await _queue.put(event)
-
-
-# ---------------------------------------------------------------------------
-# Worker loop — run as asyncio.create_task() in main.py lifespan
-# ---------------------------------------------------------------------------
-async def run_worker() -> None:
-    """
-    Infinite worker loop. Start with asyncio.create_task(run_worker()).
-    Imports broadcast lazily to avoid circular imports (ws.py ↔ queue.py).
-    """
-    from app.api.ws import broadcast  # lazy import — avoids circular dependency
-
-    logger.info("[Worker] Simulation worker started.")
-
-    while True:
-        event: EarthquakeEvent = await _queue.get()
-        logger.info(
-            f"[Worker] Dequeued: source_id={event.source_id} "
-            f"mag={event.magnitude} place={event.place!r}"
-        )
+    def put_nowait(self, event: EarthquakeEvent) -> None:
+        """
+        Maintains backwards compatibility with asyncio.Queue.put_nowait()
+        Synchronous push to Redis. (Sub-millisecond, safe for event loop).
+        """
+        if not redis_manager._is_connected:
+            raise asyncio.QueueFull("Redis is unavailable; simulation job was not queued.")
 
         try:
-            # Broadcast "simulation running" before starting
-            await _broadcast_running(broadcast, event)
-
-            # Derive trigger label from event source so NCS events aren't mislabeled
-            triggered_by = f"auto_{event.source}" if event.source else "auto_unknown"
-
-            # Run in thread — keeps event loop free during matplotlib contour gen
-            result = await asyncio.to_thread(
-                SimulationRunner.run,
-                event.latitude,
-                event.longitude,
-                event.magnitude,
-                event.depth_km,
-                None,           # use default GMPE params for auto-triggered events
-                event.db_id,
-                triggered_by,
+            q = self._get_rq_queue()
+            
+            # Serialize the event object to a raw dict for RQ Pickling compatibility
+            event_dict = event_to_payload(event)
+            event_dict["db_id"] = event.db_id
+            
+            job_identity = event.db_id if event.db_id is not None else event.source_id
+            q.enqueue(
+                run_simulation_job,
+                event_dict,
+                job_id=f"sim:{job_identity}",
+                job_timeout=300,
+                result_ttl=0,
+                failure_ttl=86400,
+                ttl=3600,
+                retry=Retry(max=2, interval=[30, 120]),
             )
-
-            await _broadcast_complete(broadcast, event, result)
-
-            # Mark in DB
-            if event.db_id is not None:
-                _mark_success(event, result)
-
-            logger.info(
-                f"[Worker] Done: sim_id={result['simulation_id']} "
-                f"event_id={event.db_id}"
-            )
-
+            logger.debug(f"[Queue] Enqueued to RQ: {event.source_id}")
         except Exception as exc:
-            logger.exception(f"[Worker] Simulation FAILED for {event.source_id}: {exc}")
-            if event.db_id is not None:
-                _mark_failure(event, str(exc))
-            await _broadcast_error(broadcast, event, str(exc))
+            logger.error(f"[Queue] Failed to enqueue to RQ: {exc}")
+            raise asyncio.QueueFull(f"Redis RQ unavailable: {exc}")
 
-        finally:
-            _queue.task_done()
-
-
-async def _broadcast_running(broadcast, event: EarthquakeEvent) -> None:
-    await broadcast({
-        "type": "simulation_running",
-        "event_id": event.db_id,
-        "event": event_to_payload(event),
-    })
+    def qsize(self) -> int:
+        try:
+            if not redis_manager._is_connected:
+                return 0
+            return self._get_rq_queue().count
+        except Exception:
+            return 0
 
 
-async def _broadcast_complete(broadcast, event: EarthquakeEvent, result: dict) -> None:
-    await broadcast({
-        "type": "simulation_complete",
-        "event_id": event.db_id,
-        "simulation_id": result["simulation_id"],
-        "simulation": result,
-    })
+# Shared singleton instance
+_queue = SimulationQueue()
 
+def get_queue() -> SimulationQueue:
+    return _queue
 
-async def _broadcast_error(broadcast, event: EarthquakeEvent, error: str) -> None:
-    await broadcast({
-        "type": "simulation_error",
-        "event_id": event.db_id,
-        "error": error,
-    })
-
-
-def _mark_success(event: EarthquakeEvent, result: dict) -> None:
-    mark_event_simulated(event.db_id, result["simulation_id"])
-
-
-def _mark_failure(event: EarthquakeEvent, error: str) -> None:
-    mark_event_sim_failed(event.db_id, error)
+async def enqueue(event: EarthquakeEvent) -> None:
+    """Async wrapper for putting events onto the RQ."""
+    await asyncio.to_thread(_queue.put_nowait, event)

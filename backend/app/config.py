@@ -24,10 +24,10 @@ def _csv_env(name: str, default: str) -> list[str]:
 class Settings:
     database_url: str = os.environ.get(
         "DATABASE_URL",
-        "postgresql://hazardmap:hazardmap_dev@localhost:5432/hazardmap",
+        ""
     )
     cors_allowed_origins: list[str] = field(
-        default_factory=lambda: _csv_env("CORS_ALLOWED_ORIGINS", "*")
+        default_factory=lambda: _csv_env("CORS_ALLOWED_ORIGINS", "")
     )
     grid_path: str = os.environ.get("GRID_PATH", "data/grids/nationwide_20km.geojson")
     vs30_raster_path: str = os.environ.get("VS30_RASTER_PATH", "/app/data/soil/india_vs30.tif")
@@ -37,6 +37,8 @@ class Settings:
     auto_sim_max_depth_km: float = float(os.environ.get("AUTO_SIM_MAX_DEPTH_KM", "300.0"))
     db_min_connections: int = int(os.environ.get("DB_MIN_CONNECTIONS", "2"))
     db_max_connections: int = int(os.environ.get("DB_MAX_CONNECTIONS", "10"))
+    redis_url: str = os.environ.get("REDIS_URL", "redis://localhost:6379/0")
+    redis_lock_fail_open: bool = os.environ.get("REDIS_LOCK_FAIL_OPEN", "false").lower() == "true"
 
 
 settings = Settings()

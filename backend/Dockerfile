@@ -18,11 +18,15 @@ RUN pip install --upgrade pip && pip install --no-cache-dir -v -r requirements.t
 COPY app/ ./app/
 COPY data/ ./data/
 
-# Create the data folder if it doesn't exist
-RUN mkdir -p data
+# Create the data folder and setup non-root user
+RUN useradd -m -u 1000 appuser && \
+    mkdir -p data && \
+    chown -R appuser:appuser /app
+
+USER appuser
 
 # Expose FastAPI port
 EXPOSE 8000
 
-# Run FastAPI with uvicorn
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# Run FastAPI with uvicorn (removed --reload for production)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
