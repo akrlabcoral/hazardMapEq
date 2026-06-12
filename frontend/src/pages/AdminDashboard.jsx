@@ -67,7 +67,7 @@ export default function AdminDashboard() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
-                  className="w-[480px]"
+                  className={activeSection === 'live_events' || activeSection === 'historic_events' ? 'w-[360px]' : 'w-[480px]'}
                 >
                   {activeSection === 'live_events' ? (
                     <div className="h-[500px]">

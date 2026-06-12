@@ -27,12 +27,16 @@ async def process_event(
     if event.magnitude >= 4.0:
         save_historic_event(event)
 
+    relevant = is_relevant(event)
+    payload = event_to_payload(event)
+    payload["is_relevant"] = relevant
+
     await broadcast({
         "type": "earthquake_detected",
-        "event": event_to_payload(event),
+        "event": payload,
     })
 
-    if not is_relevant(event):
+    if not relevant:
         return True, False
 
     try:

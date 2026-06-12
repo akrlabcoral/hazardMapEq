@@ -24,7 +24,7 @@ export default function MapLegend() {
   const show = (itemId) => visibleItems.has(itemId);
 
   return (
-    <div className="absolute bottom-6 right-20 z-20 flex flex-col items-end justify-end gap-2 pointer-events-auto">
+    <div className="absolute top-6 right-20 z-20 flex flex-col items-end justify-end gap-2 pointer-events-auto">
       <button 
         onClick={() => setIsVisible(!isVisible)}
         className="p-2 bg-slate-900/80 hover:bg-slate-800 backdrop-blur-md border border-slate-700/60 rounded-full text-slate-400 hover:text-white transition-colors shadow-lg flex items-center justify-center"

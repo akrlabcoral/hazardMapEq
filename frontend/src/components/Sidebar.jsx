@@ -32,13 +32,7 @@ export default function Sidebar({ isAdmin = false }) {
       className="absolute top-0 left-0 bottom-0 glass-panel z-50 border-t-0 border-l-0 flex flex-col overflow-visible"
     >
       <div className="p-3 flex items-center border-b border-slate-800/80 bg-slate-900/50">
-        <button 
-          onClick={toggleSidebar}
-          className="w-12 h-12 flex items-center justify-center hover:bg-slate-800 rounded-lg text-slate-300 hover:text-white transition-colors shrink-0"
-          title="Toggle Sidebar"
-        >
-          <Menu size={20} strokeWidth={2} />
-        </button>
+        
         <AnimatePresence>
           {isExpanded && (
             <motion.div
@@ -47,7 +41,7 @@ export default function Sidebar({ isAdmin = false }) {
               exit={{ opacity: 0, x: -10 }}
               className="ml-2 font-bold text-slate-200 tracking-wider whitespace-nowrap overflow-hidden"
             >
-              HAZARD<span className="text-white">MAP</span>
+              
             </motion.div>
           )}
         </AnimatePresence>

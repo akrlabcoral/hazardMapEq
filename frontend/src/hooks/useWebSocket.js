@@ -43,7 +43,7 @@ export function useWebSocket() {
 
       case 'earthquake_detected':
         addLiveEvent(msg.event);
-        if (msg.event.magnitude >= 6.0) {
+        if (msg.event.magnitude >= 6.0 && msg.event.is_relevant) {
           setActiveAlert(msg.event);
         }
         break;
