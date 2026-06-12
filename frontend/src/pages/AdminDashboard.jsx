@@ -9,7 +9,7 @@ import Sidebar from '../components/Sidebar';
 import MapView from '../components/MapView';
 import MapLegend from '../components/MapLegend';
 import ControlPanel from '../components/ControlPanel';
-import StateHoverTooltip from '../components/StateHoverTooltip';
+import InfoPanel from '../components/InfoPanel';
 import StateAnalysisPanel from '../components/StateAnalysisPanel';
 import UploadProgressManager from '../components/UploadProgressManager';
 import AlertBanner from '../components/AlertBanner';
@@ -47,7 +47,7 @@ export default function AdminDashboard() {
         <Sidebar isAdmin={true} />
         <RightSidebar />
         <MapView isAdmin={true} />
-        <StateHoverTooltip />
+        <InfoPanel />
         <MapLegend />
         <UploadProgressManager />
 

@@ -2,11 +2,8 @@
 // Map Layers panel — Data layers, Raster layer, Base layers
 
 import React from 'react';
-import { useShallow } from 'zustand/react/shallow';
-import useStore from '../store/useStore';
 import { useLayersState } from '../hooks/useLayersState';
 import { LayerRow } from '../components/ui/LayerRow';
-import { ToggleSwitch } from '../components/ui/ToggleSwitch';
 
 const RasterLayersPanel = React.lazy(() => import('../components/RasterLayersPanel'));
 

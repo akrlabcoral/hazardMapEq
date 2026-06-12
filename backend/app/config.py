@@ -58,36 +58,25 @@ GRID_PATH = settings.grid_path
 # Matches the USGS ShakeMap intensity definitions
 # ---------------------------------------------------------------------------
 PGA_LEVELS = [
-    0.001,   # < 0.001g : essentially zero shaking
-    0.02,    # I–III    : No perceptible effect
-    0.115,   # IV–V     : Light
-    0.215,   # VI       : Moderate
-    0.401,   # VII      : Strong
-    0.747,   # VIII     : Very Strong
-    1.39,    # IX       : Severe
+    0.014,   # IV       : Light
+    0.039,   # V        : Moderate
+    0.092,   # VI       : Strong
+    0.18,    # VII      : Very Strong
+    0.34,    # VIII     : Severe
+    0.65,    # IX       : Violent
+    1.24,    # X+       : Extreme
 ]
 # The last level is computed dynamically as max(5.0, observed_max + 1.0)
 
-# Human-readable label for each band (between consecutive levels)
-PGA_LABELS = [
-    "No Effect",     # < 0.02
-    "Light",         # 0.02 – 0.115
-    "Moderate",      # 0.115 – 0.215
-    "Strong",        # 0.215 – 0.401
-    "Very Strong",   # 0.401 – 0.747
-    "Severe",        # 0.747 – 1.39
-    "Violent",       # > 1.39
-]
-
-# Hex colors for each band — matches the frontend Legend component
+# Hex colors for each MMI band.
 PGA_COLORS = [
-    "#3b82f6",  # Blue       — No Effect
-    "#22c55e",  # Green      — Light
-    "#eab308",  # Yellow     — Moderate
-    "#f97316",  # Orange     — Strong
-    "#ea580c",  # Dark Orange — Very Strong
-    "#ef4444",  # Red        — Severe
-    "#7e22ce",  # Purple     — Violent
+    "#a0e6ff",  # IV. Light
+    "#80ffff",  # V. Moderate
+    "#7cd37c",  # VI. Strong
+    "#ffec7d",  # VII. Very Strong
+    "#ffb834",  # VIII. Severe
+    "#ff6666",  # IX. Violent
+    "#cc0000",  # X+. Extreme
 ]
 
 # ---------------------------------------------------------------------------
@@ -105,7 +94,7 @@ RISK_THRESHOLDS = {
 # ---------------------------------------------------------------------------
 CONTOUR_GRID_SIZE = settings.contour_grid_size    # resolution of the interpolation meshgrid (NxN)
 CONTOUR_BLUR_SIGMA = 1.5   # Gaussian blur sigma — smooths jagged contour edges
-CONTOUR_FILL_OPACITY = 0.6
+CONTOUR_FILL_OPACITY = 0.82
 
 # ---------------------------------------------------------------------------
 # Normalization

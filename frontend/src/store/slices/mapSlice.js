@@ -1,23 +1,18 @@
 export const createMapSlice = (set) => ({
-  isHoverTooltipEnabled: false,
-  setHoverTooltipEnabled: (val) => set({ isHoverTooltipEnabled: val }),
-  
-  hoveredStateId: null,
-  setHoveredStateId: (id) => set({ hoveredStateId: id }),
-  hoveredStateName: null,
-  setHoveredStateName: (name) => set({ hoveredStateName: name }),
-  
-  hoveredCellData: null,
-  setHoveredCellData: (data) => set({ hoveredCellData: data }),
-  
+  infoPanel: null,
+  setInfoPanel: (infoPanel) => set({ infoPanel }),
+  clearInfoPanel: () => set({ infoPanel: null }),
+
+  visibleLegendItems: [],
+  setVisibleLegendItems: (visibleLegendItems) => set({ visibleLegendItems }),
+
   selectedStateName: null,
   setSelectedStateName: (name) => set({ selectedStateName: name }),
   
   stateIdMapping: null,
   setStateIdMapping: (mapping) => set({ stateIdMapping: mapping }),
   
-  mousePos: { x: 0, y: 0 },
-  setMousePos: (pos) => set({ mousePos: pos }),
+
 
   gisLayers: { satellite: false, terrain: false, indiaBoundary: true, stateBoundaries: true, tectonicPlates: true, gpsVectors: false, historicEarthquakes: false },
   toggleGisLayer: (layer) => set((state) => ({ gisLayers: { ...state.gisLayers, [layer]: !state.gisLayers[layer] } })),
@@ -27,6 +22,6 @@ export const createMapSlice = (set) => ({
   soilAmpVisible: false,
   setSoilAmpVisible: (val) => set({ soilAmpVisible: val }),
 
-  mapViewport: { longitude: 88.36, latitude: 22.57, zoom: 8 },
+  mapViewport: { longitude: 78.96, latitude: 25.59, zoom: 9 },
   setMapViewport: (viewport) => set({ mapViewport: viewport }),
 });

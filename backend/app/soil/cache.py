@@ -7,8 +7,6 @@ raster is ever reopened inside a hot path.
 """
 from collections import namedtuple
 import logging
-from threading import RLock
-
 import rasterio
 
 logger = logging.getLogger("hazardmap.soil.cache")
@@ -18,7 +16,7 @@ BoundingBox = namedtuple("BoundingBox", ["left", "bottom", "right", "top"])
 _PATHS: dict[str, str] = {}
 _DATASETS: dict[str, rasterio.io.DatasetReader] = {}
 _BOUNDS: dict[str, BoundingBox] = {}
-_LOCK = RLock()
+_BOUNDS: dict[str, BoundingBox] = {}
 
 
 def register(state_name: str, path: str) -> None:
@@ -38,16 +36,12 @@ def register(state_name: str, path: str) -> None:
         logger.warning("[SoilCache] Could not open raster for '%s': %s", state_name, e)
 
 
-def get_path(state_name: str) -> str | None:
-    return _PATHS.get(state_name)
-
 
 def sample_points(state_name: str, coords: list[tuple[float, float]]) -> list:
     dataset = _DATASETS.get(state_name)
     if dataset is None:
         return []
-    with _LOCK:
-        return list(dataset.sample(coords))
+    return list(dataset.sample(coords))
 
 
 def get_bounds_registry() -> dict[str, BoundingBox]:

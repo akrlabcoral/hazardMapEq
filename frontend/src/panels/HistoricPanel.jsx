@@ -196,7 +196,7 @@ export default function HistoricPanel() {
                     store.setMapViewport({
                       longitude: feat.geometry.coordinates[0],
                       latitude: feat.geometry.coordinates[1],
-                      zoom: 6
+                      zoom: 5
                     });
 
                     // Auto-run simulation

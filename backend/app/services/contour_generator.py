@@ -73,8 +73,8 @@ def generate_contour_geojson(
         y_coords = np.array([f["properties"]["centroid_lat"] for f in grid_features])
         z_vals   = np.asarray(raw_pga, dtype=np.float64)
 
-        x_min, x_max = x_coords.min(), x_coords.max()
-        y_min, y_max = y_coords.min(), y_coords.max()
+        x_min, x_max = 68.0, 97.5
+        y_min, y_max = 6.5, 37.6
 
         N = CONTOUR_GRID_SIZE
         grid_x, grid_y = np.mgrid[x_min:x_max:complex(N), y_min:y_max:complex(N)]

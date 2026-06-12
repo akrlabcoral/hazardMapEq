@@ -13,7 +13,5 @@ export function useLayersState() {
     hazardLayers:     s.hazardLayers,
     toggleHazardLayer: s.toggleHazardLayer,
     setHazardLayerWeight: s.setHazardLayerWeight,
-    isHoverTooltipEnabled: s.isHoverTooltipEnabled,
-    setHoverTooltipEnabled: s.setHoverTooltipEnabled,
   })));
 }

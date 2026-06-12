@@ -2,14 +2,26 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Star } from 'lucide-react';
 
-import { useShallow } from 'zustand/react/shallow';
 import useStore from '../store/useStore';
+
+const PGA_SCALE = [
+  { color: '#cc0000', label: '> 1.24g (X+ Extreme)' },
+  { color: '#ff6666', label: '0.65 - 1.24g (IX Violent)' },
+  { color: '#ffb834', label: '0.34 - 0.65g (VIII Severe)' },
+  { color: '#ffec7d', label: '0.18 - 0.34g (VII Very Strong)' },
+  { color: '#7cd37c', label: '0.092 - 0.18g (VI Strong)' },
+  { color: '#80ffff', label: '0.039 - 0.092g (V Moderate)' },
+  { color: '#a0e6ff', label: '0.014 - 0.039g (IV Light)' },
+];
 
 // Map Legend — positioned top-right, shows layer symbology + intensity color scale
 // Uses glassmorphism panel with premium dark GIS styling
 export default function MapLegend() {
   const [isVisible, setIsVisible] = useState(true);
-  const gpsVectorsActive = useStore((state) => state.gisLayers.gpsVectors);
+  const visibleLegendItems = useStore((state) => state.visibleLegendItems);
+  const visibleItems = new Set(visibleLegendItems);
+  const hasVisibleItems = visibleLegendItems.length > 0;
+  const show = (itemId) => visibleItems.has(itemId);
 
   return (
     <div className="absolute bottom-6 right-20 z-20 flex flex-col items-end justify-end gap-2 pointer-events-auto">
@@ -38,13 +50,40 @@ export default function MapLegend() {
             </h3>
       <div className="space-y-2.5">
         {/* Layer symbology items */}
-        <div className="flex items-center gap-2.5 mt-1">
-          <Star className="w-4 h-4 fill-red-500 text-white stroke-[1.5px] drop-shadow-[0_0_8px_rgba(239,68,68,0.8)]" style={{ filter: 'drop-shadow(0 0 4px rgba(239,68,68,0.8))' }} />
-          <span className="text-slate-400">Earthquake origin point</span>
-        </div>
+        {!hasVisibleItems && (
+          <div className="text-slate-500 text-xs italic">No visible map layers</div>
+        )}
+
+        {show('epicenter') && (
+          <div className="flex items-center gap-2.5 mt-1">
+            <Star className="w-4 h-4 fill-yellow-400 text-white stroke-[1.5px] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" style={{ filter: 'drop-shadow(0 0 4px rgba(250,204,21,0.8))' }} />
+            <span className="text-slate-400">Earthquake origin point</span>
+          </div>
+        )}
+
+        {show('historicEarthquakes') && (
+          <div className="flex items-center gap-2.5 mt-1.5">
+            <div className="w-3.5 h-3.5 rounded-full bg-orange-500 border border-white/80 flex-shrink-0"></div>
+            <span className="text-slate-400">Historic earthquakes</span>
+          </div>
+        )}
+
+        {show('liveEarthquakes') && (
+          <div className="flex items-center gap-2.5 mt-1.5">
+            <div className="w-3.5 h-3.5 rounded-full bg-red-500 border border-white/80 flex-shrink-0 shadow-[0_0_6px_rgba(239,68,68,0.5)]"></div>
+            <span className="text-slate-400">Live earthquakes</span>
+          </div>
+        )}
+
+        {show('tectonicPlates') && (
+          <div className="flex items-center gap-2.5 mt-1.5">
+            <div className="w-7 h-0.5 bg-orange-600 flex-shrink-0"></div>
+            <span className="text-slate-400">Tectonic plate boundaries</span>
+          </div>
+        )}
 
         {/* GPS Velocity Vectors Legend */}
-        {gpsVectorsActive && (
+        {show('gpsVectors') && (
           <div className="mt-3 pt-3 border-t border-slate-700/40">
             <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">GPS Velocity Vectors</div>
             <div className="flex items-center gap-2.5 mt-1.5">
@@ -61,39 +100,23 @@ export default function MapLegend() {
         )}
 
         {/* Scientific PGA Scale */}
+        {show('pgaIntensity') && (
         <div className="mt-3 pt-3 border-t border-slate-700/40">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">PGA Intensity Scale</div>
-          <div className="flex items-center gap-2.5 mt-1.5">
-            <div className="w-3.5 h-3.5 rounded-full bg-purple-700/90 shadow-[0_0_6px_rgba(126,34,206,0.4)]"></div>
-            <span className="text-slate-400">&gt; 1.39g (Violent)</span>
-          </div>
-          <div className="flex items-center gap-2.5 mt-1.5">
-            <div className="w-3.5 h-3.5 rounded-full bg-red-500/90 shadow-[0_0_6px_rgba(239,68,68,0.4)]"></div>
-            <span className="text-slate-400">0.747 - 1.39g (Severe)</span>
-          </div>
-          <div className="flex items-center gap-2.5 mt-1.5">
-            <div className="w-3.5 h-3.5 rounded-full bg-orange-600/90 shadow-[0_0_6px_rgba(234,88,12,0.4)]"></div>
-            <span className="text-slate-400">0.401 - 0.747g (Very Strong)</span>
-          </div>
-          <div className="flex items-center gap-2.5 mt-1.5">
-            <div className="w-3.5 h-3.5 rounded-full bg-orange-500/90 shadow-[0_0_6px_rgba(249,115,22,0.4)]"></div>
-            <span className="text-slate-400">0.215 - 0.401g (Strong)</span>
-          </div>
-          <div className="flex items-center gap-2.5 mt-1.5">
-            <div className="w-3.5 h-3.5 rounded-full bg-yellow-500/90 shadow-[0_0_6px_rgba(234,179,8,0.4)]"></div>
-            <span className="text-slate-400">0.115 - 0.215g (Moderate)</span>
-          </div>
-          <div className="flex items-center gap-2.5 mt-1.5">
-            <div className="w-3.5 h-3.5 rounded-full bg-green-500/90 shadow-[0_0_6px_rgba(34,197,94,0.4)]"></div>
-            <span className="text-slate-400">0.02 - 0.115g (Light)</span>
-          </div>
-          <div className="flex items-center gap-2.5 mt-1.5">
-            <div className="w-3.5 h-3.5 rounded-full bg-blue-500/90 shadow-[0_0_6px_rgba(59,130,246,0.4)]"></div>
-            <span className="text-slate-400">&lt; 0.02g (No affect)</span>
-          </div>
+          {PGA_SCALE.map((item) => (
+            <div key={item.label} className="flex items-center gap-2.5 mt-1.5">
+              <div
+                className="w-3.5 h-3.5 rounded-full border border-white/20"
+                style={{ backgroundColor: item.color }}
+              />
+              <span className="text-slate-400">{item.label}</span>
+            </div>
+          ))}
         </div>
+        )}
 
         {/* Soil Amplification Multipliers */}
+        {show('soilAmplification') && (
         <div className="mt-3 pt-3 border-t border-slate-700/40">
           <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Site Class Amplification (Vs30)</div>
           <div className="flex items-center justify-between text-xs mt-1.5">
@@ -132,6 +155,7 @@ export default function MapLegend() {
             <span className="text-white font-mono">0.80x</span>
           </div>
         </div>
+        )}
       </div>
           </motion.div>
         )}

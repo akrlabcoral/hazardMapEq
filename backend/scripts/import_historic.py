@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 # Setup path so we can import from app
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.models.historic_repository import save_historic_event
+from app.models.historic_repository import save_historic_events_batch
 from app.ingest.normalizer import EarthquakeEvent
 from app.models.repository import init_db, init_pool, close_pool
 
@@ -23,11 +23,11 @@ def import_geojson(filepath: str):
     init_db()
 
     count = 0
+    batch = []
     for feat in features:
         props = feat.get('properties', {})
         geom = feat.get('geometry', {})
         
-        # Skip if magnitude is missing or below 4.0
         mag = props.get('mag')
         if mag is None or mag < 4.0:
             continue
@@ -37,7 +37,6 @@ def import_geojson(filepath: str):
         lat = coords[1]
         depth = coords[2] if len(coords) > 2 else 0.0
         
-        # USGS time is ms since epoch
         time_ms = props.get('time')
         if time_ms is None:
             continue
@@ -62,10 +61,16 @@ def import_geojson(filepath: str):
             alert_level=props.get('alert')
         )
         
-        save_historic_event(event)
-        count += 1
-        if count % 1000 == 0:
+        batch.append(event)
+        if len(batch) >= 1000:
+            save_historic_events_batch(batch)
+            count += len(batch)
+            batch = []
             print(f"Imported {count} historic events...")
+
+    if batch:
+        save_historic_events_batch(batch)
+        count += len(batch)
 
     print(f"Successfully imported {count} historic events (>= 4.0).")
     close_pool()

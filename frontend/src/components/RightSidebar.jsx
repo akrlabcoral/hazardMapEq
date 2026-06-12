@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Menu, MousePointer2, Waves } from 'lucide-react';
+import { Activity, Menu, Waves } from 'lucide-react';
 import useStore from '../store/useStore';
 
 export default function RightSidebar({ isAdmin = true }) {
@@ -9,21 +9,10 @@ export default function RightSidebar({ isAdmin = true }) {
   const activeRightSection = useStore((state) => state.activeRightSection);
   const setActiveRightSection = useStore((state) => state.setActiveRightSection);
 
-  const isHoverTooltipEnabled = useStore((s) => s.isHoverTooltipEnabled);
-  const setHoverTooltipEnabled = useStore((s) => s.setHoverTooltipEnabled);
-  
   const soilAmpVisible = useStore((s) => s.soilAmpVisible);
   const setSoilAmpVisible = useStore((s) => s.setSoilAmpVisible);
 
   const navItems = [
-    { 
-      id: 'hoverTooltip', 
-      icon: MousePointer2, 
-      label: 'Hover Tooltip', 
-      isToggle: true, 
-      isActive: isHoverTooltipEnabled, 
-      onClick: () => setHoverTooltipEnabled(!isHoverTooltipEnabled) 
-    },
     { 
       id: 'soilAmp', 
       icon: Waves, 

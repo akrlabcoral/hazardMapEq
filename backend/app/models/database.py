@@ -11,7 +11,6 @@ from contextlib import contextmanager
 from typing import TYPE_CHECKING, Iterator
 
 if TYPE_CHECKING:
-    from psycopg2.extensions import connection
     from psycopg2.pool import ThreadedConnectionPool
 
 from app.config import settings

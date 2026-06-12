@@ -6,31 +6,80 @@ import { rasterService } from '../services/rasterService';
 
 import { animationManager } from '../services/animationManager';
 
-import { initSimulationLayers, attachSimulationPopups, SIM_LAYERS } from '../config/simulationLayers';
+import { initSimulationLayers, SIM_LAYERS } from '../config/simulationLayers';
+import {
+  getClusterExpansion,
+  getInspectableLayerIds,
+  inspectFeature,
+  sortInspectionFeatures,
+} from '../services/featureInspectionManager';
+import { getVisibleLegendItemIds } from '../config/legendConfig';
 import { debugLog } from '../utils/debug';
-
-const escapeHtml = (value) => String(value ?? '')
-  .replace(/&/g, '&amp;')
-  .replace(/</g, '&lt;')
-  .replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;')
-  .replace(/'/g, '&#039;');
-
-const formatEventTime = (value) => {
-  if (!value) return 'Unknown';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Unknown';
-  return date.toLocaleString([], {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
 
 const getStateName = (feature) => feature?.properties?.state || feature?.properties?.STATE || null;
 const mapStyleCache = new Map();
+
+const expandCluster = (mapInstance, clusterExpansion) => {
+  const source = mapInstance.getSource(clusterExpansion.sourceId);
+  if (!source || !clusterExpansion.center) return false;
+
+  const flyToCluster = (zoom) => {
+    mapInstance.easeTo({
+      center: clusterExpansion.center,
+      zoom,
+      duration: 500,
+    });
+  };
+
+  const maybePromise = source.getClusterExpansionZoom(
+    clusterExpansion.clusterId,
+    (err, zoom) => {
+      if (!err && Number.isFinite(zoom)) flyToCluster(zoom);
+    }
+  );
+
+  if (maybePromise?.then) {
+    maybePromise.then(flyToCluster).catch(console.error);
+  }
+
+  return true;
+};
+
+const inspectMapClick = (mapInstance, event) => {
+  const layers = getInspectableLayerIds().filter((layerId) => mapInstance.getLayer(layerId));
+  if (!layers.length) return false;
+
+  const features = mapInstance.queryRenderedFeatures(event.point, { layers });
+  if (!features.length) {
+    useStore.getState().clearInfoPanel();
+    return false;
+  }
+
+  const feature = sortInspectionFeatures(features)[0];
+  const clusterExpansion = getClusterExpansion(feature);
+  if (clusterExpansion) {
+    useStore.getState().clearInfoPanel();
+    return expandCluster(mapInstance, clusterExpansion);
+  }
+
+  const infoPanel = inspectFeature(feature, event.lngLat);
+  if (!infoPanel) return false;
+
+  useStore.getState().setInfoPanel(infoPanel);
+  return true;
+};
+
+const bindInspectionCursor = (mapInstance) => {
+  getInspectableLayerIds().forEach((layerId) => {
+    if (!mapInstance.getLayer(layerId)) return;
+    mapInstance.on('mouseenter', layerId, () => {
+      mapInstance.getCanvas().style.cursor = 'pointer';
+    });
+    mapInstance.on('mouseleave', layerId, () => {
+      mapInstance.getCanvas().style.cursor = '';
+    });
+  });
+};
 
 const loadMapStyle = async (url) => {
   if (!mapStyleCache.has(url)) {
@@ -41,6 +90,17 @@ const loadMapStyle = async (url) => {
     mapStyleCache.set(url, await res.json());
   }
   return structuredClone(mapStyleCache.get(url));
+};
+
+const arraysEqual = (a, b) => a.length === b.length && a.every((value, index) => value === b[index]);
+
+const refreshVisibleLegendItems = (mapInstance) => {
+  if (!mapInstance?.getStyle()) return;
+  const nextItems = getVisibleLegendItemIds(mapInstance);
+  const currentItems = useStore.getState().visibleLegendItems || [];
+  if (!arraysEqual(nextItems, currentItems)) {
+    useStore.getState().setVisibleLegendItems(nextItems);
+  }
 };
 
 export default function MapView({ isAdmin = false }) {
@@ -64,7 +124,6 @@ export default function MapView({ isAdmin = false }) {
   // Initialize simulation sources and layers on a loaded map
   const setupSimulation = useCallback((mapInstance) => {
     initSimulationLayers(mapInstance);
-    attachSimulationPopups(mapInstance);
   }, []);
 
   useEffect(() => {
@@ -102,7 +161,10 @@ export default function MapView({ isAdmin = false }) {
         debugLog('[Epicenter] Map click => setting epicenter:', coords);
         setEarthquakeEpicenter(coords);
         useStore.getState().setIsPlacingEpicenter(false);
+        return;
       }
+
+      inspectMapClick(map.current, e);
     };
     
     const onMouseDown = (e) => {
@@ -118,12 +180,24 @@ export default function MapView({ isAdmin = false }) {
     map.current.on('click', onMapClick);
     map.current.on('mousedown', onMouseDown);
 
+    let legendRefreshFrame = null;
+    const scheduleLegendRefresh = () => {
+      if (legendRefreshFrame !== null) return;
+      legendRefreshFrame = requestAnimationFrame(() => {
+        legendRefreshFrame = null;
+        refreshVisibleLegendItems(map.current);
+      });
+    };
+    const legendEvents = ['idle', 'moveend', 'zoomend', 'styledata', 'sourcedata'];
+    legendEvents.forEach((eventName) => map.current.on(eventName, scheduleLegendRefresh));
+
     let isMapEventsInitialized = false;
 
     map.current.on('style.load', () => {
       setupSimulation(map.current);
       mapLayerService.initializeSourcesAndLayers(map.current, useStore.getState().gisLayers);
       rasterService.setMap(map.current);
+      scheduleLegendRefresh();
 
       if (!isAdmin) {
         const popLayer = useStore.getState().rasterLayers.find(l => l.id === 'population-exposure');
@@ -156,9 +230,9 @@ export default function MapView({ isAdmin = false }) {
             useStore.getState().setStateIdMapping(mapping);
           });
 
-        let hoveredStateId = null;
-        let cellHoverTimeout = null;
+        bindInspectionCursor(map.current);
 
+        let hoveredStateId = null;
         map.current.on('mousemove', 'state-boundaries-fill', (e) => {
           if (e.features.length > 0) {
             const feature = e.features[0];
@@ -173,26 +247,6 @@ export default function MapView({ isAdmin = false }) {
               { source: 'state-boundaries-source', id: hoveredStateId },
               { hover: true }
             );
-            useStore.getState().setHoveredStateId(hoveredStateId);
-            useStore.getState().setHoveredStateName(getStateName(feature));
-            
-            if (cellHoverTimeout) clearTimeout(cellHoverTimeout);
-            cellHoverTimeout = setTimeout(() => {
-              if (!map.current || (!useStore.getState().isSimulationRunning && !useStore.getState().simulationResults)) {
-                useStore.getState().setHoveredCellData(null);
-                return;
-              }
-              try {
-                const features = map.current.queryRenderedFeatures(e.point, { layers: [SIM_LAYERS.WB_GRID_FILL] });
-                if (features.length > 0) {
-                  useStore.getState().setHoveredCellData(features[0].properties);
-                } else {
-                  useStore.getState().setHoveredCellData(null);
-                }
-              } catch (err) {
-                // Ignore if layer doesn't exist
-              }
-            }, 50);
           }
         });
 
@@ -204,22 +258,12 @@ export default function MapView({ isAdmin = false }) {
             );
           }
           hoveredStateId = null;
-          useStore.getState().setHoveredStateId(null);
-          useStore.getState().setHoveredStateName(null);
-          
-          if (cellHoverTimeout) clearTimeout(cellHoverTimeout);
-          useStore.getState().setHoveredCellData(null);
         });
 
-        // Tectonic Plates Hover Logic
         let hoveredPlateId = null;
-        const platePopup = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 10 });
-
         map.current.on('mousemove', 'tectonic-plates-line', (e) => {
           if (e.features.length > 0) {
-            map.current.getCanvas().style.cursor = 'pointer';
             const feature = e.features[0];
-            const type = feature.properties.Boundary_Type || 'Unknown';
             
             if (hoveredPlateId !== null) {
               map.current.setFeatureState(
@@ -235,19 +279,10 @@ export default function MapView({ isAdmin = false }) {
                 { hover: true }
               );
             }
-
-            platePopup.setLngLat(e.lngLat).setHTML(`
-              <div style="background:#0f172a;border:1px solid #334155;padding:8px 12px;border-radius:6px;font-family:monospace;font-size:12px;color:#e2e8f0;">
-                <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;margin-bottom:2px">Plate Boundary</div>
-                <div style="color:#fb923c;font-weight:700;font-size:14px">${escapeHtml(type)}</div>
-              </div>
-            `).addTo(map.current);
           }
         });
 
         map.current.on('mouseleave', 'tectonic-plates-line', () => {
-          map.current.getCanvas().style.cursor = '';
-          platePopup.remove();
           if (hoveredPlateId !== null) {
             map.current.setFeatureState(
               { source: 'tectonic-plates-source', id: hoveredPlateId },
@@ -256,63 +291,24 @@ export default function MapView({ isAdmin = false }) {
             hoveredPlateId = null;
           }
         });
-
-        const historicPopup = new maplibregl.Popup({ closeButton: true, closeOnClick: true, offset: 12 });
-
-        map.current.on('mouseenter', 'historic-unclustered-point', () => {
-          map.current.getCanvas().style.cursor = 'pointer';
-        });
-
-        map.current.on('mouseleave', 'historic-unclustered-point', () => {
-          map.current.getCanvas().style.cursor = '';
-        });
-
-        map.current.on('click', 'historic-unclustered-point', (e) => {
-          if (!e.features?.length) return;
-          const feature = e.features[0];
-          const props = feature.properties || {};
-          const coordinates = feature.geometry?.coordinates || [e.lngLat.lng, e.lngLat.lat];
-          const longitude = Number(coordinates[0]);
-          const latitude = Number(coordinates[1]);
-          const magnitude = Number(props.mag);
-          const depth = Number(props.depth);
-          const location = props.place || `${latitude.toFixed(2)}°N, ${longitude.toFixed(2)}°E`;
-
-          historicPopup
-            .setLngLat([longitude, latitude])
-            .setHTML(`
-              <div style="background:#0f172a;border:1px solid #334155;padding:10px 14px;border-radius:8px;font-family:monospace;font-size:12px;color:#e2e8f0;min-width:220px">
-                <div style="color:#94a3b8;font-size:10px;text-transform:uppercase;margin-bottom:4px">Historic Earthquake</div>
-                <div style="color:#fb923c;font-weight:700;font-size:15px;margin-bottom:8px">${Number.isFinite(magnitude) ? `M ${magnitude.toFixed(1)}` : 'Magnitude unknown'}</div>
-                <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:5px">
-                  <span style="color:#94a3b8">Time</span>
-                  <span style="text-align:right;color:#e2e8f0">${escapeHtml(formatEventTime(props.time))}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;gap:12px;margin-bottom:5px">
-                  <span style="color:#94a3b8">Location</span>
-                  <span style="text-align:right;color:#e2e8f0">${escapeHtml(location)}</span>
-                </div>
-                <div style="display:flex;justify-content:space-between;gap:12px">
-                  <span style="color:#94a3b8">Depth</span>
-                  <span style="text-align:right;color:#e2e8f0">${Number.isFinite(depth) ? `${depth.toFixed(1)} km` : 'Unknown'}</span>
-                </div>
-              </div>
-            `)
-            .addTo(map.current);
-        });
       }
     });
 
     return () => {
       animationManager.stopShockwave();
+      if (legendRefreshFrame !== null) {
+        cancelAnimationFrame(legendRefreshFrame);
+      }
       if (map.current) {
+        legendEvents.forEach((eventName) => map.current.off(eventName, scheduleLegendRefresh));
         map.current.off('click', onMapClick);
         map.current.off('mousedown', onMouseDown);
         map.current.remove();
         map.current = null;
       }
+      useStore.getState().setVisibleLegendItems([]);
     };
-  }, [setEarthquakeEpicenter, initSimulationLayers]);
+  }, [setEarthquakeEpicenter, setupSimulation, isAdmin]);
 
   // Fly to new viewport when it changes
   useEffect(() => {
@@ -364,6 +360,7 @@ export default function MapView({ isAdmin = false }) {
     Object.keys(gisLayers).forEach(layerKey => {
       mapLayerService.setLayerVisibility(layerKey, gisLayers[layerKey]);
     });
+    refreshVisibleLegendItems(map.current);
   }, [gisLayers]);
 
   // Update epicenter marker
@@ -396,6 +393,7 @@ export default function MapView({ isAdmin = false }) {
         soilAmpVisible ? 'visible' : 'none'
       );
     }
+    refreshVisibleLegendItems(map.current);
   }, [soilAmpVisible]);
 
   // Sync state isolation filter
@@ -409,6 +407,7 @@ export default function MapView({ isAdmin = false }) {
     if (mapLayerService.layerExists(map.current, SIM_LAYERS.CONTOUR_FILL)) {
       map.current.setFilter(SIM_LAYERS.CONTOUR_FILL, filter);
     }
+    refreshVisibleLegendItems(map.current);
   }, [selectedStateName]);
 
   // Render simulation results and trigger shockwave
@@ -428,6 +427,7 @@ export default function MapView({ isAdmin = false }) {
           if (map.current.getLayer(SIM_LAYERS.CONTOUR_FILL))   map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL,   'visibility', 'none');
           if (map.current.getLayer(SIM_LAYERS.CONTOUR_STROKE)) map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'none');
           if (map.current.getLayer(SIM_LAYERS.WB_GRID_FILL))   map.current.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL,   'visibility', 'none');
+          refreshVisibleLegendItems(map.current);
           
           const emptyFC = { type: 'FeatureCollection', features: [] };
           if (wbGridSrc) wbGridSrc.setData(emptyFC);
@@ -459,6 +459,8 @@ export default function MapView({ isAdmin = false }) {
         if (map.current.getLayer(SIM_LAYERS.CONTOUR_FILL))   map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL,   'visibility', 'visible');
         if (map.current.getLayer(SIM_LAYERS.CONTOUR_STROKE)) map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'visible');
         if (map.current.getLayer(SIM_LAYERS.WB_GRID_FILL))   map.current.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL,   'visibility', 'visible');
+        mapLayerService.bringSimulationLayersToFront(map.current);
+        refreshVisibleLegendItems(map.current);
         debugLog('[MapView] Layers made visible:', SIM_LAYERS.CONTOUR_FILL, SIM_LAYERS.CONTOUR_STROKE, SIM_LAYERS.WB_GRID_FILL);
 
         if (simulationResults.state_summary) {

@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from collections import OrderedDict
 from threading import Lock
-
+from psycopg2.extras import execute_values
 from app.models.database import get_conn
 
 _CACHE_TTL_SECONDS = 300
@@ -45,10 +45,37 @@ def save_historic_event(event) -> int | None:
             clear_historic_cache()
             return row[0] if row else None
 
-
 def clear_historic_cache() -> None:
     with _cache_lock:
         _geojson_cache.clear()
+
+def save_historic_events_batch(events: list) -> None:
+    if not events:
+        return
+    
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            execute_values(
+                cur,
+                """
+                INSERT INTO historic_events
+                    (source_id, source, fingerprint, latitude, longitude,
+                     depth_km, magnitude, mag_type, origin_time, place,
+                     status, alert_level)
+                VALUES %s
+                ON CONFLICT (source_id) DO UPDATE 
+                SET updated_at = NOW(), magnitude = EXCLUDED.magnitude
+                """,
+                [
+                    (
+                        e.source_id, e.source, e.fingerprint, e.latitude, e.longitude,
+                        e.depth_km, e.magnitude, e.mag_type, e.origin_time, e.place,
+                        e.status, e.alert_level
+                    ) for e in events
+                ],
+                page_size=1000
+            )
+        clear_historic_cache()
 
 
 def _parse_bbox(bbox: str) -> tuple[float, float, float, float]:

@@ -5,7 +5,7 @@ import Sidebar from '../components/Sidebar';
 import MapView from '../components/MapView';
 import MapLegend from '../components/MapLegend';
 import ControlPanel from '../components/ControlPanel';
-import StateHoverTooltip from '../components/StateHoverTooltip';
+import InfoPanel from '../components/InfoPanel';
 import AlertBanner from '../components/AlertBanner';
 import { LayersPanel } from '../panels/LayersPanel';
 import { AlertsPanel } from '../panels/AlertsPanel';
@@ -32,8 +32,6 @@ export default function PublicDashboard() {
     if (!current || current === 'disasters') {
       forceActiveSection('live_events');
     }
-    // Enable hover tool by default for public dashboard
-    useStore.setState({ isHoverTooltipEnabled: true });
   }, [forceActiveSection]);
 
   // Start WebSocket connection — real-time earthquake events + auto-sim results
@@ -49,7 +47,7 @@ export default function PublicDashboard() {
         <Sidebar isAdmin={false} />
         <RightSidebar isAdmin={false} />
         <MapView isAdmin={false} />
-        <StateHoverTooltip />
+        <InfoPanel />
         <MapLegend />
 
         {/* Main Content Overlay */}
