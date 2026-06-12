@@ -50,14 +50,14 @@ export default function MapLegend() {
         {show('epicenter') && (
           <div className="flex items-center gap-2.5 mt-1">
             <Star className="w-4 h-4 fill-yellow-400 text-white stroke-[1.5px] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" style={{ filter: 'drop-shadow(0 0 4px rgba(250,204,21,0.8))' }} />
-            <span className="text-slate-400">Earthquake origin point</span>
+            <span className="text-white">Earthquake origin point</span>
           </div>
         )}
 
         {show('historicEarthquakes') && (
           <div className="flex items-center gap-2.5 mt-1.5">
             <div className="w-3.5 h-3.5 rounded-full bg-orange-500 border border-white/80 flex-shrink-0"></div>
-            <span className="text-slate-400">Historic earthquakes</span>
+            <span className="text-white">Historic earthquakes</span>
           </div>
         )}
 
@@ -71,23 +71,23 @@ export default function MapLegend() {
         {show('tectonicPlates') && (
           <div className="flex items-center gap-2.5 mt-1.5">
             <div className="w-7 h-0.5 bg-orange-600 flex-shrink-0"></div>
-            <span className="text-slate-400">Tectonic plate boundaries</span>
+            <span className="text-white">Tectonic plate boundaries</span>
           </div>
         )}
 
         {/* GPS Velocity Vectors Legend */}
         {show('gpsVectors') && (
           <div className="mt-3 pt-3 border-t border-slate-700/40">
-            <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">GPS Velocity Vectors</div>
+            <div className="text-[10px] text-white uppercase tracking-wider mb-2">GPS Velocity Vectors</div>
             <div className="flex items-center gap-2.5 mt-1.5">
               <div className="w-3 h-3 rounded-full bg-red-500 border border-black flex-shrink-0"></div>
-              <span className="text-slate-400">GPS Station (Anchor Point)</span>
+              <span className="text-white">GPS Station (Anchor Point)</span>
             </div>
             <div className="flex items-center gap-2.5 mt-1.5">
               <div className="w-6 h-0.5 bg-red-500 ml-[-6px] mr-1 flex-shrink-0 relative">
                 <div className="absolute right-[-4px] top-1/2 -translate-y-[45%] text-red-500 text-[10px] leading-none">^</div>
               </div>
-              <span className="text-slate-400 text-[10px] leading-tight">Line length ∝ Velocity<br/>Arrow indicates drift direction</span>
+              <span className="text-white text-[10px] leading-tight">Line length ∝ Velocity<br/>Arrow indicates drift direction</span>
             </div>
           </div>
         )}
@@ -97,8 +97,8 @@ export default function MapLegend() {
             and low-impact cells fade by opacity so underlying layers remain visible. */}
         {show('pgaIntensity') && (
         <div className="mt-3 pt-3 border-t border-slate-700/40">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Earthquake Damage</div>
-          <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">
+          <div className="text-[10px] text-white uppercase tracking-wider mb-2">Earthquake Damage</div>
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-white mb-1.5">
             <span>Most Damage</span>
             <span>Least Damage</span>
           </div>

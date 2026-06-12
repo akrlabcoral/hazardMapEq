@@ -6,7 +6,7 @@
 
 *A full-stack, scientific-grade geospatial application designed to monitor, model, and visualize real-time seismic impacts across the Indian Subcontinent.*
 
-![Python](https://img.shields.io/badge/backend-FastAPI%20%28Python%29-blue) ![React](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-cyan) ![PostgreSQL](https://img.shields.io/badge/database-PostgreSQL%2016-blue) ![Docker](https://img.shields.io/badge/deployment-Docker%20Compose-2496ED) ![MapLibre](https://img.shields.io/badge/maps-MapLibre%20GL%20JS-purple)
+![Python](https://img.shields.io/badge/backend-FastAPI%20%28Python%29-blue) ![React](https://img.shields.io/badge/frontend-React%2019%20%2B%20Vite-cyan) ![PostgreSQL](https://img.shields.io/badge/database-PostgreSQL%2016-blue) ![Redis](https://img.shields.io/badge/queue-Redis%20%2B%20RQ-red) ![Docker](https://img.shields.io/badge/deployment-Docker%20Compose-2496ED) ![MapLibre](https://img.shields.io/badge/maps-MapLibre%20GL%20JS-purple)
 
 </div>
 
@@ -14,9 +14,9 @@
 
 ## 📌 Overview
 
-HazardMap is a rigorous real-time seismic hazard platform. It actively monitors global and regional earthquake data feeds (USGS and India's NCS), immediately applies Ground Motion Prediction Equations (GMPEs) optimized for specific tectonic regions, and pushes interactive Peak Ground Acceleration (PGA) heatmaps directly to connected browsers via WebSockets in a matter of seconds.
+HazardMap is a rigorous real-time seismic hazard platform. It actively monitors global and regional earthquake data feeds (USGS and India's NCS), immediately applies Ground Motion Prediction Equations (GMPEs) optimized for specific tectonic regions, and pushes interactive Earthquake Damage heatmaps directly to connected browsers via WebSockets in a matter of seconds.
 
-The system evaluates hazard over a nationwide 20-kilometer analysis grid, incorporating local `Vs30` soil data to apply realistic site-specific amplification factors.
+The system evaluates hazard over a nationwide 10-kilometer analysis grid, incorporating local `Vs30` soil data to apply realistic site-specific amplification factors, distributed across scalable Redis-backed RQ workers.
 
 ---
 
@@ -24,17 +24,19 @@ The system evaluates hazard over a nationwide 20-kilometer analysis grid, incorp
 
 - **Real-Time Automated Ingestion**: Continuous polling of the USGS and National Center for Seismology (NCS) feeds. Incoming events are spatially and temporally deduplicated.
 - **Tectonic Region Detection**: The engine automatically classifies the epicenter into distinct tectonic zones (`Himalayan`, `Northeast India`, `Peninsular Shield`) and selects the appropriate empirical GMPE model.
-- **High-Performance Vectorized Math**: Replaces slow Python loops with vectorized NumPy math to evaluate Ground Motion on 6,500+ grid cells instantly.
+- **High-Performance Vectorized Math**: Replaces slow Python loops with vectorized NumPy math to evaluate Ground Motion on thousands of grid cells instantly.
 - **Soil Amplification (Vs30 Proxy)**: Directly samples a national GeoTIFF raster to extract local Vs30 values, assign NEHRP site classifications, and compute non-linear soil amplification factors on the fly.
-- **Contour Polygon Generation**: Utilizes `scipy.interpolate.griddata` and `matplotlib` to convert scattered cell data into smoothed, USGS ShakeMap-compliant GeoJSON contour polygons.
+- **Distributed Simulation Queue**: Utilizes Redis and Python-RQ to horizontally scale simulation generation across multiple worker containers, allowing concurrent processing of manual and automated simulations.
+- **Contour Polygon Generation**: Utilizes `scipy.interpolate.griddata` and `matplotlib` to convert scattered cell data into smoothed GeoJSON contour polygons mapped to a continuous Earthquake Damage Palette.
 - **WebSocket Broadcast**: Employs an ultra-fast asynchronous `orjson` WebSocket broadcaster to push live simulation results directly to all connected users.
 
 ## 🗺️ Frontend Capabilities
 
-- **Interactive GIS Dashboard**: Built using React 19, MapLibre GL JS, and Zustand state management. Features dark/light themes and collapsible data panels.
-- **Live Event Feeds**: View real-time incoming earthquakes. Earthquakes of Magnitude $\ge$ 6.0 trigger automatic red-alert banners across the UI.
-- **Manual "What-If" Simulations**: Users can drop a pin anywhere on the map, set a custom magnitude and depth, and run an instant manual simulation.
-- **Dynamic Layers & Data Export**: Toggle satellite/terrain overlays, regional boundaries, and the raw soil amplification overlay. Export simulation results to JSON, CSV, or GeoJSON directly from the browser.
+- **Interactive GIS Dashboard**: Built using React 19, MapLibre GL JS, and Zustand state management. Features dark/light themes and collapsible glassmorphism data panels.
+- **Live Event Feeds & Notifications**: View real-time incoming earthquakes. Includes an interactive notification bell dropdown that explicitly filters for regional alerts (India + 200km boundary). Earthquakes of Magnitude $\ge$ 6.0 within the boundary trigger automatic red-alert banners across the UI.
+- **Granular Data Inspection**: Advanced click-priority logic allows users to punch through the smooth visual heatmap contours and inspect the specific Local PGA, Population, and Site Class of the exact 10x10km grid cell they clicked on.
+- **Manual "What-If" Simulations**: Users can drop a pin anywhere on the map, set a custom magnitude, depth, and even override the auto-detected GMPE parameters, and run an instant manual simulation.
+- **Dynamic Layers & Data Export**: Toggle satellite/terrain overlays, regional boundaries, historical event clusters, and the raw soil amplification overlay. Export simulation results to JSON, CSV, or GeoJSON directly from the browser.
 
 ---
 
@@ -42,20 +44,21 @@ The system evaluates hazard over a nationwide 20-kilometer analysis grid, incorp
 
 ### `backend/` (FastAPI + Python 3.10+)
 The core scientific computation and ingestion engine:
-- **`ingest/`**: Async HTTP pollers for USGS and NCS with spatial-temporal deduplication.
+- **`ingest/`**: Async HTTP pollers for USGS and NCS with spatial-temporal deduplication and regional filtering logic.
 - **`layers/pga/`**: Region definitions and GMPE mathematical equations.
 - **`soil/`**: Rasterio-powered GeoTIFF caching and batch coordinate sampling for Vs30.
-- **`jobs/`**: Background AsyncIO queue and blocking thread dispatch (for matplotlib).
+- **`jobs/`**: Redis-backed RQ workers (`hazard_auto`, `hazard_manual`) for distributed background map generation.
 - **`models/`**: Thread-safe `psycopg2` PostgreSQL connection pooling for persistence.
 
 ### `frontend/` (React 19 + Vite)
 The real-time MapLibre GL presentation layer:
-- **`hooks/`**: Custom hooks for WebSocket management (`useWebSocket`) and simulation data handling.
+- **`hooks/`**: Custom hooks for WebSocket management (`useWebSocket`) and distributed simulation queue tracking.
 - **`store/`**: Centralized `useStore` (Zustand) for global Map and UI state.
-- **`services/`**: Map layer toggling, raster injection, and GeoJSON polygon styling logic.
+- **`services/`**: Map layer toggling, feature inspection prioritization, raster injection, and GeoJSON polygon styling.
 
-### Database
+### Infrastructure
 - **PostgreSQL 16**: Relational storage of all ingested events and computed simulations.
+- **Redis 7**: Distributed task queue broker and in-memory cache lock manager.
 
 ---
 
@@ -72,7 +75,7 @@ The entire application is fully dockerized for single-command orchestration.
    ```bash
    cd hazardmap-realtime
    ```
-2. Build and start the cluster:
+2. Build and start the cluster (spins up Postgres, Redis, FastAPI, 3x RQ Workers, and Vite):
    ```bash
    docker compose up --build
    ```
@@ -80,14 +83,15 @@ The entire application is fully dockerized for single-command orchestration.
    - **Frontend UI**: `http://localhost:5173`
    - **Backend API Docs**: `http://localhost:8000/docs`
 
-> **Note**: The backend initializes a one-time connection to the PostgreSQL database and loads the 6,500-cell GeoJSON grid into memory at startup. The first initialization may take a few seconds.
+> **Note**: The backend initializes a one-time connection to the PostgreSQL database and loads the national GeoJSON grid into memory at startup. The first initialization may take a few seconds.
 
 ### Runtime Configuration
 
 The Docker Compose defaults are development-friendly. For staging or production, set these backend environment variables explicitly:
 
-- `CORS_ALLOWED_ORIGINS`: comma-separated browser origins allowed to call the API, for example `https://hazardmap.example.com`.
+- `CORS_ALLOWED_ORIGINS`: comma-separated browser origins allowed to call the API.
 - `DATABASE_URL`: PostgreSQL connection URL.
+- `REDIS_URL`: Redis connection URL for the RQ queue.
 - `VS30_RASTER_PATH`: path to the national Vs30 GeoTIFF inside the backend container.
 - `GRID_PATH`: path to the analysis grid GeoJSON.
 - `USGS_POLL_INTERVAL_SECONDS` and `NCS_POLL_INTERVAL_SECONDS`: feed polling cadence.
