@@ -54,29 +54,30 @@ settings = Settings()
 GRID_PATH = settings.grid_path
 
 # ---------------------------------------------------------------------------
-# PGA Intensity Scale — thresholds in units of g (gravitational acceleration)
-# Matches the USGS ShakeMap intensity definitions
+# Damage contour scale — thresholds in units of g (gravitational acceleration)
+# Colors are listed low-to-high because matplotlib contourf consumes ascending
+# levels. The UI legend displays the same palette most-damage-left.
 # ---------------------------------------------------------------------------
 PGA_LEVELS = [
-    0.014,   # IV       : Light
-    0.039,   # V        : Moderate
-    0.092,   # VI       : Strong
-    0.18,    # VII      : Very Strong
-    0.34,    # VIII     : Severe
-    0.65,    # IX       : Violent
-    1.24,    # X+       : Extreme
+    0.014,   # Minimal
+    0.039,   # Very light
+    0.092,   # Light
+    0.18,    # Moderate
+    0.34,    # High
+    0.65,    # Severe
+    1.24,    # Extreme / most damage
 ]
 # The last level is computed dynamically as max(5.0, observed_max + 1.0)
 
-# Hex colors for each MMI band.
+# Hex colors for each damage band, low-to-high for contourf.
 PGA_COLORS = [
-    "#a0e6ff",  # IV. Light
-    "#80ffff",  # V. Moderate
-    "#7cd37c",  # VI. Strong
-    "#ffec7d",  # VII. Very Strong
-    "#ffb834",  # VIII. Severe
-    "#ff6666",  # IX. Violent
-    "#cc0000",  # X+. Extreme
+    "#0b006e",  # Minimal
+    "#0046b8",  # Very light
+    "#008fd3",  # Light
+    "#00b956",  # Moderate
+    "#88d66b",  # High
+    "#e5e875",  # Severe
+    "#8b5a45",  # Extreme
 ]
 
 # ---------------------------------------------------------------------------

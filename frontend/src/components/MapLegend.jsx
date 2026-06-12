@@ -3,16 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Eye, EyeOff, Star } from 'lucide-react';
 
 import useStore from '../store/useStore';
+import { EARTHQUAKE_DAMAGE_PALETTE } from '../config/damagePalette';
 
-const PGA_SCALE = [
-  { color: '#cc0000', label: '> 1.24g (X+ Extreme)' },
-  { color: '#ff6666', label: '0.65 - 1.24g (IX Violent)' },
-  { color: '#ffb834', label: '0.34 - 0.65g (VIII Severe)' },
-  { color: '#ffec7d', label: '0.18 - 0.34g (VII Very Strong)' },
-  { color: '#7cd37c', label: '0.092 - 0.18g (VI Strong)' },
-  { color: '#80ffff', label: '0.039 - 0.092g (V Moderate)' },
-  { color: '#a0e6ff', label: '0.014 - 0.039g (IV Light)' },
-];
+const DAMAGE_GRADIENT = `linear-gradient(to right, ${EARTHQUAKE_DAMAGE_PALETTE.map((item) => item.color).join(', ')})`;
 
 // Map Legend — positioned top-right, shows layer symbology + intensity color scale
 // Uses glassmorphism panel with premium dark GIS styling
@@ -99,19 +92,31 @@ export default function MapLegend() {
           </div>
         )}
 
-        {/* Scientific PGA Scale */}
+        {/* Damage palette legend runs most-damage-left to least-damage-right.
+            MapLibre/contour interpolation is defined low-to-high internally,
+            and low-impact cells fade by opacity so underlying layers remain visible. */}
         {show('pgaIntensity') && (
         <div className="mt-3 pt-3 border-t border-slate-700/40">
-          <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">PGA Intensity Scale</div>
-          {PGA_SCALE.map((item) => (
-            <div key={item.label} className="flex items-center gap-2.5 mt-1.5">
-              <div
-                className="w-3.5 h-3.5 rounded-full border border-white/20"
-                style={{ backgroundColor: item.color }}
-              />
-              <span className="text-slate-400">{item.label}</span>
-            </div>
-          ))}
+          <div className="text-[10px] text-slate-500 uppercase tracking-wider mb-2">Earthquake Damage</div>
+          <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-slate-500 mb-1.5">
+            <span>Most Damage</span>
+            <span>Least Damage</span>
+          </div>
+          <div
+            className="h-3 rounded-full border border-white/20 shadow-[0_0_8px_rgba(14,165,233,0.25)]"
+            style={{ background: DAMAGE_GRADIENT }}
+          />
+          <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
+            {EARTHQUAKE_DAMAGE_PALETTE.map((item) => (
+              <div key={item.id} className="flex items-center gap-1.5">
+                <span
+                  className="h-2.5 w-2.5 rounded-full border border-white/20 shrink-0"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-slate-400">{item.label}</span>
+              </div>
+            ))}
+          </div>
         </div>
         )}
 

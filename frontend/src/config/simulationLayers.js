@@ -1,4 +1,8 @@
 import { mapLayerService } from '../services/mapLayerService';
+import {
+  EARTHQUAKE_DAMAGE_FILL_COLOR,
+  EARTHQUAKE_DAMAGE_FILL_OPACITY,
+} from './damagePalette';
 
 // Layer IDs for simulation visualization
 export const SIM_LAYERS = {
@@ -38,21 +42,14 @@ export const initSimulationLayers = (mapInstance) => {
     }
   }, SIM_LAYERS.WB_GRID_FILL);
 
-  // --- Hazard Grid Fill (Choropleth by fused_hazard score) ---
+  // --- Damage grid fill (normalized fused_hazard: 0.0 least damage, 1.0 most damage) ---
   mapLayerService.addLayerSafe(mapInstance, {
     id: SIM_LAYERS.WB_GRID_FILL,
     type: 'fill',
     source: 'sim-wb-grid-source',
     paint: {
-      'fill-color': [
-        'interpolate', ['linear'], ['get', 'fused_hazard'],
-        0.0, 'rgba(34, 197, 94, 0.0)',
-        0.2, 'rgba(34, 197, 94, 0.5)',
-        0.4, 'rgba(234, 179, 8, 0.6)',
-        0.6, 'rgba(249, 115, 22, 0.7)',
-        0.8, 'rgba(239, 68, 68, 0.8)',
-        1.0, 'rgba(185, 28, 28, 0.95)',
-      ],
+      'fill-color': EARTHQUAKE_DAMAGE_FILL_COLOR,
+      'fill-opacity': EARTHQUAKE_DAMAGE_FILL_OPACITY,
       'fill-outline-color': 'rgba(255, 255, 255, 0.1)',
     }
   });
@@ -129,7 +126,7 @@ export const initSimulationLayers = (mapInstance) => {
 
   if (!mapInstance.hasImage('star-icon')) {
     const img = new Image();
-    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#facc15" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#ff0000" stroke="#ffffff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>`;
     img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
     img.onload = () => {
       if (!mapInstance.hasImage('star-icon')) {
