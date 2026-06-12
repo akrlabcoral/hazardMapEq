@@ -49,3 +49,6 @@ htmlcov/
 
 # Local data stores
 backend/data/simulations.db
+
+__pycache__/
+*.pyc
