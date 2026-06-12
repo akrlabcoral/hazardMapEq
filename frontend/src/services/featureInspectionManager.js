@@ -20,10 +20,10 @@ const INSPECTION_LAYER_PRIORITY = [
   'gps-vectors-head',
   'gps-vectors-line',
   'tectonic-plates-line',
-  'state-boundaries-fill',
   SIM_LAYERS.SOIL_AMP,
-  SIM_LAYERS.CONTOUR_FILL,
   SIM_LAYERS.WB_GRID_FILL,
+  SIM_LAYERS.CONTOUR_FILL,
+  'state-boundaries-fill',
 ];
 
 const inspectionPriority = new Map(
