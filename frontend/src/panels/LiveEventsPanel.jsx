@@ -36,8 +36,8 @@ export default function LiveEventsPanel() {
   const { handleRunSimulation } = useSimulation();
 
   const [minMag, setMinMag] = useState('');
-  const [timeframe, setTimeframe] = useState('24h');
-  const [regionFilter, setRegionFilter] = useState('all');
+  const [timeframe, setTimeframe] = useState('all');
+  const [regionFilter, setRegionFilter] = useState('india');
 
   // Fetch initial history from backend on mount
   useEffect(() => {

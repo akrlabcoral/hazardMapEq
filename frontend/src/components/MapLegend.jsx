@@ -7,8 +7,23 @@ import { EARTHQUAKE_DAMAGE_PALETTE } from '../config/damagePalette';
 
 const DAMAGE_GRADIENT = `linear-gradient(to right, ${EARTHQUAKE_DAMAGE_PALETTE.map((item) => item.color).join(', ')})`;
 
-// Map Legend — positioned top-right, shows layer symbology + intensity color scale
-// Uses glassmorphism panel with premium dark GIS styling
+// ESA WorldCover 2021 Land Cover Legend
+// Colors correspond to official ESA WorldCover classes
+const ESA_WORLDCOVER_LEGEND_ITEMS = [
+  { label: 'Tree Cover', color: '#006400' },
+  { label: 'Shrubland', color: '#ffbb22' },
+  { label: 'Grassland', color: '#ffff4c' },
+  { label: 'Cropland', color: '#f096ff' },
+  { label: 'Built-up', color: '#fa0000' },
+  { label: 'Bare / Sparse Vegetation', color: '#b4b4b4' },
+  { label: 'Snow & Ice', color: '#f0f0f0' },
+  { label: 'Water Bodies', color: '#0064c8' },
+  { label: 'Herbaceous Wetland', color: '#0096a0' },
+  { label: 'Mangroves', color: '#00cf75' },
+  { label: 'Moss & Lichen', color: '#fae6a0' },
+];
+
+
 export default function MapLegend() {
   const [isVisible, setIsVisible] = useState(true);
   const visibleLegendItems = useStore((state) => state.visibleLegendItems);
@@ -33,7 +48,7 @@ export default function MapLegend() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20, transition: { duration: 0.2 } }}
             transition={{ duration: 0.4, delay: 0.1 }}
-            className="bg-slate-900/85 backdrop-blur-xl border border-slate-700/60 p-4 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] text-xs w-64"
+            className="bg-slate-900/85 backdrop-blur-xl border border-slate-700/60 p-4 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] text-xs w-64 max-h-[calc(100vh-6rem)] overflow-y-auto"
           >
 
             {/* Header with neon accent */}
@@ -49,7 +64,7 @@ export default function MapLegend() {
 
         {show('epicenter') && (
           <div className="flex items-center gap-2.5 mt-1">
-            <Star className="w-4 h-4 fill-yellow-400 text-white stroke-[1.5px] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" style={{ filter: 'drop-shadow(0 0 4px rgba(250,204,21,0.8))' }} />
+            <Star className="w-4 h-4 fill-red-600 text-white stroke-[1.5px] drop-shadow-[0_0_8px_rgba(250,204,21,0.8)]" style={{ filter: 'drop-shadow(0 0 4px rgb(255, 0, 0))' }} />
             <span className="text-white">Earthquake origin point</span>
           </div>
         )}
@@ -159,6 +174,21 @@ export default function MapLegend() {
             </div>
             <span className="text-white font-mono">0.80x</span>
           </div>
+        </div>
+        )}
+
+        {show('landCover') && (
+        <div className="mt-3 pt-3 border-t border-slate-700/40">
+          <div className="text-[10px] text-white uppercase tracking-wider mb-2">ESA WorldCover 2021 Land Cover</div>
+          {ESA_WORLDCOVER_LEGEND_ITEMS.map((item) => (
+            <div key={item.label} className="flex items-center gap-2 mt-1.5">
+              <span
+                className="w-2.5 h-2.5 rounded-sm border border-white/20 flex-shrink-0"
+                style={{ backgroundColor: item.color }}
+              />
+              <span className="text-white">{item.label}</span>
+            </div>
+          ))}
         </div>
         )}
       </div>

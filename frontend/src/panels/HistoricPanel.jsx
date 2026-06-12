@@ -32,7 +32,7 @@ export default function HistoricPanel() {
 
   // Filters
   const [minMag, setMinMag] = useState('7.0');
-  const [regionFilter, setRegionFilter] = useState('all');
+  const [regionFilter, setRegionFilter] = useState('India');
 
   useEffect(() => {
     // Enable layer on mount

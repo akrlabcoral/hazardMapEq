@@ -417,25 +417,43 @@ class RasterService {
           // Heatmap: Blue -> Cyan -> Yellow -> Red -> Dark Red
           let r, g, b;
           if (frac < 0.25) {
-            // Blue to Cyan
             let f = frac / 0.25;
             r = 0; g = Math.floor(255 * f); b = 255;
           } else if (frac < 0.5) {
-            // Cyan to Yellow
             let f = (frac - 0.25) / 0.25;
             r = Math.floor(255 * f); g = 255; b = Math.floor(255 * (1 - f));
           } else if (frac < 0.75) {
-            // Yellow to Red
             let f = (frac - 0.5) / 0.25;
             r = 255; g = Math.floor(255 * (1 - f)); b = 0;
           } else {
-            // Red to Dark Red
             let f = (frac - 0.75) / 0.25;
             r = Math.floor(255 * (1 - 0.5 * f)); g = 0; b = 0;
           }
           imageData.data[i * 4]     = r;
           imageData.data[i * 4 + 1] = g;
           imageData.data[i * 4 + 2] = b;
+        } else if (renderingMode === 'land-cover') {
+          // ESA WorldCover 10m Classes
+          let r = 0, g = 0, b = 0, a = 255;
+          switch(Math.round(v)) {
+            case 10: r = 0; g = 100; b = 0; break;       // Trees
+            case 20: r = 255; g = 187; b = 34; break;    // Shrubland
+            case 30: r = 255; g = 255; b = 76; break;    // Grassland
+            case 40: r = 240; g = 150; b = 255; break;   // Cropland
+            case 50: r = 250; g = 0; b = 0; break;       // Built-up
+            case 60: r = 180; g = 180; b = 180; break;   // Bare / sparse veg
+            case 70: r = 240; g = 240; b = 240; break;   // Snow and ice
+            case 80: r = 0; g = 100; b = 200; break;     // Permanent water
+            case 90: r = 0; g = 150; b = 160; break;     // Herbaceous wetland
+            case 95: r = 0; g = 207; b = 117; break;     // Mangroves
+            case 100: r = 250; g = 230; b = 160; break;  // Moss and lichen
+            default: a = 0; break;                       // Transparent for unknown/nodata
+          }
+          imageData.data[i * 4]     = r;
+          imageData.data[i * 4 + 1] = g;
+          imageData.data[i * 4 + 2] = b;
+          imageData.data[i * 4 + 3] = a;
+          continue; // skip the default alpha assignment below
         } else {
           let c = Math.round(frac * 255);
           if (invert) c = 255 - c;

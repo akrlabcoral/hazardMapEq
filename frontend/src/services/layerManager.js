@@ -133,7 +133,7 @@ export const LAYER_CONFIGS = {
         filter: ['==', 'type', 'vector'],
         paint: {
           'line-color': '#ef4444',
-          'line-width': 4.0,
+          'line-width': 1.0,
           'line-opacity': 0.9
         }
       },
@@ -145,7 +145,7 @@ export const LAYER_CONFIGS = {
         layout: {
           'text-field': '^',
           'text-rotate': ['get', 'azimuth'],
-          'text-size': 20,
+          'text-size': 10,
           'text-allow-overlap': true,
           'text-ignore-placement': true,
           'text-offset': [0, 0.2]

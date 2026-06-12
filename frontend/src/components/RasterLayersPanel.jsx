@@ -84,7 +84,7 @@ export default function RasterLayersPanel({ isAdmin = true }) {
         await rasterService.addGeoTiffFromUrl(layer.url, layer.id, {
           opacity: layer.opacity,
           visible: true,
-          renderingModeOverride: layer.id === 'population-exposure' ? 'population' : undefined
+          renderingModeOverride: layer.id === 'population-exposure' ? 'population' : (layer.id === 'land-cover' ? 'land-cover' : undefined)
         });
         updateRasterLayerLoaded(layer.id, true);
       } catch (error) {

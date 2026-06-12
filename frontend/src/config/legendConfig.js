@@ -36,6 +36,11 @@ export const LEGEND_ITEMS = [
     layerIds: [SIM_LAYERS.SOIL_AMP],
     requiresRenderedFeature: true,
   },
+  {
+    id: 'landCover',
+    layerIds: ['land-cover'],
+    requiresRenderedFeature: false,
+  },
 ];
 
 const isLayerVisibleAtZoom = (mapInstance, layerId) => {
