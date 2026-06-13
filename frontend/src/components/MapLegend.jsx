@@ -5,7 +5,8 @@ import { Eye, EyeOff, Star } from 'lucide-react';
 import useStore from '../store/useStore';
 import { EARTHQUAKE_DAMAGE_PALETTE } from '../config/damagePalette';
 
-const DAMAGE_GRADIENT = `linear-gradient(to right, ${EARTHQUAKE_DAMAGE_PALETTE.map((item) => item.color).join(', ')})`;
+const DAMAGE_LEGEND_PALETTE = [...EARTHQUAKE_DAMAGE_PALETTE].reverse();
+const DAMAGE_GRADIENT = `linear-gradient(to right, ${DAMAGE_LEGEND_PALETTE.map((item) => item.color).join(', ')})`;
 
 // ESA WorldCover 2021 Land Cover Legend
 // Colors correspond to official ESA WorldCover classes
@@ -107,22 +108,22 @@ export default function MapLegend() {
           </div>
         )}
 
-        {/* Damage palette legend runs most-damage-left to least-damage-right.
+        {/* Damage palette legend runs least-damage-left to most-damage-right.
             MapLibre/contour interpolation is defined low-to-high internally,
             and low-impact cells fade by opacity so underlying layers remain visible. */}
         {show('pgaIntensity') && (
         <div className="mt-3 pt-3 border-t border-slate-700/40">
           <div className="text-[10px] text-white uppercase tracking-wider mb-2">Earthquake Damage</div>
           <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-white mb-1.5">
-            <span>Most Damage</span>
             <span>Least Damage</span>
+            <span>Most Damage</span>
           </div>
           <div
             className="h-3 rounded-full border border-white/20 shadow-[0_0_8px_rgba(14,165,233,0.25)]"
             style={{ background: DAMAGE_GRADIENT }}
           />
           <div className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1.5">
-            {EARTHQUAKE_DAMAGE_PALETTE.map((item) => (
+            {DAMAGE_LEGEND_PALETTE.map((item) => (
               <div key={item.id} className="flex items-center gap-1.5">
                 <span
                   className="h-2.5 w-2.5 rounded-full border border-white/20 shrink-0"
