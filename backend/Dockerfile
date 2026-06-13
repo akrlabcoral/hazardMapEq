@@ -1,32 +1,51 @@
-FROM python:3.10-slim
+FROM python:3.10-slim AS builder
 
-WORKDIR /app
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
+WORKDIR /build
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libexpat1 \
     gdal-bin \
     libgdal-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements file and install dependencies
-COPY requirements.txt .
-RUN pip install --upgrade pip && pip install --no-cache-dir -v -r requirements.txt
+RUN python -m venv "$VIRTUAL_ENV"
 
-# Copy backend source files
+COPY requirements.txt requirements-dev.txt ./
+ARG INSTALL_DEV=false
+RUN pip install --upgrade pip && \
+    if [ "$INSTALL_DEV" = "true" ]; then \
+      pip install --no-cache-dir -r requirements-dev.txt; \
+    else \
+      pip install --no-cache-dir -r requirements.txt; \
+    fi
+
+FROM python:3.10-slim AS runtime
+
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+ENV PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libexpat1 \
+    libgdal36 \
+    proj-data \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /opt/venv /opt/venv
 COPY app/ ./app/
 COPY data/ ./data/
 
-# Create the data folder and setup non-root user
 RUN useradd -m -u 1000 appuser && \
     mkdir -p data && \
-    chown -R appuser:appuser /app
+    chown -R appuser:appuser /app /opt/venv
 
 USER appuser
 
-# Expose FastAPI port
 EXPOSE 8000
 
-# Run FastAPI with uvicorn (removed --reload for production)
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

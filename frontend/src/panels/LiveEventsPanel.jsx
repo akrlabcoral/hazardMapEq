@@ -123,6 +123,11 @@ export default function LiveEventsPanel() {
                 store.setEarthquakeEpicenter({ lat: event.latitude, lng: event.longitude });
                 store.setEarthquakeMagnitude(event.magnitude);
                 store.setEarthquakeDepth(event.depth_km || 10);
+                store.setMapViewport({
+                  longitude: event.longitude,
+                  latitude: event.latitude,
+                  zoom: 5
+                });
                 handleRunSimulation();
               }}
             >

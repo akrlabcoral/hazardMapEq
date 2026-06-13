@@ -16,8 +16,8 @@ SITE_CLASS_AMPLIFICATION_FACTORS: dict[str, float] = {
     "A": 0.8,  # Hard Rock — De-amplification
     "B": 1.0,  # Rock — Neutral / Reference
     "C": 1.2,  # Dense Soil / Soft Rock
-    "D": 1.4,  # Stiff Soil
-    "E": 1.7,  # Soft Clay Soil — Highest amplification
+    "D": 1.5,  # Stiff Soil
+    "E": 2.0,  # Soft Clay Soil — Highest amplification
 }
 
 DEFAULT_FACTOR: float = 1.0

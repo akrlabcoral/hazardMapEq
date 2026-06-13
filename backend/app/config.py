@@ -46,7 +46,7 @@ class Settings:
     enable_dev_routes: bool = _bool_env("ENABLE_DEV_ROUTES")
     ws_max_clients: int = int(os.environ.get("WS_MAX_CLIENTS", "10000"))
     ws_send_timeout_seconds: float = float(os.environ.get("WS_SEND_TIMEOUT_SECONDS", "5.0"))
-    contour_grid_size: int = int(os.environ.get("CONTOUR_GRID_SIZE", "300"))
+    contour_grid_size: int = int(os.environ.get("CONTOUR_GRID_SIZE", "700"))
 
 
 settings = Settings()
