@@ -1,24 +1,20 @@
-FROM node:22-alpine
+FROM node:22-alpine AS builder
 
 WORKDIR /app
 
-# Copy package management files
-COPY package.json package-lock.json* ./
-
-# Install dependencies cleanly
+COPY package.json package-lock.json ./
 RUN npm ci
 
-# Copy source code and config files
-COPY src/ ./src/
-COPY public/ ./public/
-COPY index.html admin.html vite.config.js tailwind.config.js postcss.config.js ./
+COPY . .
+RUN npm run build
 
-# Use the built-in non-root node user
-RUN chown -R node:node /app
-USER node
+FROM nginx:alpine
 
-# Expose Vite dev server port
-EXPOSE 5173
+RUN rm -rf /usr/share/nginx/html/*
 
-# Start Vite dev server with host and port specified
-CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+
+CMD ["nginx", "-g", "daemon off;"]
