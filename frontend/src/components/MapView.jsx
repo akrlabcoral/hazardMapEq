@@ -103,6 +103,32 @@ const refreshVisibleLegendItems = (mapInstance) => {
   }
 };
 
+const applyBoundaryTheme = (mapInstance, mapStyle) => {
+  if (!mapInstance?.getStyle()) return;
+  const isDark = mapStyle === 'dark';
+  const boundaryLine = isDark ? '#22d3ee' : '#000000';
+  const boundaryFill = isDark ? '#0891b2' : '#0f172a';
+  const stateHoverFill = isDark ? '#22d3ee' : '#0ea5e9';
+
+  if (mapInstance.getLayer('india-boundary-fill')) {
+    mapInstance.setPaintProperty('india-boundary-fill', 'fill-color', boundaryFill);
+  }
+  if (mapInstance.getLayer('india-boundary-line')) {
+    mapInstance.setPaintProperty('india-boundary-line', 'line-color', boundaryLine);
+  }
+  if (mapInstance.getLayer('state-boundaries-fill')) {
+    mapInstance.setPaintProperty('state-boundaries-fill', 'fill-color', stateHoverFill);
+  }
+  if (mapInstance.getLayer('state-boundaries-line')) {
+    mapInstance.setPaintProperty('state-boundaries-line', 'line-color', [
+      'case',
+      ['boolean', ['feature-state', 'hover'], false],
+      boundaryLine,
+      boundaryLine,
+    ]);
+  }
+};
+
 export default function MapView({ isAdmin = false }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -196,6 +222,7 @@ export default function MapView({ isAdmin = false }) {
     map.current.on('style.load', () => {
       setupSimulation(map.current);
       mapLayerService.initializeSourcesAndLayers(map.current, useStore.getState().gisLayers);
+      applyBoundaryTheme(map.current, useStore.getState().mapStyle);
       rasterService.setMap(map.current);
       scheduleLegendRefresh();
 
@@ -360,8 +387,9 @@ export default function MapView({ isAdmin = false }) {
     Object.keys(gisLayers).forEach(layerKey => {
       mapLayerService.setLayerVisibility(layerKey, gisLayers[layerKey]);
     });
+    applyBoundaryTheme(map.current, mapStyle);
     refreshVisibleLegendItems(map.current);
-  }, [gisLayers]);
+  }, [gisLayers, mapStyle]);
 
   // Update epicenter marker
   useEffect(() => {
