@@ -26,6 +26,38 @@ def generate_contour_geojson(features: list, pga_values: np.ndarray) -> dict:
     return _generate(features, pga_values)
 
 
+def generate_intensity_contour_geojson(features: list, mmi_values: np.ndarray) -> dict:
+    from app.services.contour_generator import generate_intensity_contour_geojson as _generate
+
+    return _generate(features, mmi_values)
+
+
+def pga_g_to_mmi(pga_g: float) -> float:
+    """Convert PGA in g to MMI using PGA in cm/s^2."""
+    pga_cm_s2 = max(float(pga_g) * 980.665, 1e-9)
+    return 3.66 * np.log10(pga_cm_s2) - 1.66
+
+
+def mmi_to_roman(mmi: float) -> str:
+    if mmi < 2.5:
+        return "I-II"
+    if mmi < 3.5:
+        return "III"
+    if mmi < 4.5:
+        return "IV"
+    if mmi < 5.5:
+        return "V"
+    if mmi < 6.5:
+        return "VI"
+    if mmi < 7.5:
+        return "VII"
+    if mmi < 8.5:
+        return "VIII"
+    if mmi < 9.5:
+        return "IX"
+    return "X+"
+
+
 @dataclass
 class GridContext:
     geojson: dict
@@ -111,7 +143,7 @@ class SimulationRunner:
             self.grid_context.soil_precomputed = False
             logger.warning("[SimRunner] Soil precompute failed, using per-run fallback: %s", exc)
 
-    def _annotate_features(self, features: list, raw_pga: np.ndarray, norm_pga: np.ndarray) -> np.ndarray:
+    def _annotate_features(self, features: list, raw_pga: np.ndarray, norm_pga: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         for i, feat in enumerate(features):
             p = feat["properties"]
             p["pga_base"] = round(float(raw_pga[i]), 4)
@@ -140,12 +172,17 @@ class SimulationRunner:
         ], dtype=np.float64)
         norm_pga_final = self.pga_engine.normalize(pga_final_arr)
 
+        mmi_values = np.empty(len(features), dtype=np.float64)
         for i, feat in enumerate(features):
             p = feat["properties"]
+            mmi = pga_g_to_mmi(pga_final_arr[i])
+            mmi_values[i] = float(np.clip(mmi, 1.0, 10.0))
             p["pga_final"] = round(float(pga_final_arr[i]), 4)
             p["fused_hazard"] = round(float(norm_pga_final[i]), 4)
+            p["mmi"] = round(float(mmi_values[i]), 2)
+            p["intensity"] = mmi_to_roman(mmi)
 
-        return pga_final_arr
+        return pga_final_arr, mmi_values
 
     def run_simulation(
         self,
@@ -181,7 +218,7 @@ class SimulationRunner:
         pga_ms = (time.perf_counter() - t_pga) * 1000
 
         t_annotate = time.perf_counter()
-        pga_final = self._annotate_features(features, raw_pga, norm_pga)
+        pga_final, mmi_values = self._annotate_features(features, raw_pga, norm_pga)
         annotate_ms = (time.perf_counter() - t_annotate) * 1000
 
         max_idx = np.argmax(pga_final)
@@ -201,6 +238,7 @@ class SimulationRunner:
 
         t_contour = time.perf_counter()
         contour_geojson = generate_contour_geojson(features, pga_final)
+        intensity_contour_geojson = generate_intensity_contour_geojson(features, mmi_values)
         contour_ms = (time.perf_counter() - t_contour) * 1000
 
         t_save = time.perf_counter()
@@ -235,6 +273,7 @@ class SimulationRunner:
             "simulation_id": sim_id,
             "grid_geojson": grid,
             "contour_geojson": contour_geojson,
+            "intensity_contour_geojson": intensity_contour_geojson,
             "district_summary": district_summary,
             "state_summary": state_summary,
             "triggered_by": triggered_by,

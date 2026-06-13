@@ -21,6 +21,7 @@ const INSPECTION_LAYER_PRIORITY = [
   'gps-vectors-line',
   'tectonic-plates-line',
   SIM_LAYERS.SOIL_AMP,
+  SIM_LAYERS.INTENSITY_FILL,
   SIM_LAYERS.WB_GRID_FILL,
   SIM_LAYERS.CONTOUR_FILL,
   'state-boundaries-fill',
@@ -85,15 +86,25 @@ const rows = (items) => items
 const classifyIntensity = (pgaValue) => {
   const pga = asNumber(pgaValue);
   if (pga === null) return null;
-  if (pga < 0.0017) return 'I-II';
-  if (pga < 0.014) return 'III';
-  if (pga < 0.039) return 'IV';
-  if (pga < 0.092) return 'V';
-  if (pga < 0.18) return 'VI';
-  if (pga < 0.34) return 'VII';
-  if (pga < 0.65) return 'VIII';
-  if (pga < 1.24) return 'IX';
+  const mmi = 3.66 * Math.log10(Math.max(pga * 980.665, 1e-9)) - 1.66;
+  if (mmi < 2.5) return 'I-II';
+  if (mmi < 3.5) return 'III';
+  if (mmi < 4.5) return 'IV';
+  if (mmi < 5.5) return 'V';
+  if (mmi < 6.5) return 'VI';
+  if (mmi < 7.5) return 'VII';
+  if (mmi < 8.5) return 'VIII';
+  if (mmi < 9.5) return 'IX';
   return 'X+';
+};
+
+const contourIntensityLabel = (props) => {
+  if (isPresent(props.intensity)) return props.intensity;
+  const title = String(props.title || props.name || props.description || '');
+  if (title.includes('X+')) return 'X+';
+  const romanMatch = title.match(/\b(I-II|III|IV|V|VI|VII|VIII|IX)\b/);
+  if (romanMatch) return romanMatch[1];
+  return null;
 };
 
 export const registerInspector = (inspector) => {
@@ -214,9 +225,27 @@ registerInspector({
 
 registerInspector({
   id: 'hazardZone',
-  layerIds: [SIM_LAYERS.WB_GRID_FILL, SIM_LAYERS.CONTOUR_FILL, SIM_LAYERS.SOIL_AMP],
+  layerIds: [SIM_LAYERS.WB_GRID_FILL, SIM_LAYERS.CONTOUR_FILL, SIM_LAYERS.SOIL_AMP, SIM_LAYERS.INTENSITY_FILL],
   inspect: (feature) => {
     const props = feature.properties || {};
+    if (feature.layer?.id === SIM_LAYERS.INTENSITY_FILL) {
+      const intensity = contourIntensityLabel(props);
+      return {
+        type: 'hazardZone',
+        title: intensity ? `Intensity ${intensity}` : 'Intensity zone',
+        subtitle: 'MMI intensity',
+        accent: props.fill || '#ffec7d',
+        sections: [
+          {
+            title: 'Intensity',
+            rows: rows([
+              { label: 'Intensity', value: intensity },
+            ]),
+          },
+        ],
+      };
+    }
+
     const zoneName = props.zone_name || props.state || props.name || 'Hazard zone';
     const riskLevel = props.risk_category || props.risk_level || props.category;
     const localPga = props.pga_final ?? props.local_pga;
@@ -232,6 +261,7 @@ registerInspector({
           rows: rows([
             { label: 'Risk level', value: riskLevel },
             { label: 'Intensity', value: props.intensity || classifyIntensity(localPga) },
+            { label: 'MMI', value: props.mmi ? formatNumber(props.mmi, 2) : null },
             { label: 'Local PGA', value: localPga ? `${formatNumber(localPga, 4)}g` : null },
             { label: 'Base PGA', value: props.pga_base ? `${formatNumber(props.pga_base, 4)}g` : null },
             { label: 'Site class', value: props.site_class },

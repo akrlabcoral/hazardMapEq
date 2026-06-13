@@ -10,6 +10,8 @@ export function useLayersState() {
     toggleGisLayer:   s.toggleGisLayer,
     soilAmpVisible:   s.soilAmpVisible,
     setSoilAmpVisible: s.setSoilAmpVisible,
+    intensityVisible: s.intensityVisible,
+    setIntensityVisible: s.setIntensityVisible,
     hazardLayers:     s.hazardLayers,
     toggleHazardLayer: s.toggleHazardLayer,
     setHazardLayerWeight: s.setHazardLayerWeight,

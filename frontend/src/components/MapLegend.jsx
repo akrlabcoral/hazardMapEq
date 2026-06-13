@@ -4,6 +4,7 @@ import { Eye, EyeOff, Star } from 'lucide-react';
 
 import useStore from '../store/useStore';
 import { EARTHQUAKE_DAMAGE_PALETTE } from '../config/damagePalette';
+import { MMI_INTENSITY_PALETTE } from '../config/intensityPalette';
 
 const DAMAGE_LEGEND_PALETTE = [...EARTHQUAKE_DAMAGE_PALETTE].reverse();
 const DAMAGE_GRADIENT = `linear-gradient(to right, ${DAMAGE_LEGEND_PALETTE.map((item) => item.color).join(', ')})`;
@@ -127,6 +128,23 @@ export default function MapLegend() {
               <div key={item.id} className="flex items-center gap-1.5">
                 <span
                   className="h-2.5 w-2.5 rounded-full border border-white/20 shrink-0"
+                  style={{ backgroundColor: item.color }}
+                />
+                <span className="text-slate-400">{item.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        )}
+
+        {show('mmiIntensity') && (
+        <div className="mt-3 pt-3 border-t border-slate-700/40">
+          <div className="text-[10px] text-white uppercase tracking-wider mb-2">MMI Intensity</div>
+          <div className="grid grid-cols-3 gap-x-2 gap-y-1.5">
+            {MMI_INTENSITY_PALETTE.map((item) => (
+              <div key={item.id} className="flex items-center gap-1.5">
+                <span
+                  className="h-2.5 w-2.5 rounded-full border border-white/30 shrink-0"
                   style={{ backgroundColor: item.color }}
                 />
                 <span className="text-slate-400">{item.label}</span>

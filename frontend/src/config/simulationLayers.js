@@ -7,6 +7,7 @@ import {
 // Layer IDs for simulation visualization
 export const SIM_LAYERS = {
   WB_GRID_FILL:   'sim-wb-grid-fill',
+  INTENSITY_FILL: 'sim-intensity-fill',
   CONTOUR_FILL:   'sim-contour-fill',
   CONTOUR_STROKE: 'sim-contour-stroke',
   SHOCKWAVE:      'sim-shockwave',
@@ -19,6 +20,7 @@ export const initSimulationLayers = (mapInstance) => {
 
   mapLayerService.addSourceSafe(mapInstance, 'sim-wb-grid-source',    { type: 'geojson', data: emptyFC });
   mapLayerService.addSourceSafe(mapInstance, 'sim-contour-source',    { type: 'geojson', data: emptyFC });
+  mapLayerService.addSourceSafe(mapInstance, 'sim-intensity-contour-source', { type: 'geojson', data: emptyFC });
   mapLayerService.addSourceSafe(mapInstance, 'sim-shockwave-source',  { type: 'geojson', data: emptyFC });
   mapLayerService.addSourceSafe(mapInstance, 'sim-epicenter-source',  { type: 'geojson', data: emptyFC });
 
@@ -51,6 +53,27 @@ export const initSimulationLayers = (mapInstance) => {
       'fill-color': EARTHQUAKE_DAMAGE_FILL_COLOR,
       'fill-opacity': EARTHQUAKE_DAMAGE_FILL_OPACITY,
       'fill-outline-color': 'rgba(255, 255, 255, 0.1)',
+    }
+  });
+
+  // --- Smooth MMI intensity contour, derived from local PGA using the configured MMI formula ---
+  mapLayerService.addLayerSafe(mapInstance, {
+    id: SIM_LAYERS.INTENSITY_FILL,
+    type: 'fill',
+    source: 'sim-intensity-contour-source',
+    layout: { visibility: 'none' },
+    paint: {
+      'fill-color': [
+        'case',
+        ['has', 'fill'], ['get', 'fill'],
+        'rgba(0,0,0,0)'
+      ],
+      'fill-opacity': [
+        'case',
+        ['has', 'fill-opacity'], ['get', 'fill-opacity'],
+        0.84
+      ],
+      'fill-outline-color': 'rgba(15, 23, 42, 0.18)',
     }
   });
 

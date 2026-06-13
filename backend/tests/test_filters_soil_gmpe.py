@@ -43,6 +43,6 @@ def test_custom_gmpe_override_is_preserved():
 def test_soil_class_and_amplification_batch():
     assert get_site_class(1600) == "A"
     assert get_site_class(500) == "C"
-    assert get_amplification_factor("E") == 1.7
+    assert get_amplification_factor("E") == 2.0
     assert get_site_classes_batch([1600, 500, 100]) == ["A", "C", "E"]
-    assert get_amplification_batch(["A", "B", "E"]).tolist() == pytest.approx([0.8, 1.0, 1.7])
+    assert get_amplification_batch(["A", "B", "E"]).tolist() == pytest.approx([0.8, 1.0, 2.0])

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import pytest
+
 from app.jobs import simulation_worker
-from app.jobs.simulation_worker import GridContext, SimulationRunner
+from app.jobs.simulation_worker import GridContext, SimulationRunner, mmi_to_roman, pga_g_to_mmi
 
 
 def _feature(cell_id, lon, lat):
@@ -37,6 +39,11 @@ def test_simulation_runner_response_shape(monkeypatch):
         "generate_contour_geojson",
         lambda features, raw_pga: {"type": "FeatureCollection", "features": []},
     )
+    monkeypatch.setattr(
+        simulation_worker,
+        "generate_intensity_contour_geojson",
+        lambda features, mmi_values: {"type": "FeatureCollection", "features": []},
+    )
 
     result = SimulationRunner(context).run_simulation(
         latitude=28.05,
@@ -48,5 +55,16 @@ def test_simulation_runner_response_shape(monkeypatch):
     assert result["simulation_id"] == 123
     assert result["grid_geojson"]["type"] == "FeatureCollection"
     assert result["contour_geojson"]["type"] == "FeatureCollection"
+    assert result["intensity_contour_geojson"]["type"] == "FeatureCollection"
     assert "district_summary" in result
     assert "state_summary" in result
+    first_props = result["grid_geojson"]["features"][0]["properties"]
+    assert "mmi" in first_props
+    assert "intensity" in first_props
+
+
+def test_mmi_formula_uses_pga_in_cm_per_second_squared():
+    assert pga_g_to_mmi(1.0) == pytest.approx(9.289, abs=0.001)
+    assert pga_g_to_mmi(0.01) == pytest.approx(1.969, abs=0.001)
+    assert mmi_to_roman(9.289) == "IX"
+    assert mmi_to_roman(10.0) == "X+"

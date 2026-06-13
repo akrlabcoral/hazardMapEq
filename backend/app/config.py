@@ -80,6 +80,21 @@ PGA_COLORS = [
     "#8b5a45",  # Extreme
 ]
 
+# MMI intensity contour scale. Levels are numeric MMI boundaries and colors
+# follow Roman intensity bands from low-to-high for matplotlib contourf.
+MMI_LEVELS = [1.0, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5]
+MMI_COLORS = [
+    "#ffffff",  # I-II
+    "#bfccff",  # III
+    "#a0e6ff",  # IV
+    "#80ffff",  # V
+    "#7cd37c",  # VI
+    "#ffec7d",  # VII
+    "#ffb834",  # VIII
+    "#ff6666",  # IX
+    "#cc0000",  # X+
+]
+
 # ---------------------------------------------------------------------------
 # Risk Category Thresholds (for state/district summary)
 # ---------------------------------------------------------------------------

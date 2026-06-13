@@ -165,6 +165,7 @@ const restoreSimulationAfterStyleLoad = (mapInstance) => {
   const epicenter = store.earthquakeEpicenter;
   const wbGridSrc = mapInstance.getSource('sim-wb-grid-source');
   const contourSrc = mapInstance.getSource('sim-contour-source');
+  const intensityContourSrc = mapInstance.getSource('sim-intensity-contour-source');
   const epicenterSrc = mapInstance.getSource('sim-epicenter-source');
   const emptyFC = { type: 'FeatureCollection', features: [] };
 
@@ -175,9 +176,11 @@ const restoreSimulationAfterStyleLoad = (mapInstance) => {
   if (!results?.grid_geojson?.type) {
     if (wbGridSrc) wbGridSrc.setData(emptyFC);
     if (contourSrc) contourSrc.setData(emptyFC);
+    if (intensityContourSrc) intensityContourSrc.setData(emptyFC);
     if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL, 'visibility', 'none');
     if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_STROKE)) mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'none');
     if (mapInstance.getLayer(SIM_LAYERS.WB_GRID_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL, 'visibility', 'none');
+    if (mapInstance.getLayer(SIM_LAYERS.INTENSITY_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.INTENSITY_FILL, 'visibility', 'none');
     animationManager.stopShockwave();
     refreshVisibleLegendItems(mapInstance);
     return;
@@ -185,10 +188,18 @@ const restoreSimulationAfterStyleLoad = (mapInstance) => {
 
   if (wbGridSrc) wbGridSrc.setData(results.grid_geojson);
   if (contourSrc) contourSrc.setData(results.contour_geojson || emptyFC);
+  if (intensityContourSrc) intensityContourSrc.setData(results.intensity_contour_geojson || emptyFC);
 
   if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL, 'visibility', 'visible');
   if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_STROKE)) mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'visible');
   if (mapInstance.getLayer(SIM_LAYERS.WB_GRID_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL, 'visibility', 'visible');
+  if (mapInstance.getLayer(SIM_LAYERS.INTENSITY_FILL)) {
+    mapInstance.setLayoutProperty(
+      SIM_LAYERS.INTENSITY_FILL,
+      'visibility',
+      store.intensityVisible ? 'visible' : 'none'
+    );
+  }
 
   mapLayerService.bringSimulationLayersToFront(mapInstance);
   if (epicenter) {
@@ -210,6 +221,7 @@ export default function MapView({ isAdmin = false }) {
   
   const gisLayers      = useStore((state) => state.gisLayers);
   const soilAmpVisible = useStore((state) => state.soilAmpVisible);
+  const intensityVisible = useStore((state) => state.intensityVisible);
   
   const simulationResults = useStore((state) => state.simulationResults);
   const mapStyle          = useStore((state) => state.mapStyle);
@@ -500,6 +512,19 @@ export default function MapView({ isAdmin = false }) {
     refreshVisibleLegendItems(map.current);
   }, [soilAmpVisible]);
 
+  // Sync MMI Intensity layer visibility
+  useEffect(() => {
+    if (!map.current || !map.current.getStyle()) return;
+    if (mapLayerService.layerExists(map.current, SIM_LAYERS.INTENSITY_FILL)) {
+      map.current.setLayoutProperty(
+        SIM_LAYERS.INTENSITY_FILL,
+        'visibility',
+        intensityVisible && simulationResults ? 'visible' : 'none'
+      );
+    }
+    refreshVisibleLegendItems(map.current);
+  }, [intensityVisible, simulationResults]);
+
   // Sync state isolation filter
   useEffect(() => {
     if (!map.current || !map.current.getStyle()) return;
@@ -523,7 +548,8 @@ export default function MapView({ isAdmin = false }) {
       try {
         const wbGridSrc = map.current.getSource('sim-wb-grid-source');
         const contourSrc = map.current.getSource('sim-contour-source');
-        if (!wbGridSrc || !contourSrc) return;
+        const intensityContourSrc = map.current.getSource('sim-intensity-contour-source');
+        if (!wbGridSrc || !contourSrc || !intensityContourSrc) return;
 
         if (!simulationResults) {
           // simulationResults=null means simulation was just triggered or cleared
@@ -531,11 +557,13 @@ export default function MapView({ isAdmin = false }) {
           if (map.current.getLayer(SIM_LAYERS.CONTOUR_FILL))   map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL,   'visibility', 'none');
           if (map.current.getLayer(SIM_LAYERS.CONTOUR_STROKE)) map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'none');
           if (map.current.getLayer(SIM_LAYERS.WB_GRID_FILL))   map.current.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL,   'visibility', 'none');
+          if (map.current.getLayer(SIM_LAYERS.INTENSITY_FILL)) map.current.setLayoutProperty(SIM_LAYERS.INTENSITY_FILL, 'visibility', 'none');
           refreshVisibleLegendItems(map.current);
           
           const emptyFC = { type: 'FeatureCollection', features: [] };
           if (wbGridSrc) wbGridSrc.setData(emptyFC);
           if (contourSrc) contourSrc.setData(emptyFC);
+          if (intensityContourSrc) intensityContourSrc.setData(emptyFC);
 
           if (map.current.getSource('state-boundaries-source')) {
             map.current.removeFeatureState({ source: 'state-boundaries-source' });
@@ -559,10 +587,14 @@ export default function MapView({ isAdmin = false }) {
         if (simulationResults.contour_geojson) {
           contourSrc.setData(simulationResults.contour_geojson);
         }
+        intensityContourSrc.setData(simulationResults.intensity_contour_geojson || { type: 'FeatureCollection', features: [] });
         
         if (map.current.getLayer(SIM_LAYERS.CONTOUR_FILL))   map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL,   'visibility', 'visible');
         if (map.current.getLayer(SIM_LAYERS.CONTOUR_STROKE)) map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'visible');
         if (map.current.getLayer(SIM_LAYERS.WB_GRID_FILL))   map.current.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL,   'visibility', 'visible');
+        if (map.current.getLayer(SIM_LAYERS.INTENSITY_FILL)) {
+          map.current.setLayoutProperty(SIM_LAYERS.INTENSITY_FILL, 'visibility', intensityVisible ? 'visible' : 'none');
+        }
         mapLayerService.bringSimulationLayersToFront(map.current);
         refreshVisibleLegendItems(map.current);
         debugLog('[MapView] Layers made visible:', SIM_LAYERS.CONTOUR_FILL, SIM_LAYERS.CONTOUR_STROKE, SIM_LAYERS.WB_GRID_FILL);
@@ -628,7 +660,7 @@ export default function MapView({ isAdmin = false }) {
         clearInterval(styleWaitInterval);
       }
     };
-  }, [simulationResults, earthquakeEpicenter]);
+  }, [simulationResults, earthquakeEpicenter, intensityVisible]);
 
   return (
     <div className="absolute inset-0 z-0">

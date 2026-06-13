@@ -32,6 +32,11 @@ export const LEGEND_ITEMS = [
     requiresRenderedFeature: true,
   },
   {
+    id: 'mmiIntensity',
+    layerIds: [SIM_LAYERS.INTENSITY_FILL],
+    requiresRenderedFeature: true,
+  },
+  {
     id: 'soilAmplification',
     layerIds: [SIM_LAYERS.SOIL_AMP],
     requiresRenderedFeature: true,

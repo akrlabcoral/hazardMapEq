@@ -21,6 +21,8 @@ export const createMapSlice = (set) => ({
 
   soilAmpVisible: false,
   setSoilAmpVisible: (val) => set({ soilAmpVisible: val }),
+  intensityVisible: false,
+  setIntensityVisible: (val) => set({ intensityVisible: val }),
 
   mapViewport: { longitude: 78.96, latitude: 25.59, zoom: 9 },
   setMapViewport: (viewport) => set({ mapViewport: viewport }),

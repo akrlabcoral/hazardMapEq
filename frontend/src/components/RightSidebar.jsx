@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Activity, Menu, Waves } from 'lucide-react';
+import { Activity, Menu, Thermometer, Waves } from 'lucide-react';
 import useStore from '../store/useStore';
 
 export default function RightSidebar({ isAdmin = true }) {
@@ -11,8 +11,18 @@ export default function RightSidebar({ isAdmin = true }) {
 
   const soilAmpVisible = useStore((s) => s.soilAmpVisible);
   const setSoilAmpVisible = useStore((s) => s.setSoilAmpVisible);
+  const intensityVisible = useStore((s) => s.intensityVisible);
+  const setIntensityVisible = useStore((s) => s.setIntensityVisible);
 
   const navItems = [
+    {
+      id: 'intensity',
+      icon: Thermometer,
+      label: 'MMI Intensity',
+      isToggle: true,
+      isActive: intensityVisible,
+      onClick: () => setIntensityVisible(!intensityVisible)
+    },
     { 
       id: 'soilAmp', 
       icon: Waves, 

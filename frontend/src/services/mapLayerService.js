@@ -6,6 +6,7 @@ const SIMULATION_LAYER_ORDER = [
   'sim-wb-grid-fill',
   'sim-contour-fill',
   'sim-contour-stroke',
+  'sim-intensity-fill',
   'sim-shockwave',
   'sim-epicenter-glow',
   'sim-epicenter-ring',

@@ -30,6 +30,8 @@ import geopandas as gpd
 
 from app.gis.boundary import get_india_geom
 from app.config import (
+    MMI_COLORS,
+    MMI_LEVELS,
     PGA_LEVELS,
     PGA_COLORS,
     CONTOUR_GRID_SIZE,
@@ -68,10 +70,70 @@ def generate_contour_geojson(
         GeoJSON dict  — FeatureCollection with fill / fill-opacity properties
                         ready to be consumed by the frontend MapLibre layer.
     """
+    return _generate_contour_geojson(
+        grid_features=grid_features,
+        values=raw_pga,
+        levels=PGA_LEVELS,
+        colors=PGA_COLORS,
+        upper_floor=5.0,
+        upper_padding=1.0,
+        fill_opacity=CONTOUR_FILL_OPACITY,
+    )
+
+
+def generate_intensity_contour_geojson(
+    grid_features: list,
+    mmi_values: np.ndarray,
+) -> dict:
+    """
+    Build smooth MMI contour polygons from numeric intensity values.
+
+    The returned GeoJSON uses the same fill/fill-opacity properties as the PGA
+    contour output, so the frontend can render it with the same MapLibre paint
+    shape while displaying Roman labels in the legend and inspection panel.
+    """
+    geojson = _generate_contour_geojson(
+        grid_features=grid_features,
+        values=mmi_values,
+        levels=MMI_LEVELS,
+        colors=MMI_COLORS,
+        upper_floor=10.1,
+        upper_padding=0.1,
+        fill_opacity=0.84,
+    )
+    labels_by_color = {
+        "#ffffff": "I-II",
+        "#bfccff": "III",
+        "#a0e6ff": "IV",
+        "#80ffff": "V",
+        "#7cd37c": "VI",
+        "#ffec7d": "VII",
+        "#ffb834": "VIII",
+        "#ff6666": "IX",
+        "#cc0000": "X+",
+    }
+    for feature in geojson.get("features", []):
+        props = feature.setdefault("properties", {})
+        fill = str(props.get("fill", "")).lower()
+        if fill in labels_by_color:
+            props["intensity"] = labels_by_color[fill]
+
+    return geojson
+
+
+def _generate_contour_geojson(
+    grid_features: list,
+    values: np.ndarray,
+    levels: list[float],
+    colors: list[str],
+    upper_floor: float,
+    upper_padding: float,
+    fill_opacity: float,
+) -> dict:
     try:
         x_coords = np.array([f["properties"]["centroid_lon"] for f in grid_features])
         y_coords = np.array([f["properties"]["centroid_lat"] for f in grid_features])
-        z_vals   = np.asarray(raw_pga, dtype=np.float64)
+        z_vals = np.asarray(values, dtype=np.float64)
 
         x_min, x_max = 68.0, 97.5
         y_min, y_max = 6.5, 37.6
@@ -100,22 +162,22 @@ def generate_contour_geojson(
 
         # Dynamic upper bound for the last contour band
         max_val = float(z_vals.max())
-        levels  = PGA_LEVELS + [max(5.0, max_val + 1.0)]
+        contour_levels = levels + [max(upper_floor, max_val + upper_padding)]
 
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             with _contour_figure() as (_fig, ax):
                 contour = ax.contourf(
                     grid_x, grid_y, grid_z,
-                    levels=levels,
-                    colors=PGA_COLORS,
+                    levels=contour_levels,
+                    colors=colors,
                     extend="max",
                 )
                 contour_geojson_str = geojsoncontour.contourf_to_geojson(
                     contourf=contour,
                     ndigits=4,
                     stroke_width=1,
-                    fill_opacity=CONTOUR_FILL_OPACITY,
+                    fill_opacity=fill_opacity,
                 )
 
         return json.loads(contour_geojson_str)
