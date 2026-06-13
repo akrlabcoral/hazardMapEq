@@ -61,8 +61,8 @@
 
 .maplibregl-ctrl-scale {
   position: fixed !important;
-  bottom: 20px !important;
-  left: 50% !important;
+  bottom: 75px !important;
+  left: 90% !important;
   transform: translateX(-50%) !important;
   background-color: rgba(15, 23, 42, 0.8) !important;
   border-color: #64748b !important;

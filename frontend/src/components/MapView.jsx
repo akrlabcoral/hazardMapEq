@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import maplibregl from 'maplibre-gl';
+import { Home, ZoomIn, ZoomOut } from 'lucide-react';
 import useStore from '../store/useStore';
 import { mapLayerService } from '../services/mapLayerService';
 import { rasterService } from '../services/rasterService';
@@ -18,6 +19,11 @@ import { debugLog } from '../utils/debug';
 
 const getStateName = (feature) => feature?.properties?.state || feature?.properties?.STATE || null;
 const mapStyleCache = new Map();
+const DEFAULT_MAP_BOUNDS = [
+  [68.7, 8.4],
+  [97.25, 37.6]
+];
+const DEFAULT_MAP_FIT_OPTIONS = { padding: 50, duration: 800 };
 
 const expandCluster = (mapInstance, clusterExpansion) => {
   const source = mapInstance.getSource(clusterExpansion.sourceId);
@@ -69,14 +75,28 @@ const inspectMapClick = (mapInstance, event) => {
   return true;
 };
 
+const getMapCursor = ({ isPlacingEpicenter, isSimulationRunning, isInspectableHover = false }) => {
+  if (isPlacingEpicenter) return 'crosshair';
+  if (isSimulationRunning) return 'wait';
+  if (isInspectableHover) return 'pointer';
+  return '';
+};
+
+const applyMapCursor = (mapInstance, overrides = {}) => {
+  const canvas = mapInstance?.getCanvas?.();
+  if (!canvas) return;
+  const store = useStore.getState();
+  canvas.style.cursor = getMapCursor({ ...store, ...overrides });
+};
+
 const bindInspectionCursor = (mapInstance) => {
   getInspectableLayerIds().forEach((layerId) => {
     if (!mapInstance.getLayer(layerId)) return;
     mapInstance.on('mouseenter', layerId, () => {
-      mapInstance.getCanvas().style.cursor = 'pointer';
+      applyMapCursor(mapInstance, { isInspectableHover: true });
     });
     mapInstance.on('mouseleave', layerId, () => {
-      mapInstance.getCanvas().style.cursor = '';
+      applyMapCursor(mapInstance);
     });
   });
 };
@@ -129,6 +149,54 @@ const applyBoundaryTheme = (mapInstance, mapStyle) => {
   }
 };
 
+const buildEpicenterFeatureCollection = (epicenter) => ({
+  type: 'FeatureCollection',
+  features: epicenter ? [{
+    type: 'Feature',
+    geometry: { type: 'Point', coordinates: [epicenter.lng, epicenter.lat] }
+  }] : []
+});
+
+const restoreSimulationAfterStyleLoad = (mapInstance) => {
+  if (!mapInstance?.getStyle()) return;
+
+  const store = useStore.getState();
+  const results = store.simulationResults;
+  const epicenter = store.earthquakeEpicenter;
+  const wbGridSrc = mapInstance.getSource('sim-wb-grid-source');
+  const contourSrc = mapInstance.getSource('sim-contour-source');
+  const epicenterSrc = mapInstance.getSource('sim-epicenter-source');
+  const emptyFC = { type: 'FeatureCollection', features: [] };
+
+  if (epicenterSrc) {
+    epicenterSrc.setData(buildEpicenterFeatureCollection(epicenter));
+  }
+
+  if (!results?.grid_geojson?.type) {
+    if (wbGridSrc) wbGridSrc.setData(emptyFC);
+    if (contourSrc) contourSrc.setData(emptyFC);
+    if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL, 'visibility', 'none');
+    if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_STROKE)) mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'none');
+    if (mapInstance.getLayer(SIM_LAYERS.WB_GRID_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL, 'visibility', 'none');
+    animationManager.stopShockwave();
+    refreshVisibleLegendItems(mapInstance);
+    return;
+  }
+
+  if (wbGridSrc) wbGridSrc.setData(results.grid_geojson);
+  if (contourSrc) contourSrc.setData(results.contour_geojson || emptyFC);
+
+  if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL, 'visibility', 'visible');
+  if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_STROKE)) mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'visible');
+  if (mapInstance.getLayer(SIM_LAYERS.WB_GRID_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL, 'visibility', 'visible');
+
+  mapLayerService.bringSimulationLayersToFront(mapInstance);
+  if (epicenter) {
+    animationManager.startShockwave(mapInstance, epicenter, 300);
+  }
+  refreshVisibleLegendItems(mapInstance);
+};
+
 export default function MapView({ isAdmin = false }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -146,6 +214,7 @@ export default function MapView({ isAdmin = false }) {
   const simulationResults = useStore((state) => state.simulationResults);
   const mapStyle          = useStore((state) => state.mapStyle);
   const isPlacingEpicenter = useStore((state) => state.isPlacingEpicenter);
+  const isSimulationRunning = useStore((state) => state.isSimulationRunning);
 
   // Initialize simulation sources and layers on a loaded map
   const setupSimulation = useCallback((mapInstance) => {
@@ -155,6 +224,22 @@ export default function MapView({ isAdmin = false }) {
   useEffect(() => {
     animationManager.setStoreActions(setIsSimulationRunning);
   }, [setIsSimulationRunning]);
+
+  const zoomIn = useCallback(() => {
+    map.current?.zoomIn({ duration: 300 });
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    map.current?.zoomOut({ duration: 300 });
+  }, []);
+
+  const resetMapView = useCallback(() => {
+    map.current?.fitBounds(DEFAULT_MAP_BOUNDS, DEFAULT_MAP_FIT_OPTIONS);
+  }, []);
+
+  useEffect(() => {
+    applyMapCursor(map.current);
+  }, [isPlacingEpicenter, isSimulationRunning]);
 
   useEffect(() => {
     if (map.current) return;
@@ -171,13 +256,9 @@ export default function MapView({ isAdmin = false }) {
     });
 
     map.current.once('load', () => {
-      map.current.fitBounds([
-        [68.7, 8.4],
-        [97.25, 37.6]
-      ], { padding: 50, duration: 2000 });
+      map.current.fitBounds(DEFAULT_MAP_BOUNDS, { ...DEFAULT_MAP_FIT_OPTIONS, duration: 2000 });
     });
 
-    map.current.addControl(new maplibregl.NavigationControl(), 'bottom-right');
     map.current.addControl(new maplibregl.FullscreenControl(), 'top-right');
     map.current.addControl(new maplibregl.ScaleControl(), 'bottom-right');
 
@@ -223,6 +304,7 @@ export default function MapView({ isAdmin = false }) {
       setupSimulation(map.current);
       mapLayerService.initializeSourcesAndLayers(map.current, useStore.getState().gisLayers);
       applyBoundaryTheme(map.current, useStore.getState().mapStyle);
+      restoreSimulationAfterStyleLoad(map.current);
       rasterService.setMap(map.current);
       scheduleLegendRefresh();
 
@@ -402,13 +484,7 @@ export default function MapView({ isAdmin = false }) {
       return;
     }
 
-    source.setData({
-      type: 'FeatureCollection',
-      features: [{
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [earthquakeEpicenter.lng, earthquakeEpicenter.lat] }
-      }]
-    });
+    source.setData(buildEpicenterFeatureCollection(earthquakeEpicenter));
   }, [earthquakeEpicenter]);
 
   // Sync Soil Amplification layer visibility
@@ -556,7 +632,45 @@ export default function MapView({ isAdmin = false }) {
 
   return (
     <div className="absolute inset-0 z-0">
-      <div ref={mapContainer} className={`w-full h-full ${isPlacingEpicenter ? 'cursor-crosshair' : 'cursor-grab active:cursor-grabbing'}`} />
+      <div
+        ref={mapContainer}
+        className={`w-full h-full ${
+          isPlacingEpicenter
+            ? 'cursor-crosshair'
+            : isSimulationRunning
+              ? 'cursor-wait'
+              : 'cursor-grab active:cursor-grabbing'
+        }`}
+      />
+      <div className="absolute bottom-10 right-8 z-20 flex -translate-x-1/2 overflow-hidden rounded border border-white/10 bg-slate-800/90 shadow-2xl backdrop-blur pointer-events-auto">
+        <button
+          type="button"
+          onClick={zoomOut}
+          className="flex h-10 w-11 items-center justify-center text-slate-100 transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+          aria-label="Zoom out"
+          title="Zoom out"
+        >
+          <ZoomOut className="h-5 w-5" strokeWidth={2.2} />
+        </button>
+        <button
+          type="button"
+          onClick={resetMapView}
+          className="flex h-10 w-11 items-center justify-center border-x border-white/10 text-slate-100 transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+          aria-label="Reset map view"
+          title="Reset map view"
+        >
+          <Home className="h-5 w-5" strokeWidth={2.2} />
+        </button>
+        <button
+          type="button"
+          onClick={zoomIn}
+          className="flex h-10 w-11 items-center justify-center text-slate-100 transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-cyan-300"
+          aria-label="Zoom in"
+          title="Zoom in"
+        >
+          <ZoomIn className="h-5 w-5" strokeWidth={2.2} />
+        </button>
+      </div>
       {/* Cinematic vignette overlay */}
       <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-transparent via-slate-950/30 to-slate-950/90 mix-blend-multiply" />
     </div>
