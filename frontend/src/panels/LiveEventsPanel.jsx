@@ -1,7 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import useStore from '../store/useStore';
 import { useSimulation } from '../hooks/useSimulation';
-import { Filter } from 'lucide-react';
 
 function timeAgo(isoString) {
   if (!isoString) return '';
@@ -36,7 +35,6 @@ export default function LiveEventsPanel() {
   const { handleRunSimulation } = useSimulation();
 
   const [minMag, setMinMag] = useState('');
-  const [timeframe, setTimeframe] = useState('all');
   const [regionFilter, setRegionFilter] = useState('india');
 
   // Fetch initial history from backend on mount
@@ -51,16 +49,8 @@ export default function LiveEventsPanel() {
       .catch(err => console.error('Failed to fetch initial events:', err));
   }, [setLiveEvents]);
 
-  // Filter events
-  const filteredEvents = liveEvents.filter(event => {
+  const filteredEvents = useMemo(() => liveEvents.filter(event => {
     if (minMag && !isNaN(parseFloat(minMag)) && event.magnitude < parseFloat(minMag)) return false;
-    
-    if (timeframe !== 'all') {
-      const diff = Date.now() - new Date(event.origin_time).getTime();
-      if (timeframe === '1h' && diff > 3600000) return false;
-      if (timeframe === '24h' && diff > 86400000) return false;
-      if (timeframe === '7d' && diff > 604800000) return false;
-    }
 
     if (regionFilter === 'india') {
       // Bounding box covering India + ~200km buffer
@@ -71,7 +61,7 @@ export default function LiveEventsPanel() {
     }
     
     return true;
-  });
+  }), [liveEvents, minMag, regionFilter]);
 
   return (
     <div className="glass-card flex flex-col h-full font-sans overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.4)]">
@@ -92,29 +82,16 @@ export default function LiveEventsPanel() {
         </div>
       </div>
 
-      {/* Filter Bar */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-slate-700/50 bg-slate-800/80 shrink-0">
-        <Filter size={14} className="text-slate-400 shrink-0" />
+        <span className="text-[10px] uppercase tracking-wider text-slate-400 shrink-0">Last 24h</span>
         <input
           type="number"
-          placeholder="Min Mag..."
+          placeholder="Min Mag"
           value={minMag}
           onChange={(e) => setMinMag(e.target.value)}
           className="w-20 bg-slate-900/50 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-cyan-500"
           step="0.1"
         />
-        <select
-          value={timeframe}
-          onChange={(e) => setTimeframe(e.target.value)}
-          className="w-20 bg-slate-900/50 border border-slate-600 rounded px-2 py-1 text-xs text-white focus:outline-none focus:border-cyan-500"
-        >
-          <option value="1h">Last 1h</option>
-          <option value="24h">Last 24h</option>
-          <option value="7d">Last 7d</option>
-          <option value="all">All time</option>
-        </select>
-        
-        {/* Region Filter */}
         <select
           value={regionFilter}
           onChange={(e) => setRegionFilter(e.target.value)}
@@ -129,13 +106,12 @@ export default function LiveEventsPanel() {
       <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
         {liveEvents.length === 0 ? (
           <div className="p-8 text-center text-slate-400 text-sm">
-            <div className="text-3xl mb-2">📡</div>
-            Monitoring USGS & NCS feeds…<br />
-            <span className="text-xs opacity-70">Events will appear here automatically</span>
+            No live earthquakes in the last 24 hours.<br />
+            <span className="text-xs opacity-70">New USGS and NCS events will appear automatically.</span>
           </div>
         ) : filteredEvents.length === 0 ? (
           <div className="p-8 text-center text-slate-400 text-sm">
-            No events match your current filters.
+            No 24-hour events match your current filters.
           </div>
         ) : (
           filteredEvents.map((event, i) => (

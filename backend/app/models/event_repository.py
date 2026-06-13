@@ -90,6 +90,7 @@ def get_recent_events(limit: int = 50) -> list[dict]:
                        magnitude, mag_type, origin_time, place, status,
                        alert_level, ingested_at, sim_triggered
                 FROM earthquake_events
+                WHERE origin_time >= NOW() - INTERVAL '1 day'
                 ORDER BY origin_time DESC
                 LIMIT %s
                 """,

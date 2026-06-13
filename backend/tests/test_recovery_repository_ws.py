@@ -65,11 +65,15 @@ def test_websocket_broadcast_removes_dead_clients():
     good = GoodClient()
     dead = DeadClient()
     ws._CLIENTS.clear()
+    ws._CLIENT_LOCKS.clear()
     ws._CLIENTS.update({good, dead})
+    ws._CLIENT_LOCKS[good] = asyncio.Lock()
+    ws._CLIENT_LOCKS[dead] = asyncio.Lock()
 
-    asyncio.run(ws.broadcast({"type": "ping"}))
+    asyncio.run(ws._broadcast_local({"type": "ping"}))
 
     assert good in ws._CLIENTS
     assert dead not in ws._CLIENTS
     assert good.sent
     ws._CLIENTS.clear()
+    ws._CLIENT_LOCKS.clear()
