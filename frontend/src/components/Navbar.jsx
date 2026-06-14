@@ -31,15 +31,13 @@ export default function Navbar({ isAdmin = true }) {
       </div>
 
       <div className="flex items-center gap-6">
-        {isAdmin && (
-          <button 
-            onClick={toggleMapStyle}
-            className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
-            title={mapStyle === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
-          >
-            {mapStyle === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-white" />}
-          </button>
-        )}
+        <button 
+          onClick={toggleMapStyle}
+          className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
+          title={mapStyle === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
+        >
+          {mapStyle === 'dark' ? <Sun className="w-5 h-5 text-amber-400" /> : <Moon className="w-5 h-5 text-white" />}
+        </button>
         <div className="relative">
           <button
             className={`relative p-2 rounded-lg transition-colors ${isDropdownOpen ? 'bg-slate-800' : 'hover:bg-slate-800'}`}

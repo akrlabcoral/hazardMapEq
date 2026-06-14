@@ -485,7 +485,10 @@ export default function MapView({ isAdmin = false }) {
 
   // Sync GIS layer visibility
   useEffect(() => {
-    if (!mapLayerService.initialized) return;
+    if (!map.current || !map.current.getStyle()) return;
+    if (!mapLayerService.initialized) {
+      mapLayerService.initializeSourcesAndLayers(map.current, gisLayers);
+    }
     Object.keys(gisLayers).forEach(layerKey => {
       mapLayerService.setLayerVisibility(layerKey, gisLayers[layerKey]);
     });

@@ -16,6 +16,7 @@ def _historic_etag(data: dict) -> str:
         digest.update(str(props.get("time", "")).encode())
         digest.update(str(props.get("mag", "")).encode())
         digest.update(str(props.get("depth", "")).encode())
+        digest.update(str(props.get("place", "")).encode())
     return f'W/"historic-{len(data.get("features", []))}-{digest.hexdigest()}"'
 
 

@@ -66,6 +66,16 @@ class MapLayerService {
     }
   }
 
+  setCachedSourceData(sourceId) {
+    if (!this.map || !this.map.getStyle()) return;
+    const source = this.map.getSource(sourceId);
+    const data = this.dataCache[sourceId];
+    if (source?.setData && data) {
+      source.setData(data);
+      this.dataLoaded[sourceId] = 'loaded';
+    }
+  }
+
   removeLayerSafe(map, layerId) {
     if (!map || !map.getStyle()) return;
     if (this.layerExists(map, layerId)) {
@@ -157,16 +167,16 @@ class MapLayerService {
           tiles: config.tiles,
           tileSize: config.tileSize
         });
-        config.layers.forEach(layer => {
-          if (!this.map.getLayer(layer.id)) {
-            const beforeId = this.map.getLayer(BASE_LAYER_ANCHOR) ? BASE_LAYER_ANCHOR : undefined;
-            this.map.addLayer(
-              { ...layer, layout: { visibility: initialVisibilityState[key] ? 'visible' : 'none' } },
-              beforeId
-            );
-          }
-        });
       }
+      config.layers.forEach(layer => {
+        if (!this.map.getLayer(layer.id)) {
+          const beforeId = this.map.getLayer(BASE_LAYER_ANCHOR) ? BASE_LAYER_ANCHOR : undefined;
+          this.map.addLayer(
+            { ...layer, layout: { ...layer.layout, visibility: initialVisibilityState[key] ? 'visible' : 'none' } },
+            beforeId
+          );
+        }
+      });
     }
 
     for (const [key, config] of Object.entries(LAYER_CONFIGS)) {
@@ -192,17 +202,20 @@ class MapLayerService {
           this.loadGeoJsonData(config).catch(() => {});
         }
 
-        config.layers.forEach(layer => {
-          if (!this.map.getLayer(layer.id)) {
-            const { beforeId, ...layerConfig } = layer;
-            const targetBeforeId = beforeId && this.map.getLayer(beforeId) ? beforeId : undefined;
-            this.map.addLayer({ 
-              ...layerConfig, 
-              layout: { ...layerConfig.layout, visibility: initialVisibilityState[key] ? 'visible' : 'none' } 
-            }, targetBeforeId);
-          }
-        });
+      } else {
+        this.setCachedSourceData(config.sourceId);
       }
+
+      config.layers.forEach(layer => {
+        if (!this.map.getLayer(layer.id)) {
+          const { beforeId, ...layerConfig } = layer;
+          const targetBeforeId = beforeId && this.map.getLayer(beforeId) ? beforeId : undefined;
+          this.map.addLayer({ 
+            ...layerConfig, 
+            layout: { ...layerConfig.layout, visibility: initialVisibilityState[key] ? 'visible' : 'none' } 
+          }, targetBeforeId);
+        }
+      });
     }
     
     this.initialized = true;
@@ -218,6 +231,9 @@ class MapLayerService {
       const config = LAYER_CONFIGS[layerKey];
       if (isVisible && config.lazy && !config.manualLoad && !this.dataLoaded[config.sourceId]) {
         this.loadGeoJsonData(config).catch(() => {});
+      }
+      if (isVisible) {
+        this.setCachedSourceData(config.sourceId);
       }
       config.layers.forEach(layer => {
         if (this.map.getLayer(layer.id)) {

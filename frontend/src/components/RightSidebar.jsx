@@ -39,7 +39,7 @@ export default function RightSidebar({ isAdmin = true }) {
       isActive: activeRightSection === 'analysis', 
       onClick: () => setActiveRightSection('analysis') 
     },
-  ].filter(item => isAdmin || item.id !== 'analysis');
+  ].filter(item => isAdmin || !['analysis', 'soilAmp'].includes(item.id));
 
   const [isHovered, setIsHovered] = useState(false);
   const isExpanded = isRightSidebarOpen || isHovered;
