@@ -18,9 +18,8 @@ async def process_event(
     queue: asyncio.Queue,
     log_prefix: str,
 ) -> tuple[bool, bool]:
-    if deduplicator.is_seen(event):
+    if not deduplicator.try_record(event):
         return False, False
-    deduplicator.record(event)
 
     event.db_id = save_earthquake_event(event)
 

@@ -11,7 +11,7 @@ Two levels:
 from __future__ import annotations
 
 from app.ingest.normalizer import EarthquakeEvent
-from app.models.repository import is_duplicate, mark_seen
+from app.models.repository import is_duplicate, mark_seen, try_mark_seen
 
 
 def is_seen(event: EarthquakeEvent) -> bool:
@@ -22,3 +22,8 @@ def is_seen(event: EarthquakeEvent) -> bool:
 def record(event: EarthquakeEvent) -> None:
     """Mark both source_id and fingerprint as seen in the dedup cache."""
     mark_seen(event.source_id, event.fingerprint)
+
+
+def try_record(event: EarthquakeEvent) -> bool:
+    """Atomically mark the event as seen; returns False if it was already processed."""
+    return try_mark_seen(event.source_id, event.fingerprint)

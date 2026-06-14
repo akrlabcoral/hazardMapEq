@@ -8,7 +8,7 @@ Thin route handler — delegates all heavy computation to SimulationRunner.
 from __future__ import annotations
 
 import asyncio
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, Query, status
 
 from app.api.schemas import EarthquakeInput
 from app.gis.boundary import is_epicenter_valid
@@ -49,7 +49,10 @@ async def simulate_earthquake(params: EarthquakeInput):
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc))
 
 @router.get("/region")
-async def get_region(lat: float, lon: float):
+async def get_region(
+    lat: float = Query(..., ge=-90.0, le=90.0),
+    lon: float = Query(..., ge=-180.0, le=180.0),
+):
     """
     Given a latitude and longitude, returns the tectonic region string
     e.g., {"region": "HIMALAYA"}

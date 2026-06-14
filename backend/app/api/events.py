@@ -9,7 +9,7 @@ GET /api/health          — poller + queue + WS status
 """
 from __future__ import annotations
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from app.models.repository import get_recent_events, get_earthquake_event
 from app.ingest.poller import poller_stats
@@ -20,9 +20,9 @@ router = APIRouter()
 
 
 @router.get("/events")
-def list_events(limit: int = 50):
+def list_events(limit: int = Query(50, ge=1, le=200)):
     """Return the N most recent earthquake events, newest first."""
-    events = get_recent_events(limit=min(limit, 200))
+    events = get_recent_events(limit=limit)
     return {"events": events, "count": len(events)}
 
 
@@ -45,4 +45,3 @@ def health():
         "ws_clients": client_count(),
         "db": "postgresql",
     }
-

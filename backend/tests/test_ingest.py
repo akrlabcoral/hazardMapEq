@@ -62,3 +62,20 @@ def test_deduplicator_uses_source_and_fingerprint(monkeypatch):
 
     assert deduplicator.is_seen(Event()) is True
     assert calls["checked"] == ("src", "fp")
+
+
+def test_deduplicator_try_record_uses_atomic_repository_call(monkeypatch):
+    calls = {}
+
+    def fake_try_mark_seen(source_id, fingerprint):
+        calls["marked"] = (source_id, fingerprint)
+        return False
+
+    monkeypatch.setattr(deduplicator, "try_mark_seen", fake_try_mark_seen)
+
+    class Event:
+        source_id = "src"
+        fingerprint = "fp"
+
+    assert deduplicator.try_record(Event()) is False
+    assert calls["marked"] == ("src", "fp")

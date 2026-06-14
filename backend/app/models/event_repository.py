@@ -57,6 +57,39 @@ def mark_seen(source_id: str, fingerprint: str) -> None:
             )
 
 
+def try_mark_seen(source_id: str, fingerprint: str) -> bool:
+    """
+    Atomically claim an event dedup key pair.
+
+    Returns True only for the first processor to claim both the source id and
+    the spatial-temporal fingerprint. Transaction-scoped advisory locks prevent
+    two containers from checking and inserting the same keys concurrently.
+    """
+    source_key = f"src:{source_id}"
+    fingerprint_key = f"fp:{fingerprint}"
+    lock_keys = sorted((source_key, fingerprint_key))
+
+    with get_conn() as conn:
+        with conn.cursor() as cur:
+            for key in lock_keys:
+                cur.execute("SELECT pg_advisory_xact_lock(hashtext(%s))", (key,))
+
+            cur.execute(
+                "SELECT 1 FROM dedup_cache WHERE key = %s OR key = %s LIMIT 1",
+                (source_key, fingerprint_key),
+            )
+            if cur.fetchone() is not None:
+                return False
+
+            cur.execute(
+                """
+                INSERT INTO dedup_cache (key) VALUES (%s), (%s)
+                """,
+                (source_key, fingerprint_key),
+            )
+            return True
+
+
 def mark_event_simulated(event_id: int, sim_id: int) -> None:
     with get_conn() as conn:
         with conn.cursor() as cur:

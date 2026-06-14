@@ -46,6 +46,5 @@ export const createSimulationSlice = (set) => ({
     isSimulationRunning: false,
     pendingSimulationRequestId: null,
     selectedStateName: null,
-    activeAlert: null,
   })),
 });

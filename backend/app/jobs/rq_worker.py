@@ -1,5 +1,6 @@
 import json
 import logging
+import threading
 import time
 
 import redis
@@ -23,7 +24,20 @@ logger = logging.getLogger("hazardmap.rq_worker")
 
 
 _worker_ready = False
-_redis_pub = redis.Redis.from_url(settings.redis_url, decode_responses=True)
+_worker_ready_lock = threading.Lock()
+_redis_pub = None
+
+
+def _get_redis_pub() -> redis.Redis:
+    global _redis_pub
+    if _redis_pub is None:
+        _redis_pub = redis.Redis.from_url(
+            settings.redis_url,
+            decode_responses=True,
+            socket_timeout=5,
+            socket_connect_timeout=5,
+        )
+    return _redis_pub
 
 
 def _ensure_worker_ready() -> None:
@@ -31,13 +45,17 @@ def _ensure_worker_ready() -> None:
     if _worker_ready:
         return
 
-    started = time.perf_counter()
-    logger.info("[RQ] Initializing worker resources...")
-    init_pool()
-    load_all_soil_rasters()
-    SimulationRunner.initialize_default()
-    _worker_ready = True
-    logger.info("[RQ] Worker resources ready in %.0fms.", (time.perf_counter() - started) * 1000)
+    with _worker_ready_lock:
+        if _worker_ready:
+            return
+
+        started = time.perf_counter()
+        logger.info("[RQ] Initializing worker resources...")
+        init_pool()
+        load_all_soil_rasters()
+        SimulationRunner.initialize_default()
+        _worker_ready = True
+        logger.info("[RQ] Worker resources ready in %.0fms.", (time.perf_counter() - started) * 1000)
 
 
 def _publish(topic: str, message: dict) -> None:
@@ -46,7 +64,7 @@ def _publish(topic: str, message: dict) -> None:
         "timestamp": time.time(),
         "payload": message
     }
-    _redis_pub.publish(topic, json.dumps(contract_payload, default=str))
+    _get_redis_pub().publish(topic, json.dumps(contract_payload, default=str))
 
 
 def _mark_success(event: dict, result: dict) -> None:

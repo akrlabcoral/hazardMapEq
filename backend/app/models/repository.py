@@ -17,6 +17,7 @@ from app.models.event_repository import (
     mark_event_simulated,
     mark_seen,
     save_earthquake_event,
+    try_mark_seen,
 )
 from app.models.schema import init_db
 from app.models.simulation_repository import save_simulation
@@ -29,6 +30,7 @@ __all__ = [
     "save_earthquake_event",
     "is_duplicate",
     "mark_seen",
+    "try_mark_seen",
     "mark_event_simulated",
     "mark_event_sim_failed",
     "get_recent_events",
