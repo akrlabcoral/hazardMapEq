@@ -157,6 +157,26 @@ const buildEpicenterFeatureCollection = (epicenter) => ({
   }] : []
 });
 
+const setSimulationHeatmapMode = (mapInstance, hasResults, showIntensity) => {
+  if (!mapInstance?.getStyle()) return;
+
+  const pgaVisibility = hasResults && !showIntensity ? 'visible' : 'none';
+  const intensityVisibility = hasResults && showIntensity ? 'visible' : 'none';
+
+  if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_FILL)) {
+    mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL, 'visibility', pgaVisibility);
+  }
+  if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_STROKE)) {
+    mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', pgaVisibility);
+  }
+  if (mapInstance.getLayer(SIM_LAYERS.WB_GRID_FILL)) {
+    mapInstance.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL, 'visibility', pgaVisibility);
+  }
+  if (mapInstance.getLayer(SIM_LAYERS.INTENSITY_FILL)) {
+    mapInstance.setLayoutProperty(SIM_LAYERS.INTENSITY_FILL, 'visibility', intensityVisibility);
+  }
+};
+
 const restoreSimulationAfterStyleLoad = (mapInstance) => {
   if (!mapInstance?.getStyle()) return;
 
@@ -177,10 +197,7 @@ const restoreSimulationAfterStyleLoad = (mapInstance) => {
     if (wbGridSrc) wbGridSrc.setData(emptyFC);
     if (contourSrc) contourSrc.setData(emptyFC);
     if (intensityContourSrc) intensityContourSrc.setData(emptyFC);
-    if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL, 'visibility', 'none');
-    if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_STROKE)) mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'none');
-    if (mapInstance.getLayer(SIM_LAYERS.WB_GRID_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL, 'visibility', 'none');
-    if (mapInstance.getLayer(SIM_LAYERS.INTENSITY_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.INTENSITY_FILL, 'visibility', 'none');
+    setSimulationHeatmapMode(mapInstance, false, store.intensityVisible);
     animationManager.stopShockwave();
     refreshVisibleLegendItems(mapInstance);
     return;
@@ -190,16 +207,7 @@ const restoreSimulationAfterStyleLoad = (mapInstance) => {
   if (contourSrc) contourSrc.setData(results.contour_geojson || emptyFC);
   if (intensityContourSrc) intensityContourSrc.setData(results.intensity_contour_geojson || emptyFC);
 
-  if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL, 'visibility', 'visible');
-  if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_STROKE)) mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'visible');
-  if (mapInstance.getLayer(SIM_LAYERS.WB_GRID_FILL)) mapInstance.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL, 'visibility', 'visible');
-  if (mapInstance.getLayer(SIM_LAYERS.INTENSITY_FILL)) {
-    mapInstance.setLayoutProperty(
-      SIM_LAYERS.INTENSITY_FILL,
-      'visibility',
-      store.intensityVisible ? 'visible' : 'none'
-    );
-  }
+  setSimulationHeatmapMode(mapInstance, true, store.intensityVisible);
 
   mapLayerService.bringSimulationLayersToFront(mapInstance);
   if (epicenter) {
@@ -512,16 +520,10 @@ export default function MapView({ isAdmin = false }) {
     refreshVisibleLegendItems(map.current);
   }, [soilAmpVisible]);
 
-  // Sync MMI Intensity layer visibility
+  // Switch between PGA/damage and MMI intensity heatmap modes
   useEffect(() => {
     if (!map.current || !map.current.getStyle()) return;
-    if (mapLayerService.layerExists(map.current, SIM_LAYERS.INTENSITY_FILL)) {
-      map.current.setLayoutProperty(
-        SIM_LAYERS.INTENSITY_FILL,
-        'visibility',
-        intensityVisible && simulationResults ? 'visible' : 'none'
-      );
-    }
+    setSimulationHeatmapMode(map.current, Boolean(simulationResults), intensityVisible);
     refreshVisibleLegendItems(map.current);
   }, [intensityVisible, simulationResults]);
 
@@ -554,10 +556,7 @@ export default function MapView({ isAdmin = false }) {
         if (!simulationResults) {
           // simulationResults=null means simulation was just triggered or cleared
           debugLog('[MapView] simulationResults cleared — hiding layers and clearing data');
-          if (map.current.getLayer(SIM_LAYERS.CONTOUR_FILL))   map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL,   'visibility', 'none');
-          if (map.current.getLayer(SIM_LAYERS.CONTOUR_STROKE)) map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'none');
-          if (map.current.getLayer(SIM_LAYERS.WB_GRID_FILL))   map.current.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL,   'visibility', 'none');
-          if (map.current.getLayer(SIM_LAYERS.INTENSITY_FILL)) map.current.setLayoutProperty(SIM_LAYERS.INTENSITY_FILL, 'visibility', 'none');
+          setSimulationHeatmapMode(map.current, false, intensityVisible);
           refreshVisibleLegendItems(map.current);
           
           const emptyFC = { type: 'FeatureCollection', features: [] };
@@ -591,15 +590,10 @@ export default function MapView({ isAdmin = false }) {
           intensityContourSrc.setData(simulationResults.intensity_contour_geojson || { type: 'FeatureCollection', features: [] });
         }
         
-        if (map.current.getLayer(SIM_LAYERS.CONTOUR_FILL))   map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL,   'visibility', 'visible');
-        if (map.current.getLayer(SIM_LAYERS.CONTOUR_STROKE)) map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'visible');
-        if (map.current.getLayer(SIM_LAYERS.WB_GRID_FILL))   map.current.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL,   'visibility', 'visible');
-        if (map.current.getLayer(SIM_LAYERS.INTENSITY_FILL)) {
-          map.current.setLayoutProperty(SIM_LAYERS.INTENSITY_FILL, 'visibility', intensityVisible ? 'visible' : 'none');
-        }
+        setSimulationHeatmapMode(map.current, true, intensityVisible);
         mapLayerService.bringSimulationLayersToFront(map.current);
         refreshVisibleLegendItems(map.current);
-        debugLog('[MapView] Layers made visible:', SIM_LAYERS.CONTOUR_FILL, SIM_LAYERS.CONTOUR_STROKE, SIM_LAYERS.WB_GRID_FILL);
+        debugLog('[MapView] Heatmap mode:', intensityVisible ? 'intensity' : 'pga');
 
         if (simulationResults.state_summary) {
           const mapping = useStore.getState().stateIdMapping;

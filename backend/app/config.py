@@ -46,7 +46,7 @@ class Settings:
     enable_dev_routes: bool = _bool_env("ENABLE_DEV_ROUTES")
     ws_max_clients: int = int(os.environ.get("WS_MAX_CLIENTS", "10000"))
     ws_send_timeout_seconds: float = float(os.environ.get("WS_SEND_TIMEOUT_SECONDS", "5.0"))
-    contour_grid_size: int = int(os.environ.get("CONTOUR_GRID_SIZE", "700"))
+    contour_grid_size: int = int(os.environ.get("CONTOUR_GRID_SIZE", "300"))
 
 
 settings = Settings()
@@ -80,11 +80,10 @@ PGA_COLORS = [
     "#8b5a45",  # Extreme
 ]
 
-# MMI intensity contour scale. Levels are numeric MMI boundaries and colors
-# follow Roman intensity bands from low-to-high for matplotlib contourf.
-MMI_LEVELS = [1.0, 2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5]
+# MMI intensity contour scale. I-II is intentionally omitted so not-felt /
+# very weak shaking leaves the basemap unchanged.
+MMI_LEVELS = [2.5, 3.5, 4.5, 5.5, 6.5, 7.5, 8.5, 9.5]
 MMI_COLORS = [
-    "#ffffff",  # I-II
     "#bfccff",  # III
     "#a0e6ff",  # IV
     "#80ffff",  # V

@@ -1,5 +1,4 @@
 export const MMI_INTENSITY_PALETTE = [
-  { id: 'iII', label: 'I-II', color: '#ffffff' },
   { id: 'iii', label: 'III', color: '#bfccff' },
   { id: 'iv', label: 'IV', color: '#a0e6ff' },
   { id: 'v', label: 'V', color: '#80ffff' },
@@ -13,7 +12,7 @@ export const MMI_INTENSITY_PALETTE = [
 export const MMI_INTENSITY_FILL_COLOR = [
   'step',
   ['coalesce', ['get', 'mmi'], 0],
-  '#ffffff',
+  'rgba(0,0,0,0)',
   2.5, '#bfccff',
   3.5, '#a0e6ff',
   4.5, '#80ffff',

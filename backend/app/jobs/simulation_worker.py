@@ -20,16 +20,14 @@ from app.services.impact_aggregator import aggregate_impact
 logger = logging.getLogger("hazardmap.worker")
 
 
-def generate_contour_geojson(features: list, pga_values: np.ndarray) -> dict:
-    from app.services.contour_generator import generate_contour_geojson as _generate
+def generate_both_contours(features: list, pga_values: np.ndarray, mmi_values: np.ndarray) -> tuple[dict, dict]:
+    from app.services.contour_generator import generate_both_contours as _generate
+    return _generate(features, pga_values, mmi_values)
 
-    return _generate(features, pga_values)
 
-
-def generate_intensity_contour_geojson(features: list, mmi_values: np.ndarray) -> dict:
-    from app.services.contour_generator import generate_intensity_contour_geojson as _generate
-
-    return _generate(features, mmi_values)
+def _init_contour_interpolator(features: list) -> None:
+    from app.services.contour_generator import init_contour_interpolator
+    init_contour_interpolator(features)
 
 
 def pga_g_to_mmi(pga_g: float) -> float:
@@ -143,6 +141,15 @@ class SimulationRunner:
             self.grid_context.soil_precomputed = False
             logger.warning("[SimRunner] Soil precompute failed, using per-run fallback: %s", exc)
 
+        # Pre-build the Delaunay triangulation for the contour interpolator.
+        # This pays the O(n log n) triangulation cost once at startup so that
+        # every subsequent simulation call only needs the fast barycentric
+        # lookup (LinearNDInterpolator reuse).
+        try:
+            _init_contour_interpolator(features)
+        except Exception as exc:
+            logger.warning("[SimRunner] Contour interpolator pre-build failed, will fallback to griddata: %s", exc)
+
     def _annotate_features(self, features: list, raw_pga: np.ndarray, norm_pga: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
         for i, feat in enumerate(features):
             p = feat["properties"]
@@ -237,8 +244,11 @@ class SimulationRunner:
         aggregate_ms = (time.perf_counter() - t_aggregate) * 1000
 
         t_contour = time.perf_counter()
-        contour_geojson = generate_contour_geojson(features, pga_final)
-        intensity_contour_geojson = generate_intensity_contour_geojson(features, mmi_values)
+        # Single interpolation pass — MMI is derived analytically from the
+        # interpolated PGA grid, so griddata runs only once instead of twice.
+        contour_geojson, intensity_contour_geojson = generate_both_contours(
+            features, pga_final, mmi_values
+        )
         contour_ms = (time.perf_counter() - t_contour) * 1000
 
         t_save = time.perf_counter()

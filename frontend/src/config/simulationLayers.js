@@ -71,7 +71,7 @@ export const initSimulationLayers = (mapInstance) => {
       'fill-opacity': [
         'case',
         ['has', 'fill-opacity'], ['get', 'fill-opacity'],
-        0.84
+        0.4
       ],
       'fill-outline-color': 'rgba(15, 23, 42, 0.18)',
     }
