@@ -549,7 +549,7 @@ export default function MapView({ isAdmin = false }) {
         const wbGridSrc = map.current.getSource('sim-wb-grid-source');
         const contourSrc = map.current.getSource('sim-contour-source');
         const intensityContourSrc = map.current.getSource('sim-intensity-contour-source');
-        if (!wbGridSrc || !contourSrc || !intensityContourSrc) return;
+        if (!wbGridSrc || !contourSrc) return;
 
         if (!simulationResults) {
           // simulationResults=null means simulation was just triggered or cleared
@@ -587,7 +587,9 @@ export default function MapView({ isAdmin = false }) {
         if (simulationResults.contour_geojson) {
           contourSrc.setData(simulationResults.contour_geojson);
         }
-        intensityContourSrc.setData(simulationResults.intensity_contour_geojson || { type: 'FeatureCollection', features: [] });
+        if (intensityContourSrc) {
+          intensityContourSrc.setData(simulationResults.intensity_contour_geojson || { type: 'FeatureCollection', features: [] });
+        }
         
         if (map.current.getLayer(SIM_LAYERS.CONTOUR_FILL))   map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL,   'visibility', 'visible');
         if (map.current.getLayer(SIM_LAYERS.CONTOUR_STROKE)) map.current.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', 'visible');

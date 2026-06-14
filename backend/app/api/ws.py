@@ -46,8 +46,8 @@ async def ws_live(ws: WebSocket):
         return
 
     await ws.accept()
-    _CLIENTS.add(ws)
     _CLIENT_LOCKS[ws] = asyncio.Lock()
+    _CLIENTS.add(ws)
     logger.info(f"[WS] Client connected. Total clients: {len(_CLIENTS)}")
 
     async def send_pings():
@@ -56,6 +56,8 @@ async def ws_live(ws: WebSocket):
                 await asyncio.sleep(25)
                 async with _CLIENT_LOCKS[ws]:
                     await asyncio.wait_for(ws.send_text('{"type":"ping"}'), timeout=SEND_TIMEOUT_SECONDS)
+        except asyncio.CancelledError:
+            raise
         except Exception:
             pass
 
@@ -71,6 +73,10 @@ async def ws_live(ws: WebSocket):
         logger.debug(f"[WS] Client disconnected with error: {exc}")
     finally:
         ping_task.cancel()
+        try:
+            await ping_task
+        except asyncio.CancelledError:
+            pass
         _CLIENTS.discard(ws)
         _CLIENT_LOCKS.pop(ws, None)
         logger.info(f"[WS] Client disconnected. Total clients: {len(_CLIENTS)}")

@@ -22,7 +22,6 @@ class RedisPubSubManager:
     def __init__(self, url: str = "redis://localhost:6379"):
         self.url = url
         self._redis = None
-        self._pubsub = None
         self._is_connected = False
 
     async def connect(self) -> None:
@@ -34,22 +33,18 @@ class RedisPubSubManager:
         try:
             self._redis = redis.from_url(self.url, decode_responses=True)
             await self._redis.ping()
-            self._pubsub = self._redis.pubsub()
             self._is_connected = True
             logger.info(f"[Redis] Successfully connected to {self.url}")
         except Exception as exc:
             logger.warning(f"[Redis] Could not connect to {self.url}: {exc}. Running in Stub Mode.")
             self._redis = None
-            self._pubsub = None
             self._is_connected = False
 
     async def disconnect(self) -> None:
         """Close the Redis connection pool."""
-        if self._pubsub:
-            await self._pubsub.close()
-            self._pubsub = None
         if self._is_connected and self._redis:
             await self._redis.aclose()
+            self._redis = None
             self._is_connected = False
             logger.info("[Redis] Disconnected")
 
@@ -92,7 +87,13 @@ class RedisPubSubManager:
             logger.error(f"[Redis] Subscribe loop crashed on {channel}: {exc}")
             raise
         finally:
-            await pubsub.close()
+            try:
+                await pubsub.unsubscribe(channel)
+            finally:
+                close = getattr(pubsub, "aclose", None) or pubsub.close
+                result = close()
+                if asyncio.iscoroutine(result):
+                    await result
 
     async def acquire_lock_token(self, lock_name: str, expire_seconds: int = 60) -> str | None:
         """

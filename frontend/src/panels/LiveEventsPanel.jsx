@@ -36,17 +36,28 @@ export default function LiveEventsPanel() {
 
   const [minMag, setMinMag] = useState('');
   const [regionFilter, setRegionFilter] = useState('india');
+  const [fetchError, setFetchError] = useState(null);
 
   // Fetch initial history from backend on mount
   useEffect(() => {
-    fetch('/scientific-api/events?limit=50')
-      .then(res => res.json())
+    const controller = new AbortController();
+    fetch('/scientific-api/events?limit=50', { signal: controller.signal })
+      .then(res => {
+        if (!res.ok) throw new Error(`Events request failed: ${res.status}`);
+        return res.json();
+      })
       .then(data => {
         if (data && data.events) {
           setLiveEvents(data.events);
+          setFetchError(null);
         }
       })
-      .catch(err => console.error('Failed to fetch initial events:', err));
+      .catch(err => {
+        if (err.name === 'AbortError') return;
+        console.error('Failed to fetch initial events:', err);
+        setFetchError('Could not load live events.');
+      });
+    return () => controller.abort();
   }, [setLiveEvents]);
 
   const filteredEvents = useMemo(() => liveEvents.filter(event => {
@@ -104,7 +115,12 @@ export default function LiveEventsPanel() {
 
       {/* Event list */}
       <div className="flex-1 overflow-y-auto custom-scrollbar p-1">
-        {liveEvents.length === 0 ? (
+        {fetchError ? (
+          <div className="p-8 text-center text-red-300 text-sm">
+            {fetchError}<br />
+            <span className="text-xs opacity-70">Please check the backend connection.</span>
+          </div>
+        ) : liveEvents.length === 0 ? (
           <div className="p-8 text-center text-slate-400 text-sm">
             No live earthquakes in the last 24 hours.<br />
             <span className="text-xs opacity-70">New USGS and NCS events will appear automatically.</span>

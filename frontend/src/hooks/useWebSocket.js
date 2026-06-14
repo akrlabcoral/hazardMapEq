@@ -57,13 +57,17 @@ export function useWebSocket() {
 
       case 'simulation_complete':
         if (isOwnManualSimulation) {
-          setIsSimulationRunning(false);
-          setPendingSimulationRequestId(null);
-          setSimulationResults(msg.simulation);
+          if (msg.simulation) {
+            setIsSimulationRunning(false);
+            setPendingSimulationRequestId(null);
+            setSimulationResults(msg.simulation);
+          }
         } else if (!isManualSimulation && state.autoSimEnabled) {
           setIsSimulationRunning(false);
           // Exact same setter used by manual simulation — zero map code changes
-          setSimulationResults(msg.simulation);
+          if (msg.simulation) {
+            setSimulationResults(msg.simulation);
+          }
         }
         break;
 

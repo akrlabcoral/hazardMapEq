@@ -17,12 +17,28 @@ export function EpicenterControl() {
       setEpicenterRegion(null);
       return;
     }
-    
-    // Fetch region from backend
-    fetch(`/scientific-api/region?lat=${epicenter.lat}&lon=${epicenter.lng}`)
-      .then(res => res.json())
-      .then(data => setEpicenterRegion(data.region))
-      .catch(err => console.error("Failed to fetch region:", err));
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      fetch(`/scientific-api/region?lat=${epicenter.lat}&lon=${epicenter.lng}`, {
+        signal: controller.signal,
+      })
+        .then(res => {
+          if (!res.ok) throw new Error(`Region request failed: ${res.status}`);
+          return res.json();
+        })
+        .then(data => setEpicenterRegion(data.region))
+        .catch(err => {
+          if (err.name !== 'AbortError') {
+            console.error("Failed to fetch region:", err);
+          }
+        });
+    }, 300);
+
+    return () => {
+      clearTimeout(timeoutId);
+      controller.abort();
+    };
       
   }, [epicenter, setEpicenterRegion]);
 

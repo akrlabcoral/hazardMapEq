@@ -29,12 +29,16 @@ def init_pool(
     if _pool is not None:
         return
 
+    dsn = database_url or settings.database_url
+    if not dsn:
+        raise RuntimeError("Required env var 'DATABASE_URL' is not set.")
+
     from psycopg2.pool import ThreadedConnectionPool
 
     _pool = ThreadedConnectionPool(
         minconn=minconn or settings.db_min_connections,
         maxconn=maxconn or settings.db_max_connections,
-        dsn=database_url or settings.database_url,
+        dsn=dsn,
     )
     logger.info("[DB] Connection pool initialized.")
 

@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import useStore from '../store/useStore';
 import { debugLog } from '../utils/debug';
 
@@ -8,8 +8,22 @@ export function useSimulation() {
   const setPendingSimulationRequestId = useStore((s) => s.setPendingSimulationRequestId);
   
   const [error, setError] = useState(null);
+  const pollTimeoutRef = useRef(null);
+  const pollAbortRef = useRef(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollTimeoutRef.current) {
+      clearTimeout(pollTimeoutRef.current);
+      pollTimeoutRef.current = null;
+    }
+    if (pollAbortRef.current) {
+      pollAbortRef.current.abort();
+      pollAbortRef.current = null;
+    }
+  }, []);
 
   const pollSimulationStatus = useCallback((requestId) => {
+    stopPolling();
     const startedAt = Date.now();
     const nextPollDelay = () => (Date.now() - startedAt < 10 * 1000 ? 500 : 2000);
     const poll = async () => {
@@ -22,9 +36,17 @@ export function useSimulation() {
       }
 
       try {
-        const response = await fetch(`/scientific-api/simulate-earthquake/status/${encodeURIComponent(requestId)}`);
+        const controller = new AbortController();
+        pollAbortRef.current = controller;
+        const response = await fetch(
+          `/scientific-api/simulate-earthquake/status/${encodeURIComponent(requestId)}`,
+          { signal: controller.signal }
+        );
         if (!response.ok) throw new Error(`Status request failed: ${response.status}`);
         const status = await response.json();
+        if (pollAbortRef.current === controller) {
+          pollAbortRef.current = null;
+        }
 
         if (status.status === 'completed' && status.result_json) {
           setSimulationResults(status.result_json);
@@ -37,14 +59,16 @@ export function useSimulation() {
           throw new Error(status.error || 'Simulation failed');
         }
       } catch (err) {
+        if (err.name === 'AbortError') return;
+        pollAbortRef.current = null;
         console.warn('[Sim] Status polling error:', err);
       }
 
-      setTimeout(poll, nextPollDelay());
+      pollTimeoutRef.current = setTimeout(poll, nextPollDelay());
     };
 
-    setTimeout(poll, 500);
-  }, [setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId]);
+    pollTimeoutRef.current = setTimeout(poll, 500);
+  }, [setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId, stopPolling]);
 
   const handleRunSimulation = useCallback(async () => {
     const state = useStore.getState();
@@ -54,6 +78,7 @@ export function useSimulation() {
 
     if (!epicenter) return;
 
+    stopPolling();
     setIsSimulationRunning(true);
     setError(null);
     setSimulationResults(null); // Clear previous results
@@ -106,7 +131,9 @@ export function useSimulation() {
       setError(err.message);
       setIsSimulationRunning(false);
     }
-  }, [setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId, pollSimulationStatus]);
+  }, [setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId, pollSimulationStatus, stopPolling]);
+
+  useEffect(() => stopPolling, [stopPolling]);
 
   return { handleRunSimulation, error };
 }

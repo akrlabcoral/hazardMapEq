@@ -149,12 +149,19 @@ def run_simulation_job(event_dict: dict) -> dict:
             logger.info("[RQTiming] mark_job_completed_ms=%.0f request_id=%s", (time.perf_counter() - t_completed) * 1000, request_id)
 
         t_publish_complete = time.perf_counter()
-        _publish("ws_events", {
+        completion_message = {
             "type": "simulation_complete",
             "request_id": request_id,
             "triggered_by": triggered_by,
             "event": event_dict,
-            "simulation": result
+            "simulation_id": result.get("simulation_id"),
+            "event_id": event_dict.get("db_id"),
+        }
+        if not is_manual:
+            completion_message["simulation"] = result
+
+        _publish("ws_events", {
+            **completion_message,
         })
         logger.info(
             "[RQTiming] publish_complete_ms=%.0f total_job_ms=%.0f request_id=%s",
