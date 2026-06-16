@@ -37,8 +37,8 @@ export const initSimulationLayers = (mapInstance) => {
         0.80, '#1e40af',  // Site A
         1.00, '#3b82f6',  // Site B
         1.20, '#22c55e',  // Site C
-        1.40, '#f97316',  // Site D
-        1.70, '#ef4444',  // Site E
+        1.50, '#f97316',  // Site D
+        2.00, '#ef4444',  // Site E
       ],
       'fill-opacity': 0.75,
     }

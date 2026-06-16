@@ -45,9 +45,9 @@ class SoilEngine(BaseHazardLayer):
 
     def normalize(self, raw_values):
         """
-        Overrides BaseHazardLayer dynamic min-max normalization.
-        Vs30 amplification factors typically range [0.8, 1.7].
-        We return them directly to preserve physically meaningful scaling.
+        Return clipped Vs30 amplification factors instead of 0-1 normalization.
+        Site amplification factors are physical multipliers, so preserving their
+        scale keeps the map and downstream PGA adjustment interpretable.
         """
         if not raw_values:
             return []

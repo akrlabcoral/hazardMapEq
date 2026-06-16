@@ -160,35 +160,35 @@ export default function MapLegend() {
           <div className="text-[10px] text-white uppercase tracking-wider mb-2">Site Class Amplification (Vs30)</div>
           <div className="flex items-center justify-between text-xs mt-1.5">
             <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-sm bg-red-400"></div>
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#ef4444' }}></div>
               <span className="text-slate-400">Site E (&lt;180 m/s)</span>
             </div>
             <span className="text-white font-mono">2.0x</span>
           </div>
           <div className="flex items-center justify-between text-xs mt-1.5">
             <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-sm bg-orange-400"></div>
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#f97316' }}></div>
               <span className="text-slate-400">Site D (180-360)</span>
             </div>
             <span className="text-white font-mono">1.5x</span>
           </div>
           <div className="flex items-center justify-between text-xs mt-1.5">
             <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-sm bg-yellow-400"></div>
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#22c55e' }}></div>
               <span className="text-slate-400">Site C (360-760)</span>
             </div>
             <span className="text-white font-mono">1.2x</span>
           </div>
           <div className="flex items-center justify-between text-xs mt-1.5">
             <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-sm bg-green-400"></div>
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#3b82f6' }}></div>
               <span className="text-slate-400">Site B (760-1500)</span>
             </div>
             <span className="text-white font-mono">1.00x</span>
           </div>
           <div className="flex items-center justify-between text-xs mt-1.5">
             <div className="flex items-center gap-2">
-              <div className="w-2.5 h-2.5 rounded-sm bg-blue-400"></div>
+              <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: '#1e40af' }}></div>
               <span className="text-slate-400">Site A (&gt;1500 m/s)</span>
             </div>
             <span className="text-white font-mono">0.80x</span>

@@ -38,10 +38,12 @@ export default function LiveEventsPanel() {
   const [regionFilter, setRegionFilter] = useState('india');
   const [fetchError, setFetchError] = useState(null);
 
-  // Fetch initial history from backend on mount
+  // Fetch events from backend. Re-fetches whenever regionFilter changes so the
+  // server-side India polygon filter (boundary.py) is applied on each switch.
   useEffect(() => {
     const controller = new AbortController();
-    fetch('/scientific-api/events?limit=50', { signal: controller.signal })
+    const regionParam = regionFilter === 'india' ? '&region=india' : '';
+    fetch(`/scientific-api/events?limit=50${regionParam}`, { signal: controller.signal })
       .then(res => {
         if (!res.ok) throw new Error(`Events request failed: ${res.status}`);
         return res.json();
@@ -58,21 +60,16 @@ export default function LiveEventsPanel() {
         setFetchError('Could not load live events.');
       });
     return () => controller.abort();
-  }, [setLiveEvents]);
+  }, [setLiveEvents, regionFilter]);
 
+  // Region filtering is now done server-side via ?region=india query param.
+  // The backend uses the real India GeoJSON polygon with a 200 km buffer
+  // (boundary.py → is_epicenter_valid) — much more accurate than a bounding box.
+  // Only client-side magnitude filter remains here.
   const filteredEvents = useMemo(() => liveEvents.filter(event => {
     if (minMag && !isNaN(parseFloat(minMag)) && event.magnitude < parseFloat(minMag)) return false;
-
-    if (regionFilter === 'india') {
-      // Bounding box covering India + ~200km buffer
-      // Latitude: 6.6 to 39.4N | Longitude: 66.9 to 99.1E
-      if (event.latitude < 6.6 || event.latitude > 39.4 || event.longitude < 66.9 || event.longitude > 99.1) {
-        return false;
-      }
-    }
-    
     return true;
-  }), [liveEvents, minMag, regionFilter]);
+  }), [liveEvents, minMag]);
 
   return (
     <div className="glass-card flex flex-col h-full font-sans overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.4)]">

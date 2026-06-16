@@ -16,7 +16,6 @@ BoundingBox = namedtuple("BoundingBox", ["left", "bottom", "right", "top"])
 _PATHS: dict[str, str] = {}
 _DATASETS: dict[str, rasterio.io.DatasetReader] = {}
 _BOUNDS: dict[str, BoundingBox] = {}
-_BOUNDS: dict[str, BoundingBox] = {}
 
 
 def register(state_name: str, path: str) -> None:
