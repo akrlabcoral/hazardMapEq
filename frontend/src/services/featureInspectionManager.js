@@ -315,6 +315,7 @@ registerInspector({
             { label: 'Station', value: props.station },
             { label: 'Vector type', value: props.type },
             { label: 'Magnitude', value: props.magnitude },
+            { label: 'Azimuth', value: props.azimuth },
           ]),
         },
       ],

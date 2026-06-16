@@ -1,5 +1,7 @@
 // Static layer configurations for MapLibre
 
+export const GPS_VECTOR_ARROW_ICON_ID = 'gps-vector-arrow-icon';
+
 export const LAYER_CONFIGS = {
   indiaBoundary: {
     sourceId: 'india-boundary-source',
@@ -143,17 +145,13 @@ export const LAYER_CONFIGS = {
         source: 'gps-vectors-source',
         filter: ['==', 'type', 'head'],
         layout: {
-          'text-field': '^',
-          'text-rotate': ['get', 'azimuth'],
-          'text-size': 10,
-          'text-allow-overlap': true,
-          'text-ignore-placement': true,
-          'text-offset': [0, 0.2]
-        },
-        paint: {
-          'text-color': '#ef4444',
-          'text-halo-color': '#0f172a',
-          'text-halo-width': 1
+          'icon-image': GPS_VECTOR_ARROW_ICON_ID,
+          'icon-rotate': ['get', 'azimuth'],
+          'icon-size': 0.55,
+          'icon-allow-overlap': true,
+          'icon-ignore-placement': true,
+          'icon-rotation-alignment': 'map',
+          'icon-pitch-alignment': 'map'
         }
       }
     ]

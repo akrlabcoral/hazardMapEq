@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Star } from 'lucide-react';
+import { Eye, EyeOff, Navigation, Star } from 'lucide-react';
 
 import useStore from '../store/useStore';
 import { EARTHQUAKE_DAMAGE_PALETTE } from '../config/damagePalette';
@@ -102,7 +102,7 @@ export default function MapLegend() {
             </div>
             <div className="flex items-center gap-2.5 mt-1.5">
               <div className="w-6 h-0.5 bg-red-500 ml-[-6px] mr-1 flex-shrink-0 relative">
-                <div className="absolute right-[-4px] top-1/2 -translate-y-[45%] text-red-500 text-[10px] leading-none">^</div>
+                <Navigation className="absolute right-[-7px] top-1/2 h-3 w-3 -translate-y-1/2 rotate-90 fill-red-500 text-red-500" />
               </div>
               <span className="text-white text-[10px] leading-tight">Line length ∝ Velocity<br/>Arrow indicates drift direction</span>
             </div>

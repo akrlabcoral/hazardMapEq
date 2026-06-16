@@ -1,4 +1,4 @@
-import { LAYER_CONFIGS, RASTER_CONFIGS } from './layerManager';
+import { GPS_VECTOR_ARROW_ICON_ID, LAYER_CONFIGS, RASTER_CONFIGS } from './layerManager';
 import { fetchGeoJson } from './geoJsonLoader';
 
 const SIMULATION_LAYER_ORDER = [
@@ -12,6 +12,35 @@ const SIMULATION_LAYER_ORDER = [
   'sim-epicenter-ring',
   'sim-epicenter',
 ];
+
+const createGpsVectorArrowImage = () => {
+  if (typeof document === 'undefined') return null;
+
+  const size = 32;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.clearRect(0, 0, size, size);
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  ctx.beginPath();
+  ctx.moveTo(16, 3);
+  ctx.lineTo(27, 24);
+  ctx.lineTo(16, 19);
+  ctx.lineTo(5, 24);
+  ctx.closePath();
+  ctx.fillStyle = '#ef4444';
+  ctx.strokeStyle = '#0f172a';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.fill();
+
+  return ctx.getImageData(0, 0, size, size);
+};
 
 class MapLayerService {
   constructor() {
@@ -63,6 +92,16 @@ class MapLayerService {
       map.addLayer(layerConfig, beforeId);
     } else {
       map.addLayer(layerConfig);
+    }
+  }
+
+  ensureLayerImages(map) {
+    if (!map || !map.getStyle()) return;
+    if (!map.hasImage(GPS_VECTOR_ARROW_ICON_ID)) {
+      const arrowImage = createGpsVectorArrowImage();
+      if (arrowImage) {
+        map.addImage(GPS_VECTOR_ARROW_ICON_ID, arrowImage, { pixelRatio: 2 });
+      }
     }
   }
 
@@ -157,6 +196,7 @@ class MapLayerService {
   async initializeSourcesAndLayers(mapInstance, initialVisibilityState) {
     if (this.initialized && this.map === mapInstance) return;
     this.map = mapInstance;
+    this.ensureLayerImages(this.map);
     
     const BASE_LAYER_ANCHOR = 'sim-soil-amp-layer';
 
