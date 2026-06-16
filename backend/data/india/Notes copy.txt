@@ -1,0 +1,3 @@
+Where it's used: In backend/app/gis/boundary.py.
+
+What it does: When the automated script (or a user) tries to run a simulation for a new earthquake, the system first checks this file. If the earthquake's epicenter is inside India (or within a 200 km buffer zone of this boundary), the simulation runs. If the earthquake is too far away (e.g., in Japan or South America), the system safely ignores it to save computing power.

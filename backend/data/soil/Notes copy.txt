@@ -1,0 +1,5 @@
+Registered on Startup: In backend/app/soil/loader.py, there is a function called load_all_soil_rasters(). When the backend API boots up, it looks for this specific file and registers it in memory.
+
+Soil Amplification (Site Class): When an earthquake simulation runs, the SoilEngine (in backend/app/layers/soil/engine.py) reads this .tif file to figure out what type of soil exists at every single 10km grid cell across India.
+
+PGA Calculation: It uses this information to retrieve the Vs30 value (the shear-wave velocity in the top 30 meters of soil). If the soil is soft (like mud or sand), the backend mathematically amplifies the earthquake's shaking intensity for that specific location. If it is hard rock, the shaking is reduced.
