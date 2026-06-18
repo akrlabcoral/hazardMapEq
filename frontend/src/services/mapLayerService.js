@@ -11,6 +11,8 @@ const SIMULATION_LAYER_ORDER = [
   'sim-epicenter-glow',
   'sim-epicenter-ring',
   'sim-epicenter',
+  'live-earthquake-pulse',
+  'live-earthquake-point',
 ];
 
 const createGpsVectorArrowImage = () => {

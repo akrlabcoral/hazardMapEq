@@ -11,11 +11,11 @@ const UNKNOWN = 'Unknown';
 const INSPECTION_LAYER_PRIORITY = [
   'historic-clusters',
   'historic-cluster-count',
-  'historic-unclustered-point',
   'live-earthquake-point',
   'live-earthquakes-point',
   'live-event-point',
   'live-events-point',
+  'historic-unclustered-point',
   'gps-vectors-circle',
   'gps-vectors-head',
   'gps-vectors-line',

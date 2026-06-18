@@ -41,12 +41,30 @@ export function useWebSocket() {
         // Heartbeat — ignore
         break;
 
-      case 'earthquake_detected':
+      case 'earthquake_detected': {
+        // Guard: if the user has selected a region filter, drop events outside that region.
+        // This mirrors the server-side boundary.py check for real-time WS pushes,
+        // which broadcast globally to all connected clients regardless of their filter.
+        const currentRegion = useStore.getState().regionFilter;
+        if (currentRegion === 'india') {
+          const { latitude: lat, longitude: lon } = msg.event || {};
+          // Approximate India bounding box with ~200 km buffer (matches boundary.py BUFFER_DEG=1.8)
+          const INDIA_LAT_MIN = 8.4  - 1.8;  // ~6.6
+          const INDIA_LAT_MAX = 37.6 + 1.8;  // ~39.4
+          const INDIA_LON_MIN = 68.7 - 1.8;  // ~66.9
+          const INDIA_LON_MAX = 97.25 + 1.8; // ~99.05
+          const inIndia =
+            lat != null && lon != null &&
+            lat >= INDIA_LAT_MIN && lat <= INDIA_LAT_MAX &&
+            lon >= INDIA_LON_MIN && lon <= INDIA_LON_MAX;
+          if (!inIndia) break; // skip non-India events
+        }
         addLiveEvent(msg.event);
         if (msg.event.magnitude >= 6.0 && msg.event.is_relevant) {
           setActiveAlert(msg.event);
         }
         break;
+      }
 
       case 'simulation_running':
         // Read autoSimEnabled at call time to avoid stale closure / reconnect loop

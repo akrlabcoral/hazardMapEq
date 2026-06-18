@@ -32,10 +32,11 @@ export default function LiveEventsPanel() {
   const liveEvents  = useStore((s) => s.liveEvents);
   const setLiveEvents = useStore((s) => s.setLiveEvents);
   const wsConnected = useStore((s) => s.wsConnected);
+  const regionFilter = useStore((s) => s.regionFilter);
+  const setRegionFilter = useStore((s) => s.setRegionFilter);
   const { handleRunSimulation } = useSimulation();
 
   const [minMag, setMinMag] = useState('');
-  const [regionFilter, setRegionFilter] = useState('india');
   const [fetchError, setFetchError] = useState(null);
 
   // Fetch events from backend. Re-fetches whenever regionFilter changes so the

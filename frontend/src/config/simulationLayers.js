@@ -15,6 +15,13 @@ export const SIM_LAYERS = {
   SOIL_AMP:       'sim-soil-amp-layer',
 };
 
+export const LIVE_EARTHQUAKE_SOURCE = 'live-earthquakes-source';
+
+export const LIVE_EARTHQUAKE_LAYERS = {
+  PULSE: 'live-earthquake-pulse',
+  POINT: 'live-earthquake-point',
+};
+
 export const initSimulationLayers = (mapInstance) => {
   const emptyFC = { type: 'FeatureCollection', features: [] };
 
@@ -23,6 +30,7 @@ export const initSimulationLayers = (mapInstance) => {
   mapLayerService.addSourceSafe(mapInstance, 'sim-intensity-contour-source', { type: 'geojson', data: emptyFC });
   mapLayerService.addSourceSafe(mapInstance, 'sim-shockwave-source',  { type: 'geojson', data: emptyFC });
   mapLayerService.addSourceSafe(mapInstance, 'sim-epicenter-source',  { type: 'geojson', data: emptyFC });
+  mapLayerService.addSourceSafe(mapInstance, LIVE_EARTHQUAKE_SOURCE,  { type: 'geojson', data: emptyFC });
 
   // --- Soil Amplification Choropleth (Vs30 Site Classification) ---
   mapLayerService.addLayerSafe(mapInstance, {
@@ -168,6 +176,45 @@ export const initSimulationLayers = (mapInstance) => {
       'icon-size': 1.0,
       'icon-allow-overlap': true,
       'icon-ignore-placement': true
+    }
+  });
+
+  // --- Persistent live earthquake dots ---
+  mapLayerService.addLayerSafe(mapInstance, {
+    id: LIVE_EARTHQUAKE_LAYERS.PULSE,
+    type: 'circle',
+    source: LIVE_EARTHQUAKE_SOURCE,
+    filter: ['==', ['get', 'is_relevant'], true],
+    paint: {
+      'circle-radius': [
+        'interpolate', ['linear'], ['coalesce', ['get', 'magnitude'], 0],
+        0, 8,
+        5, 14,
+        9.5, 22,
+      ],
+      'circle-color': 'rgba(239, 68, 68, 0.24)',
+      'circle-blur': 0.65,
+      'circle-opacity': 0.8,
+      'circle-stroke-width': 0,
+    }
+  });
+
+  mapLayerService.addLayerSafe(mapInstance, {
+    id: LIVE_EARTHQUAKE_LAYERS.POINT,
+    type: 'circle',
+    source: LIVE_EARTHQUAKE_SOURCE,
+    paint: {
+      'circle-radius': [
+        'interpolate', ['linear'], ['coalesce', ['get', 'magnitude'], 0],
+        0, 4,
+        4, 6,
+        6, 8,
+        9.5, 11,
+      ],
+      'circle-color': '#ef4444',
+      'circle-opacity': 0.95,
+      'circle-stroke-color': '#ffffff',
+      'circle-stroke-width': 1.5,
     }
   });
 };

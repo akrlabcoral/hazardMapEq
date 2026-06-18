@@ -13,4 +13,8 @@ export const createLiveEventsSlice = (set) => ({
 
   autoSimEnabled: true,
   setAutoSimEnabled: (val) => set({ autoSimEnabled: val }),
+
+  // Shared region filter — used by LiveEventsPanel (UI) and useWebSocket (WS push guard)
+  regionFilter: 'india',
+  setRegionFilter: (region) => set({ regionFilter: region }),
 });

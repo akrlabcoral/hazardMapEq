@@ -15,11 +15,15 @@ export function MagnitudeDepthRow() {
           <span className="text-base font-bold neon-text-alert">{magnitude.toFixed(1)}</span>
         </div>
         <input
-          type="number" min="1.0" max="10.0" step="0.1"
+          type="range" min="0" max="9.5" step="0.1"
           value={magnitude}
-          onChange={(e) => { const v = parseFloat(e.target.value); setMagnitude(isNaN(v) ? 1.0 : v); }}
-          className="w-full bg-slate-950 border border-slate-600 text-red-400 font-bold text-base rounded px-2 py-1.5 focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-400"
+          onChange={(e) => { const v = parseFloat(e.target.value); setMagnitude(isNaN(v) ? 0 : v); }}
+          className="w-full h-2 accent-red-500 cursor-pointer"
         />
+        <div className="flex justify-between text-[10px] text-slate-500 mt-2">
+          <span>0.0</span>
+          <span>9.5</span>
+        </div>
       </div>
 
       {/* Depth */}

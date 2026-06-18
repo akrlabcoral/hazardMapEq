@@ -7,7 +7,11 @@ import { rasterService } from '../services/rasterService';
 
 import { animationManager } from '../services/animationManager';
 
-import { initSimulationLayers, SIM_LAYERS } from '../config/simulationLayers';
+import {
+  initSimulationLayers,
+  LIVE_EARTHQUAKE_SOURCE,
+  SIM_LAYERS,
+} from '../config/simulationLayers';
 import {
   getClusterExpansion,
   getInspectableLayerIds,
@@ -157,6 +161,56 @@ const buildEpicenterFeatureCollection = (epicenter) => ({
   }] : []
 });
 
+const asFiniteNumber = (value) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
+};
+
+const buildLiveEventsFeatureCollection = (events = []) => ({
+  type: 'FeatureCollection',
+  features: events
+    .map((event, index) => {
+      const longitude = asFiniteNumber(event.longitude ?? event.lon ?? event.lng);
+      const latitude = asFiniteNumber(event.latitude ?? event.lat);
+      if (longitude === null || latitude === null) return null;
+
+      const magnitude = asFiniteNumber(event.magnitude ?? event.mag) ?? 0;
+      const depth = asFiniteNumber(event.depth ?? event.depth_km);
+      const place = event.place || event.location || 'Live earthquake';
+      const time = event.time || event.origin_time || event.created_at || null;
+
+      return {
+        type: 'Feature',
+        geometry: {
+          type: 'Point',
+          coordinates: [longitude, latitude],
+        },
+        properties: {
+          id: event.id ?? index,
+          source_id: event.source_id || '',
+          source: event.source || '',
+          magnitude,
+          mag: magnitude,
+          depth,
+          depth_km: depth,
+          place,
+          location: place,
+          time,
+          is_relevant: Boolean(event.is_relevant),
+        },
+      };
+    })
+    .filter(Boolean),
+});
+
+const syncLiveEarthquakesSource = (mapInstance, events) => {
+  if (!mapInstance?.getStyle()) return;
+  const source = mapInstance.getSource(LIVE_EARTHQUAKE_SOURCE);
+  if (source?.setData) {
+    source.setData(buildLiveEventsFeatureCollection(events));
+  }
+};
+
 const setSimulationHeatmapMode = (mapInstance, hasResults, showIntensity) => {
   if (!mapInstance?.getStyle()) return;
 
@@ -192,6 +246,7 @@ const restoreSimulationAfterStyleLoad = (mapInstance) => {
   if (epicenterSrc) {
     epicenterSrc.setData(buildEpicenterFeatureCollection(epicenter));
   }
+  syncLiveEarthquakesSource(mapInstance, store.liveEvents);
 
   if (!results?.grid_geojson?.type) {
     if (wbGridSrc) wbGridSrc.setData(emptyFC);
@@ -235,6 +290,7 @@ export default function MapView({ isAdmin = false }) {
   const mapStyle          = useStore((state) => state.mapStyle);
   const isPlacingEpicenter = useStore((state) => state.isPlacingEpicenter);
   const isSimulationRunning = useStore((state) => state.isSimulationRunning);
+  const liveEvents = useStore((state) => state.liveEvents);
 
   // Initialize simulation sources and layers on a loaded map
   const setupSimulation = useCallback((mapInstance) => {
@@ -509,6 +565,14 @@ export default function MapView({ isAdmin = false }) {
 
     source.setData(buildEpicenterFeatureCollection(earthquakeEpicenter));
   }, [earthquakeEpicenter]);
+
+  // Keep the retained live event list visible as persistent red map dots.
+  useEffect(() => {
+    if (!map.current || !map.current.getStyle()) return;
+    syncLiveEarthquakesSource(map.current, liveEvents);
+    mapLayerService.bringSimulationLayersToFront(map.current);
+    refreshVisibleLegendItems(map.current);
+  }, [liveEvents]);
 
   // Sync Soil Amplification layer visibility
   useEffect(() => {
