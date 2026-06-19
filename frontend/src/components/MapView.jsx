@@ -283,7 +283,6 @@ export default function MapView({ isAdmin = false }) {
   const selectedStateName      = useStore((state) => state.selectedStateName);
   
   const gisLayers      = useStore((state) => state.gisLayers);
-  const soilAmpVisible = useStore((state) => state.soilAmpVisible);
   const intensityVisible = useStore((state) => state.intensityVisible);
   
   const simulationResults = useStore((state) => state.simulationResults);
@@ -574,19 +573,6 @@ export default function MapView({ isAdmin = false }) {
     refreshVisibleLegendItems(map.current);
   }, [liveEvents]);
 
-  // Sync Soil Amplification layer visibility
-  useEffect(() => {
-    if (!map.current || !map.current.getStyle()) return;
-    if (mapLayerService.layerExists(map.current, SIM_LAYERS.SOIL_AMP)) {
-      map.current.setLayoutProperty(
-        SIM_LAYERS.SOIL_AMP, 
-        'visibility', 
-        soilAmpVisible ? 'visible' : 'none'
-      );
-    }
-    refreshVisibleLegendItems(map.current);
-  }, [soilAmpVisible]);
-
   // Switch between PGA/damage and MMI intensity heatmap modes
   useEffect(() => {
     if (!map.current || !map.current.getStyle()) return;
@@ -737,7 +723,7 @@ export default function MapView({ isAdmin = false }) {
               : 'cursor-grab active:cursor-grabbing'
         }`}
       />
-      <div className="absolute bottom-10 right-8 z-20 flex -translate-x-1/2 overflow-hidden rounded border border-white/10 bg-slate-800/90 shadow-2xl backdrop-blur pointer-events-auto">
+      <div className="absolute bottom-10 right-2 z-20 flex  overflow-hidden rounded border border-white/10 bg-slate-800/90 shadow-2xl backdrop-blur pointer-events-auto">
         <button
           type="button"
           onClick={zoomOut}

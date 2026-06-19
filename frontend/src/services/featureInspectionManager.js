@@ -20,7 +20,6 @@ const INSPECTION_LAYER_PRIORITY = [
   'gps-vectors-head',
   'gps-vectors-line',
   'tectonic-plates-line',
-  SIM_LAYERS.SOIL_AMP,
   SIM_LAYERS.INTENSITY_FILL,
   SIM_LAYERS.WB_GRID_FILL,
   SIM_LAYERS.CONTOUR_FILL,
@@ -225,7 +224,7 @@ registerInspector({
 
 registerInspector({
   id: 'hazardZone',
-  layerIds: [SIM_LAYERS.WB_GRID_FILL, SIM_LAYERS.CONTOUR_FILL, SIM_LAYERS.SOIL_AMP, SIM_LAYERS.INTENSITY_FILL],
+  layerIds: [SIM_LAYERS.WB_GRID_FILL, SIM_LAYERS.CONTOUR_FILL, SIM_LAYERS.INTENSITY_FILL],
   inspect: (feature) => {
     const props = feature.properties || {};
     if (feature.layer?.id === SIM_LAYERS.INTENSITY_FILL) {
@@ -264,7 +263,6 @@ registerInspector({
             { label: 'MMI', value: props.mmi ? formatNumber(props.mmi, 2) : null },
             { label: 'Local PGA', value: localPga ? `${formatNumber(localPga, 4)}g` : null },
             { label: 'Base PGA', value: props.pga_base ? `${formatNumber(props.pga_base, 4)}g` : null },
-            { label: 'Site class', value: props.site_class },
             { label: 'Population', value: props.population ? formatNumber(props.population, 0) : null },
           ]),
         },

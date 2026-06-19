@@ -10,14 +10,12 @@ import MapView from '../components/MapView';
 import MapLegend from '../components/MapLegend';
 import ControlPanel from '../components/ControlPanel';
 import InfoPanel from '../components/InfoPanel';
-import StateAnalysisPanel from '../components/StateAnalysisPanel';
 import UploadProgressManager from '../components/UploadProgressManager';
 import AlertBanner from '../components/AlertBanner';
+import AdminMapToolbar from '../components/AdminMapToolbar';
+import MapLayersControl from '../components/MapLayersControl';
 import { DisastersPanel } from '../panels/DisastersPanel';
-import { LayersPanel } from '../panels/LayersPanel';
 import { AlertsPanel } from '../panels/AlertsPanel';
-import RightSidebar from '../components/RightSidebar';
-import RightControlPanel from '../components/RightControlPanel';
 import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import LiveEventsPanel from '../panels/LiveEventsPanel';
@@ -25,14 +23,12 @@ import HistoricPanel from '../panels/HistoricPanel';
 
 const PANEL_TITLE = {
   disasters: 'DISASTERS PANEL',
-  layers:    'MAP LAYERS',
   alerts:    'ALERTS',
   historic_events: 'HISTORIC EVENTS',
 };
 
 export default function AdminDashboard() {
   const activeSection = useStore((s) => s.activeSection);
-  const activeRightSection = useStore((s) => s.activeRightSection);
 
   // Start WebSocket connection — real-time earthquake events + auto-sim results
   useWebSocket();
@@ -42,11 +38,12 @@ export default function AdminDashboard() {
       {/* Global alert banner for M≥5.0 auto-detected events */}
       <AlertBanner />
       <Navbar isAdmin={true} />
+      <AdminMapToolbar />
 
       <div className="flex-1 relative flex overflow-hidden">
         <Sidebar isAdmin={true} />
-        <RightSidebar />
         <MapView isAdmin={true} />
+        <MapLayersControl isAdmin={true} />
         <InfoPanel />
         <MapLegend />
         <UploadProgressManager />
@@ -80,29 +77,9 @@ export default function AdminDashboard() {
                   ) : (
                     <ControlPanel title={PANEL_TITLE[activeSection] ?? activeSection.toUpperCase()}>
                       {activeSection === 'disasters' && <DisastersPanel />}
-                      {activeSection === 'layers'    && <LayersPanel isAdmin={true} />}
                       {activeSection === 'alerts'    && <AlertsPanel />}
                     </ControlPanel>
                   )}
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Right Control Panels (Center aligned vertically) */}
-          <div className="flex flex-col justify-center gap-4 pointer-events-none [&>*]:pointer-events-auto h-full">
-            <AnimatePresence mode="wait">
-              {activeRightSection === 'analysis' && (
-                <motion.div
-                  key="analysis"
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className="w-[400px]"
-                >
-                  <RightControlPanel title="STATE ANALYSIS">
-                    <StateAnalysisPanel />
-                  </RightControlPanel>
                 </motion.div>
               )}
             </AnimatePresence>

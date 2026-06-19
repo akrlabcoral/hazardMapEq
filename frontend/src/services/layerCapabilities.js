@@ -7,13 +7,6 @@ export const HAZARD_LAYERS = [
     defaultWeight: 1.0
   },
   { 
-    id: 'soil', 
-    label: 'Soil Amplification', 
-    available: false, 
-    placeholder: true,
-    defaultWeight: 0.5
-  },
-  { 
     id: 'lithology', 
     label: 'Lithology Response', 
     available: false, 

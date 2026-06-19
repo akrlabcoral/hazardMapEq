@@ -7,9 +7,9 @@ import MapLegend from '../components/MapLegend';
 import ControlPanel from '../components/ControlPanel';
 import InfoPanel from '../components/InfoPanel';
 import AlertBanner from '../components/AlertBanner';
-import { LayersPanel } from '../panels/LayersPanel';
+import PublicMapToolbar from '../components/PublicMapToolbar';
+import MapLayersControl from '../components/MapLayersControl';
 import { AlertsPanel } from '../panels/AlertsPanel';
-import RightSidebar from '../components/RightSidebar';
 import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 
@@ -17,7 +17,6 @@ import LiveEventsPanel from '../panels/LiveEventsPanel';
 import HistoricPanel from '../panels/HistoricPanel';
 
 const PANEL_TITLE = {
-  layers:    'MAP LAYERS',
   alerts:    'ALERTS',
 };
 
@@ -29,7 +28,7 @@ export default function PublicDashboard() {
   useEffect(() => {
     // Read fresh state to avoid closure staleness in StrictMode
     const current = useStore.getState().activeSection;
-    if (!current || current === 'disasters') {
+    if (!current || current === 'disasters' || current === 'layers') {
       forceActiveSection('live_events');
     }
   }, [forceActiveSection]);
@@ -42,11 +41,12 @@ export default function PublicDashboard() {
       {/* Global alert banner for M≥5.0 auto-detected events */}
       <AlertBanner />
       <Navbar isAdmin={false} />
+      <PublicMapToolbar />
 
       <div className="flex-1 relative flex overflow-hidden">
         <Sidebar isAdmin={false} />
-        <RightSidebar isAdmin={false} />
         <MapView isAdmin={false} />
+        <MapLayersControl isAdmin={false} />
         <InfoPanel />
         <MapLegend />
 
@@ -79,7 +79,6 @@ export default function PublicDashboard() {
                   ) : (
                     PANEL_TITLE[activeSection] && (
                       <ControlPanel title={PANEL_TITLE[activeSection]}>
-                        {activeSection === 'layers' && <LayersPanel isAdmin={false} />}
                         {activeSection === 'alerts' && <AlertsPanel />}
                       </ControlPanel>
                     )

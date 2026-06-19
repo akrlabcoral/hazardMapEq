@@ -12,7 +12,6 @@ export const SIM_LAYERS = {
   CONTOUR_STROKE: 'sim-contour-stroke',
   SHOCKWAVE:      'sim-shockwave',
   EPICENTER:      'sim-epicenter',
-  SOIL_AMP:       'sim-soil-amp-layer',
 };
 
 export const LIVE_EARTHQUAKE_SOURCE = 'live-earthquakes-source';
@@ -31,26 +30,6 @@ export const initSimulationLayers = (mapInstance) => {
   mapLayerService.addSourceSafe(mapInstance, 'sim-shockwave-source',  { type: 'geojson', data: emptyFC });
   mapLayerService.addSourceSafe(mapInstance, 'sim-epicenter-source',  { type: 'geojson', data: emptyFC });
   mapLayerService.addSourceSafe(mapInstance, LIVE_EARTHQUAKE_SOURCE,  { type: 'geojson', data: emptyFC });
-
-  // --- Soil Amplification Choropleth (Vs30 Site Classification) ---
-  mapLayerService.addLayerSafe(mapInstance, {
-    id: SIM_LAYERS.SOIL_AMP,
-    type: 'fill',
-    source: 'sim-wb-grid-source',
-    layout: { visibility: 'none' }, // hidden until user enables toggle
-    filter: ['>', ['get', 'pga_base'], 0.001],
-    paint: {
-      'fill-color': [
-        'interpolate', ['linear'], ['get', 'soil_factor'],
-        0.80, '#1e40af',  // Site A
-        1.00, '#3b82f6',  // Site B
-        1.20, '#22c55e',  // Site C
-        1.50, '#f97316',  // Site D
-        2.00, '#ef4444',  // Site E
-      ],
-      'fill-opacity': 0.75,
-    }
-  }, SIM_LAYERS.WB_GRID_FILL);
 
   // --- Damage grid fill (normalized fused_hazard: 0.0 least damage, 1.0 most damage) ---
   mapLayerService.addLayerSafe(mapInstance, {

@@ -19,8 +19,6 @@ export const createMapSlice = (set) => ({
   historicMinMag: 4.0,
   setHistoricMinMag: (magnitude) => set({ historicMinMag: magnitude }),
 
-  soilAmpVisible: false,
-  setSoilAmpVisible: (val) => set({ soilAmpVisible: val }),
   intensityVisible: false,
   setIntensityVisible: (val) => set({ intensityVisible: val }),
 

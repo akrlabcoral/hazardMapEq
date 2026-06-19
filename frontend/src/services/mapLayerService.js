@@ -2,7 +2,6 @@ import { GPS_VECTOR_ARROW_ICON_ID, LAYER_CONFIGS, RASTER_CONFIGS } from './layer
 import { fetchGeoJson } from './geoJsonLoader';
 
 const SIMULATION_LAYER_ORDER = [
-  'sim-soil-amp-layer',
   'sim-wb-grid-fill',
   'sim-contour-fill',
   'sim-contour-stroke',
@@ -200,7 +199,7 @@ class MapLayerService {
     this.map = mapInstance;
     this.ensureLayerImages(this.map);
     
-    const BASE_LAYER_ANCHOR = 'sim-soil-amp-layer';
+    const BASE_LAYER_ANCHOR = 'sim-wb-grid-fill';
 
     for (const [key, config] of Object.entries(RASTER_CONFIGS)) {
       if (!this.map.getSource(config.sourceId)) {

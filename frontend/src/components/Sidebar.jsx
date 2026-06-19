@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Layers, Play, Menu, Radio, Archive } from 'lucide-react';
+import { AlertTriangle, Play, Menu, Radio, Archive } from 'lucide-react';
 import useStore from '../store/useStore';
 
 const navItems = [
   { id: 'disasters',   icon: Play,          label: 'Earthquake Simulation' },
-  { id: 'layers',      icon: Layers,        label: 'Map Layers'            },
   { id: 'alerts',      icon: AlertTriangle, label: 'Alerts'                },
   { id: 'live_events', icon: Radio,         label: 'Live Events'           },
   { id: 'historic_events', icon: Archive,   label: 'Historic Earthquakes'  },

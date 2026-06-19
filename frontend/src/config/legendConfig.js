@@ -37,11 +37,6 @@ export const LEGEND_ITEMS = [
     requiresRenderedFeature: true,
   },
   {
-    id: 'soilAmplification',
-    layerIds: [SIM_LAYERS.SOIL_AMP],
-    requiresRenderedFeature: true,
-  },
-  {
     id: 'landCover',
     layerIds: ['land-cover'],
     requiresRenderedFeature: false,
