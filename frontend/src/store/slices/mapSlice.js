@@ -6,9 +6,6 @@ export const createMapSlice = (set) => ({
   visibleLegendItems: [],
   setVisibleLegendItems: (visibleLegendItems) => set({ visibleLegendItems }),
 
-  selectedStateName: null,
-  setSelectedStateName: (name) => set({ selectedStateName: name }),
-  
   stateIdMapping: null,
   setStateIdMapping: (mapping) => set({ stateIdMapping: mapping }),
   

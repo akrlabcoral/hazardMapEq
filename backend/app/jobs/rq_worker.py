@@ -133,7 +133,7 @@ def run_simulation_job(event_dict: dict) -> dict:
             longitude=event_dict["longitude"],
             magnitude=event_dict["magnitude"],
             depth_km=event_dict["depth_km"],
-            gmpe_params=event_dict.get("gmpe_params") if is_manual else None,
+            gmpe_params=None,
             event_id=event_dict.get("db_id"),
             triggered_by=triggered_by
         )

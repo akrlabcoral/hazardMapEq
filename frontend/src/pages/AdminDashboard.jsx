@@ -41,30 +41,27 @@ export default function AdminDashboard() {
       <AdminMapToolbar />
 
       <div className="flex-1 relative flex overflow-hidden">
-        <Sidebar isAdmin={true} />
         <MapView isAdmin={true} />
         <MapLayersControl isAdmin={true} />
         <InfoPanel />
         <MapLegend />
         <UploadProgressManager />
 
-        {/* Main Content Overlay */}
-        <motion.div
-          className="absolute inset-0 pointer-events-none z-10 flex justify-between p-6 pl-[96px] pr-[96px]"
-          initial={{ left: 0 }}
-          animate={{ left: 0 }}
-          transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-        >
-          {/* Left Control Panels (Bottom aligned) */}
-          <div className="mt-auto flex gap-4 pointer-events-none items-end [&>*]:pointer-events-auto">
+        {/* Left Column Overlay (Sidebar + Panels) */}
+        <div className="absolute inset-y-0 left-0 pointer-events-none z-10 flex flex-col w-[480px]">
+          <div className="pointer-events-auto">
+            <Sidebar isAdmin={true} />
+          </div>
+
+          <div className="flex-1 pt-4 pb-6 pointer-events-none [&>*]:pointer-events-auto flex flex-col min-h-0">
             <AnimatePresence mode="wait">
               {activeSection && (
                 <motion.div
                   key={activeSection}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  className={activeSection === 'live_events' || activeSection === 'historic_events' ? 'w-[360px]' : 'w-[480px]'}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  exit={{ opacity: 0, x: -20 }}
+                  className={activeSection === 'disasters' ? 'w-[480px]' : activeSection === 'live_events' || activeSection === 'historic_events' ? 'w-[260px] h-full flex flex-col' : 'w-[260px]'}
                 >
                   {activeSection === 'live_events' ? (
                     <div className="h-[500px]">
@@ -84,7 +81,7 @@ export default function AdminDashboard() {
               )}
             </AnimatePresence>
           </div>
-        </motion.div>
+        </div>
       </div>
     </div>
   );

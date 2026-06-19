@@ -84,25 +84,12 @@ export function useSimulation() {
     setSimulationResults(null); // Clear previous results
 
     try {
-      const hazardLayers = state.hazardLayers;
-      const weights = {};
-      for (const [id, config] of Object.entries(hazardLayers)) {
-          if (config.active) {
-              weights[id] = config.weight;
-          }
-      }
-      
       const payload = {
         latitude: epicenter.lat,
         longitude: epicenter.lng,
         magnitude: magnitude,
         depth: depth,
-        weights: weights,
       };
-
-      if (state.useCustomGmpe) {
-        payload.gmpe_params = state.gmpeParams;
-      }
       
       const response = await fetch('/scientific-api/simulate-earthquake', {
         method: 'POST',

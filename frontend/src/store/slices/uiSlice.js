@@ -1,7 +1,4 @@
 export const createUiSlice = (set) => ({
-  isSidebarOpen: false,
-  toggleSidebar: () => set((state) => ({ isSidebarOpen: !state.isSidebarOpen })),
-  
   activeSection: null,
   setActiveSection: (section) => set((state) => ({ activeSection: state.activeSection === section ? null : section })),
   forceActiveSection: (section) => set({ activeSection: section }),

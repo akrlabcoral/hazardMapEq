@@ -280,7 +280,6 @@ export default function MapView({ isAdmin = false }) {
   const earthquakeEpicenter    = useStore((state) => state.earthquakeEpicenter);
   const setEarthquakeEpicenter = useStore((state) => state.setEarthquakeEpicenter);
   const setIsSimulationRunning = useStore((state) => state.setIsSimulationRunning);
-  const selectedStateName      = useStore((state) => state.selectedStateName);
   
   const gisLayers      = useStore((state) => state.gisLayers);
   const intensityVisible = useStore((state) => state.intensityVisible);
@@ -580,19 +579,6 @@ export default function MapView({ isAdmin = false }) {
     refreshVisibleLegendItems(map.current);
   }, [intensityVisible, simulationResults]);
 
-  // Sync state isolation filter
-  useEffect(() => {
-    if (!map.current || !map.current.getStyle()) return;
-    const filter = selectedStateName ? ['==', ['get', 'state'], selectedStateName] : null;
-    
-    if (mapLayerService.layerExists(map.current, SIM_LAYERS.WB_GRID_FILL)) {
-      map.current.setFilter(SIM_LAYERS.WB_GRID_FILL, filter);
-    }
-    if (mapLayerService.layerExists(map.current, SIM_LAYERS.CONTOUR_FILL)) {
-      map.current.setFilter(SIM_LAYERS.CONTOUR_FILL, filter);
-    }
-    refreshVisibleLegendItems(map.current);
-  }, [selectedStateName]);
 
   // Render simulation results and trigger shockwave
   useEffect(() => {

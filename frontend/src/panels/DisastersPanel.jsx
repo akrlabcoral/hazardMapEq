@@ -7,9 +7,6 @@ import useStore from '../store/useStore';
 import { useSimulation } from '../hooks/useSimulation';
 import { EpicenterControl } from './disasters/EpicenterControl';
 import { MagnitudeDepthRow } from './disasters/MagnitudeDepthRow';
-import { GmpeParamsGrid } from './disasters/GmpeParamsGrid';
-import { HazardModules } from './disasters/HazardModules';
-import { StateFilter } from './disasters/StateFilter';
 
 export function DisastersPanel() {
   const { earthquakeEpicenter, isSimulationRunning, clearSimulationState } = useStore(
@@ -49,9 +46,6 @@ export function DisastersPanel() {
 
       <EpicenterControl />
       <MagnitudeDepthRow />
-      <GmpeParamsGrid />
-      <StateFilter />
-      <HazardModules />
     </div>
   );
 }

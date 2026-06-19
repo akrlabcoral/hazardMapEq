@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { AlertTriangle, Play, Menu, Radio, Archive } from 'lucide-react';
+import React from 'react';
+import { AlertTriangle, Play, Radio, Archive } from 'lucide-react';
 import useStore from '../store/useStore';
 
 const navItems = [
@@ -13,40 +12,12 @@ const navItems = [
 export default function Sidebar({ isAdmin = false }) {
   const visibleNavItems = navItems.filter(item => isAdmin || item.id !== 'disasters');
 
-  const isSidebarOpen = useStore((state) => state.isSidebarOpen);
-  const toggleSidebar = useStore((state) => state.toggleSidebar);
   const activeSection = useStore((state) => state.activeSection);
   const setActiveSection = useStore((state) => state.setActiveSection);
 
-  const [isHovered, setIsHovered] = useState(false);
-  const isExpanded = isSidebarOpen || isHovered;
-
   return (
-    <motion.aside
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-      initial={false}
-      animate={{ width: isExpanded ? 260 : 72 }}
-      transition={{ type: 'spring', stiffness: 300, damping: 30 }}
-      className="absolute top-0 left-0 bottom-0 glass-panel z-50 border-t-0 border-l-0 flex flex-col overflow-visible"
-    >
-      <div className="p-3 flex items-center border-b border-slate-800/80 bg-slate-900/50">
-        
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              initial={{ opacity: 0, x: -10 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -10 }}
-              className="ml-2 font-bold text-slate-200 tracking-wider whitespace-nowrap overflow-hidden"
-            >
-              
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <div className="p-3 flex-1 overflow-y-auto space-y-1 overflow-x-hidden">
+    <aside className="glass-panel z-50 border-t-0 border-l-0 flex flex-col shrink-0 w-[260px] rounded-br-2xl shadow-xl relative">
+      <div className="p-3 overflow-y-auto space-y-1 overflow-x-hidden mt-4">
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeSection === item.id;
@@ -68,58 +39,14 @@ export default function Sidebar({ isAdmin = false }) {
                   <Icon className={`w-5 h-5 ${isActive ? 'text-white' : ''}`} strokeWidth={2} />
                 </div>
                 
-                <AnimatePresence>
-                  {isExpanded && (
-                    <motion.div
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      className="ml-2 font-medium tracking-wide text-left overflow-hidden whitespace-nowrap"
-                    >
-                      {item.label}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </button>
-
-              {/* Tooltip for collapsed state */}
-              {!isExpanded && (
-                <div className="absolute left-[80px] top-1/2 -translate-y-1/2 px-3 py-1.5 bg-slate-800 text-slate-200 text-xs font-semibold rounded shadow-lg border border-slate-700 opacity-0 group-hover/navitem:opacity-100 pointer-events-none transition-opacity duration-200 z-50 whitespace-nowrap">
+                <div className="ml-2 font-medium tracking-wide text-left overflow-hidden whitespace-nowrap">
                   {item.label}
-                  <div className="absolute top-1/2 -left-1 -translate-y-1/2 border-t-4 border-b-4 border-r-4 border-t-transparent border-b-transparent border-r-slate-800"></div>
                 </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="p-3 border-t border-slate-800/80 bg-slate-900/50 relative overflow-hidden">
-        <div className="absolute top-0 left-3 right-3 h-[1px] bg-gradient-to-r from-transparent via-cyan/30 to-transparent" />
-        <AnimatePresence mode="wait">
-          {isExpanded ? (
-            <motion.div
-              key="expanded-footer"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-xs text-slate-500 text-center whitespace-nowrap"
-            >
-              HazardMap
-            </motion.div>
-          ) : (
-            <motion.div
-              key="collapsed-footer"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="text-[10px] text-slate-500 text-center font-mono whitespace-nowrap"
-            >
-              HM
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-    </motion.aside>
-  );
+  </button>
+</div>
+);
+})}
+</div>
+</aside>
+);
 }

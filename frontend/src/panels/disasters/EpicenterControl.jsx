@@ -1,7 +1,7 @@
 // src/panels/disasters/EpicenterControl.jsx
 // Epicenter section: lat/lng display, manual inputs, and Drop Pin button
 
-import { useCallback, useEffect } from 'react';
+import { useCallback } from 'react';
 import { useEarthquakeState } from '../../hooks/useEarthquakeState';
 
 const formatCoords = (epicenter) => {
@@ -10,37 +10,7 @@ const formatCoords = (epicenter) => {
 };
 
 export function EpicenterControl() {
-  const { epicenter, setEpicenter, isPlacing, setIsPlacing, epicenterRegion, setEpicenterRegion } = useEarthquakeState();
-
-  useEffect(() => {
-    if (!epicenter) {
-      setEpicenterRegion(null);
-      return;
-    }
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      fetch(`/scientific-api/region?lat=${epicenter.lat}&lon=${epicenter.lng}`, {
-        signal: controller.signal,
-      })
-        .then(res => {
-          if (!res.ok) throw new Error(`Region request failed: ${res.status}`);
-          return res.json();
-        })
-        .then(data => setEpicenterRegion(data.region))
-        .catch(err => {
-          if (err.name !== 'AbortError') {
-            console.error("Failed to fetch region:", err);
-          }
-        });
-    }, 300);
-
-    return () => {
-      clearTimeout(timeoutId);
-      controller.abort();
-    };
-      
-  }, [epicenter, setEpicenterRegion]);
+  const { epicenter, setEpicenter, isPlacing, setIsPlacing } = useEarthquakeState();
 
   const handleLatChange = useCallback((e) => {
     const val = parseFloat(e.target.value);
@@ -57,11 +27,6 @@ export function EpicenterControl() {
       <div className="flex justify-between items-center">
         <span className="font-semibold text-slate-100">Earthquake Epicenter</span>
         <div className="flex gap-2">
-          {epicenterRegion && (
-            <span className="text-[10px] px-2 py-1 rounded bg-cyan-900/40 text-white border border-cyan-700/50">
-              {epicenterRegion}
-            </span>
-          )}
           <span className={`text-xs px-2 py-1 rounded border ${epicenter ? 'bg-red-900/30 text-red-400 border-red-500/30' : 'bg-slate-700 text-slate-300 border-slate-500'}`}>
             {epicenter ? 'ACTIVE' : 'WAITING'}
           </span>

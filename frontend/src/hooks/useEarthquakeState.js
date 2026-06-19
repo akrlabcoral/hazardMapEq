@@ -15,11 +15,5 @@ export function useEarthquakeState() {
     setDepth:       s.setEarthquakeDepth,
     isPlacing:      s.isPlacingEpicenter,
     setIsPlacing:   s.setIsPlacingEpicenter,
-    gmpeParams:     s.gmpeParams,
-    updateGmpeParam: s.updateGmpeParam,
-    useCustomGmpe:   s.useCustomGmpe,
-    setUseCustomGmpe: s.setUseCustomGmpe,
-    epicenterRegion:  s.epicenterRegion,
-    setEpicenterRegion: s.setEpicenterRegion,
   })));
 }

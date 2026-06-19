@@ -38,7 +38,6 @@ async def simulate_earthquake(params: EarthquakeInput):
             longitude=params.longitude,
             magnitude=params.magnitude,
             depth_km=params.depth,
-            gmpe_params=params.gmpe_params,
         )
         return {
             "status": "accepted",

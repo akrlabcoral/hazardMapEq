@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useStore from '../store/useStore';
 
 export default function Navbar({ isAdmin = true }) {
-  const toggleSidebar  = useStore((state) => state.toggleSidebar);
   const mapStyle       = useStore((state) => state.mapStyle);
   const toggleMapStyle = useStore((state) => state.toggleMapStyle);
   const activeAlert    = useStore((state) => state.activeAlert);
@@ -17,12 +16,6 @@ export default function Navbar({ isAdmin = true }) {
   return (
     <nav className="h-16 glass-panel flex items-center justify-between px-6 z-50 relative border-b-0">
       <div className="flex items-center gap-4">
-        <button 
-          onClick={toggleSidebar}
-          className="p-2 hover:bg-slate-800 rounded-lg transition-colors cursor-pointer"
-        >
-          <Menu className="w-6 h-6 neon-text" />
-        </button>
         <div className="flex items-center gap-2">
           <Earth className="w-6 h-6 text-white" />
           <h1 className="text-xl font-bold tracking-wider neon-text" >HazardMap</h1>

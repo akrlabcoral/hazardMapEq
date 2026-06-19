@@ -84,7 +84,6 @@ class SimulationQueue:
         longitude: float,
         magnitude: float,
         depth_km: float,
-        gmpe_params: dict | None = None,
     ) -> str:
         if not redis_manager._is_connected:
             raise asyncio.QueueFull("Redis is unavailable; manual simulation job was not queued.")
@@ -97,7 +96,6 @@ class SimulationQueue:
             "longitude": longitude,
             "magnitude": magnitude,
             "depth_km": depth_km,
-            "gmpe_params": gmpe_params,
             "source_id": request_id,
             "source": "manual",
             "enqueued_at": time.time(),

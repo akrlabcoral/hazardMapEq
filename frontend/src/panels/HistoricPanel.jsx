@@ -113,7 +113,7 @@ export default function HistoricPanel() {
   const displayFeatures = filteredFeatures.slice(0, 100);
 
   return (
-    <div className="glass-card flex flex-col h-full font-sans overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.4)] w-[360px]">
+    <div className="glass-card flex flex-col h-full font-sans overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.4)] ">
       {/* Header */}
       <div className="relative flex items-center justify-between px-4 py-3 border-b border-slate-700/50 bg-slate-900/90 shrink-0">
         <div className="absolute top-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-orange-500/40 to-transparent" />
