@@ -14,7 +14,7 @@ export default function Navbar({ isAdmin = true }) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
 
   return (
-    <nav className="h-16 glass-panel flex items-center justify-between px-6 z-50 relative border-b-0">
+    <nav className="h-10 glass-panel flex items-center justify-between px-6 z-50 relative border-b-0">
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
           <Earth className="w-6 h-6 text-white" />

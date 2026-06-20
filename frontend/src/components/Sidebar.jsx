@@ -16,7 +16,7 @@ export default function Sidebar({ isAdmin = false }) {
   const setActiveSection = useStore((state) => state.setActiveSection);
 
   return (
-    <aside className="glass-panel z-50 border-t-0 border-l-0 flex flex-col shrink-0 w-[260px] rounded-br-2xl shadow-xl relative">
+    <aside className="glass-panel z-50 border-t-0 border-l-0 flex flex-col shrink-0 w-[260px] shadow-xl relative">
       <div className="p-3 overflow-y-auto space-y-1 overflow-x-hidden mt-4">
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
@@ -25,14 +25,14 @@ export default function Sidebar({ isAdmin = false }) {
             <div key={item.id} className="relative group/navitem">
               <button
                 onClick={() => setActiveSection(item.id)}
-                className={`w-full flex items-center h-12 rounded-lg transition-all duration-300 relative ${
+                className={`w-full flex items-center h-12 transition-all duration-300 relative ${
                   isActive 
                     ? 'bg-slate-700/50 text-white' 
                     : 'hover:bg-slate-800/50 text-slate-400 hover:text-slate-200'
                 }`}
               >
                 {isActive && (
-                  <div className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r bg-white" />
+                  <div className="absolute left-0 top-2 bottom-2 w-[3px] bg-white" />
                 )}
                 
                 <div className="shrink-0 flex items-center justify-center w-12 h-12">

@@ -7,7 +7,7 @@ export default function PublicMapToolbar() {
   const setIntensityVisible = useStore((state) => state.setIntensityVisible);
 
   return (
-    <div className="glass-panel relative z-40 flex h-12 items-center border-x-0 border-t border-slate-800/80 px-6">
+    <div className="glass-panel relative z-40 flex h-8 items-center border-x-0 border-t border-slate-800/80 px-6">
       <div className="absolute bottom-0 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent" />
       <button
         type="button"
