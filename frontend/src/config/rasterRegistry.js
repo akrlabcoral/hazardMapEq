@@ -15,7 +15,7 @@ export const BUILT_IN_RASTERS = [
     name: "Population Exposure (WorldPop)",
     type: "raster",
     sourceType: "geotiff",
-    url: "/rasters/ind_pd_2020_1km_3857.tif",
+    url: "/rasters/india_population_1km_3857.tif",
     visible: false,
     opacity: 0.8,
     isBuiltIn: true,

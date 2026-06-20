@@ -407,7 +407,14 @@ class RasterService {
 
     for (let i = 0; i < pixelCount; i++) {
       const v = bandR[i];
-      if (v === noDataValue || isNaN(v) || !isFinite(v) || v <= 0) {
+      if (v === noDataValue || isNaN(v) || !isFinite(v)) {
+        imageData.data[i * 4 + 3] = 0;
+      } else if (renderingMode === 'population' && v <= 0) {
+        imageData.data[i * 4] = 0;
+        imageData.data[i * 4 + 1] = 0;
+        imageData.data[i * 4 + 2] = 255;
+        imageData.data[i * 4 + 3] = 255;
+      } else if (v <= 0) {
         imageData.data[i * 4 + 3] = 0;
       } else {
         let frac = (v - min) / range;

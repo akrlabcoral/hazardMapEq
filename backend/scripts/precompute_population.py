@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Precompute population zonal stats for a grid GeoJSON.")
     parser.add_argument("--grid", type=path_arg, default=DATA_DIR / "grids" / "nationwide_20km.geojson")
-    parser.add_argument("--raster", type=path_arg, default=DATA_DIR / "population" / "ind_pd_2020_1km.tif")
+    parser.add_argument("--raster", type=path_arg, default=DATA_DIR / "population" / "india_population_1km.tif")
     parser.add_argument("--output", type=path_arg, default=DATA_DIR / "grids" / "nationwide_20km.geojson")
     add_overwrite(parser)
     return parser.parse_args()
