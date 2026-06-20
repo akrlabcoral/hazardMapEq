@@ -78,9 +78,65 @@ const formatCoordinates = (coordinates) => {
   return `${coordinates.lat.toFixed(4)}, ${coordinates.lng.toFixed(4)}`;
 };
 
+const coordinatesFromEvent = (event) => {
+  const lat = asNumber(event?.latitude ?? event?.lat);
+  const lng = asNumber(event?.longitude ?? event?.lng);
+  if (lat === null || lng === null) return null;
+  return { lat, lng };
+};
+
 const rows = (items) => items
   .filter((item) => isPresent(item.value))
   .map((item) => ({ label: item.label, value: String(item.value) }));
+
+export const buildLiveEarthquakeInfoPanel = (event) => {
+  if (!event) return null;
+  const coordinates = coordinatesFromEvent(event);
+
+  return {
+    type: 'liveEarthquake',
+    title: formatMagnitude(event.mag ?? event.magnitude),
+    subtitle: event.place || event.location || 'Live earthquake',
+    accent: '#ef4444',
+    sections: [
+      {
+        title: 'Live Earthquake',
+        rows: rows([
+          { label: 'Magnitude', value: formatMagnitude(event.mag ?? event.magnitude) },
+          { label: 'Time', value: formatDateTime(event.time ?? event.origin_time) },
+          { label: 'Depth', value: formatDepth(event.depth ?? event.depth_km) },
+          { label: 'Coordinates', value: formatCoordinates(coordinates) },
+        ]),
+      },
+    ],
+  };
+};
+
+export const buildSimulationInfoPanel = (result, epicenter, event = null) => {
+  if (!result?.grid_geojson?.type) return null;
+  const coordinates = coordinatesFromEvent(event) || epicenter;
+  const stateCount = result.state_summary ? Object.keys(result.state_summary).length : null;
+  const districtCount = result.district_summary ? Object.keys(result.district_summary).length : null;
+
+  return {
+    type: 'simulation',
+    title: 'Simulation Complete',
+    subtitle: result.triggered_by === 'manual' ? 'Manual simulation' : 'Live simulation',
+    accent: '#ef4444',
+    sections: [
+      {
+        title: 'Completed Simulation',
+        rows: rows([
+          { label: 'Magnitude', value: formatMagnitude(event?.mag ?? event?.magnitude) },
+          { label: 'Depth', value: formatDepth(event?.depth ?? event?.depth_km) },
+          { label: 'Coordinates', value: formatCoordinates(coordinates) },
+          { label: 'States', value: stateCount === null ? null : formatNumber(stateCount, 0) },
+          { label: 'Districts', value: districtCount === null ? null : formatNumber(districtCount, 0) },
+        ]),
+      },
+    ],
+  };
+};
 
 const classifyIntensity = (pgaValue) => {
   const pga = asNumber(pgaValue);

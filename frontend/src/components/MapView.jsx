@@ -24,7 +24,7 @@ import { debugLog } from '../utils/debug';
 const getStateName = (feature) => feature?.properties?.state || feature?.properties?.STATE || null;
 const mapStyleCache = new Map();
 const DEFAULT_MAP_BOUNDS = [
-  [68.7, 8.4],
+  [50.7, 8.4],
   [97.25, 37.6]
 ];
 const DEFAULT_MAP_FIT_OPTIONS = { padding: 50, duration: 800 };
@@ -271,6 +271,14 @@ const restoreSimulationAfterStyleLoad = (mapInstance) => {
   refreshVisibleLegendItems(mapInstance);
 };
 
+const restoreTsunamiWaveAfterStyleLoad = (mapInstance) => {
+  if (!mapInstance?.getStyle()) return;
+  const warningEvent = useStore.getState().activeTsunamiWarning;
+  if (warningEvent?.tsunami_warning?.is_warning) {
+    animationManager.startTsunamiWave(mapInstance, warningEvent);
+  }
+};
+
 export default function MapView({ isAdmin = false }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -285,10 +293,12 @@ export default function MapView({ isAdmin = false }) {
   const intensityVisible = useStore((state) => state.intensityVisible);
   
   const simulationResults = useStore((state) => state.simulationResults);
+  const pendingSimulationInfoPanel = useStore((state) => state.pendingSimulationInfoPanel);
   const mapStyle          = useStore((state) => state.mapStyle);
   const isPlacingEpicenter = useStore((state) => state.isPlacingEpicenter);
   const isSimulationRunning = useStore((state) => state.isSimulationRunning);
   const liveEvents = useStore((state) => state.liveEvents);
+  const activeTsunamiWarning = useStore((state) => state.activeTsunamiWarning);
 
   // Initialize simulation sources and layers on a loaded map
   const setupSimulation = useCallback((mapInstance) => {
@@ -379,6 +389,7 @@ export default function MapView({ isAdmin = false }) {
       mapLayerService.initializeSourcesAndLayers(map.current, useStore.getState().gisLayers);
       applyBoundaryTheme(map.current, useStore.getState().mapStyle);
       restoreSimulationAfterStyleLoad(map.current);
+      restoreTsunamiWaveAfterStyleLoad(map.current);
       rasterService.setMap(map.current);
       scheduleLegendRefresh();
 
@@ -479,6 +490,7 @@ export default function MapView({ isAdmin = false }) {
 
     return () => {
       animationManager.stopShockwave();
+      animationManager.stopTsunamiWave();
       if (legendRefreshFrame !== null) {
         cancelAnimationFrame(legendRefreshFrame);
       }
@@ -528,6 +540,7 @@ export default function MapView({ isAdmin = false }) {
         // Setting a new style wipes out custom layers. 
         // We must tell mapLayerService to re-initialize on the next style.load
         mapLayerService.initialized = false;
+        animationManager.stopTsunamiWave();
         
         map.current.setStyle(styleJson);
       } catch (err) {
@@ -571,6 +584,18 @@ export default function MapView({ isAdmin = false }) {
     mapLayerService.bringSimulationLayersToFront(map.current);
     refreshVisibleLegendItems(map.current);
   }, [liveEvents]);
+
+  // Loop tsunami-specific wavefronts while a confirmed tsunami warning is active.
+  useEffect(() => {
+    if (!map.current || !map.current.getStyle()) return;
+
+    if (activeTsunamiWarning?.tsunami_warning?.is_warning) {
+      animationManager.startTsunamiWave(map.current, activeTsunamiWarning);
+      mapLayerService.bringSimulationLayersToFront(map.current);
+    } else {
+      animationManager.stopTsunamiWave();
+    }
+  }, [activeTsunamiWarning]);
 
   // Switch between PGA/damage and MMI intensity heatmap modes
   useEffect(() => {
@@ -634,6 +659,12 @@ export default function MapView({ isAdmin = false }) {
         refreshVisibleLegendItems(map.current);
         debugLog('[MapView] Heatmap mode:', intensityVisible ? 'intensity' : 'pga');
 
+        const pendingInfoPanel = useStore.getState().pendingSimulationInfoPanel;
+        if (pendingInfoPanel) {
+          useStore.getState().setInfoPanel(pendingInfoPanel);
+          useStore.getState().clearPendingSimulationInfoPanel();
+        }
+
         if (simulationResults.state_summary) {
           const mapping = useStore.getState().stateIdMapping;
           if (mapping) {
@@ -695,7 +726,7 @@ export default function MapView({ isAdmin = false }) {
         clearInterval(styleWaitInterval);
       }
     };
-  }, [simulationResults, earthquakeEpicenter, intensityVisible]);
+  }, [simulationResults, pendingSimulationInfoPanel, earthquakeEpicenter, intensityVisible]);
 
   return (
     <div className="absolute inset-0 z-0">

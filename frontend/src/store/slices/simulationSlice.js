@@ -24,5 +24,6 @@ export const createSimulationSlice = (set) => ({
     simulationResults: null,
     isSimulationRunning: false,
     pendingSimulationRequestId: null,
+    pendingSimulationInfoPanel: null,
   }),
 });

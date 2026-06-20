@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import useStore from '../store/useStore';
 import { debugLog } from '../utils/debug';
+import { buildSimulationInfoPanel } from '../services/featureInspectionManager';
 
 export function useSimulation() {
   const setSimulationResults   = useStore((s) => s.setSimulationResults);
   const setIsSimulationRunning = useStore((s) => s.setIsSimulationRunning);
   const setPendingSimulationRequestId = useStore((s) => s.setPendingSimulationRequestId);
+  const setPendingSimulationInfoPanel = useStore((s) => s.setPendingSimulationInfoPanel);
   
   const [error, setError] = useState(null);
   const pollTimeoutRef = useRef(null);
@@ -49,7 +51,16 @@ export function useSimulation() {
         }
 
         if (status.status === 'completed' && status.result_json) {
+          const state = useStore.getState();
+          const epicenter = state.earthquakeEpicenter;
+          const eventContext = epicenter ? {
+            latitude: epicenter.lat,
+            longitude: epicenter.lng,
+            magnitude: state.earthquakeMagnitude,
+            depth_km: state.earthquakeDepth,
+          } : null;
           setSimulationResults(status.result_json);
+          setPendingSimulationInfoPanel(buildSimulationInfoPanel(status.result_json, epicenter, eventContext));
           setIsSimulationRunning(false);
           setPendingSimulationRequestId(null);
           return;
@@ -68,7 +79,7 @@ export function useSimulation() {
     };
 
     pollTimeoutRef.current = setTimeout(poll, 500);
-  }, [setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId, stopPolling]);
+  }, [setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId, setPendingSimulationInfoPanel, stopPolling]);
 
   const handleRunSimulation = useCallback(async () => {
     const state = useStore.getState();
@@ -82,6 +93,7 @@ export function useSimulation() {
     setIsSimulationRunning(true);
     setError(null);
     setSimulationResults(null); // Clear previous results
+    setPendingSimulationInfoPanel(null);
 
     try {
       const payload = {
@@ -110,6 +122,12 @@ export function useSimulation() {
         pollSimulationStatus(result.request_id);
       } else {
         setSimulationResults(result);
+        setPendingSimulationInfoPanel(buildSimulationInfoPanel(result, epicenter, {
+          latitude: epicenter.lat,
+          longitude: epicenter.lng,
+          magnitude,
+          depth_km: depth,
+        }));
         setIsSimulationRunning(false);
       }
       
@@ -118,7 +136,7 @@ export function useSimulation() {
       setError(err.message);
       setIsSimulationRunning(false);
     }
-  }, [setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId, pollSimulationStatus, stopPolling]);
+  }, [setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId, setPendingSimulationInfoPanel, pollSimulationStatus, stopPolling]);
 
   useEffect(() => stopPolling, [stopPolling]);
 

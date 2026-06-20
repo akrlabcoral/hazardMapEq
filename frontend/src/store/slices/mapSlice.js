@@ -2,6 +2,9 @@ export const createMapSlice = (set) => ({
   infoPanel: null,
   setInfoPanel: (infoPanel) => set({ infoPanel }),
   clearInfoPanel: () => set({ infoPanel: null }),
+  pendingSimulationInfoPanel: null,
+  setPendingSimulationInfoPanel: (infoPanel) => set({ pendingSimulationInfoPanel: infoPanel }),
+  clearPendingSimulationInfoPanel: () => set({ pendingSimulationInfoPanel: null }),
 
   visibleLegendItems: [],
   setVisibleLegendItems: (visibleLegendItems) => set({ visibleLegendItems }),
@@ -19,6 +22,6 @@ export const createMapSlice = (set) => ({
   intensityVisible: false,
   setIntensityVisible: (val) => set({ intensityVisible: val }),
 
-  mapViewport: { longitude: 78.96, latitude: 25.59, zoom: 9 },
+  mapViewport: { longitude: 77.96, latitude: 25.59, zoom: 9 },
   setMapViewport: (viewport) => set({ mapViewport: viewport }),
 });

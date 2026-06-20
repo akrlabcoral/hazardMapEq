@@ -1,4 +1,4 @@
-import { GPS_VECTOR_ARROW_ICON_ID, LAYER_CONFIGS, RASTER_CONFIGS } from './layerManager';
+import { GPS_VECTOR_ARROW_ICON_ID, GPS_VECTOR_COLOR, LAYER_CONFIGS, RASTER_CONFIGS } from './layerManager';
 import { fetchGeoJson } from './geoJsonLoader';
 
 const SIMULATION_LAYER_ORDER = [
@@ -7,6 +7,9 @@ const SIMULATION_LAYER_ORDER = [
   'sim-contour-stroke',
   'sim-intensity-fill',
   'sim-shockwave',
+  'tsunami-wavefront-glow',
+  'tsunami-wavefront-lines',
+  'tsunami-wavefront-labels',
   'sim-epicenter-glow',
   'sim-epicenter-ring',
   'sim-epicenter',
@@ -34,7 +37,7 @@ const createGpsVectorArrowImage = () => {
   ctx.lineTo(16, 19);
   ctx.lineTo(5, 24);
   ctx.closePath();
-  ctx.fillStyle = '#ef4444';
+  ctx.fillStyle = GPS_VECTOR_COLOR;
   ctx.strokeStyle = '#0f172a';
   ctx.lineWidth = 2.5;
   ctx.stroke();
@@ -166,13 +169,14 @@ class MapLayerService {
 
     this.dataLoaded[config.sourceId] = 'loading';
     this.dataPromises[cacheKey] = fetchGeoJson(dataUrl, fetchOptions).then(data => {
-      this.dataCache[cacheKey] = data;
-      this.dataCache[config.sourceId] = data;
+      const sourceData = typeof config.transformData === 'function' ? config.transformData(data) : data;
+      this.dataCache[cacheKey] = sourceData;
+      this.dataCache[config.sourceId] = sourceData;
       if (this.map && this.map.getSource(config.sourceId)) {
-        this.map.getSource(config.sourceId).setData(data);
+        this.map.getSource(config.sourceId).setData(sourceData);
       }
       this.dataLoaded[config.sourceId] = 'loaded';
-      return data;
+      return sourceData;
     }).catch(err => {
       if (err.name !== 'AbortError') {
         console.error(`Failed to lazy load ${config.sourceId}`, err);

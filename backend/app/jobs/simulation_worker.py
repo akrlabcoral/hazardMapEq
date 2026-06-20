@@ -117,7 +117,6 @@ class SimulationRunner:
         longitude: float,
         magnitude: float,
         depth_km: float,
-        gmpe_params: dict | None = None,
         event_id: int | None = None,
         triggered_by: str = "manual",
     ) -> dict:
@@ -126,7 +125,6 @@ class SimulationRunner:
             longitude=longitude,
             magnitude=magnitude,
             depth_km=depth_km,
-            gmpe_params=gmpe_params,
             event_id=event_id,
             triggered_by=triggered_by,
         )
@@ -197,13 +195,12 @@ class SimulationRunner:
         longitude: float,
         magnitude: float,
         depth_km: float,
-        gmpe_params: dict | None = None,
         event_id: int | None = None,
         triggered_by: str = "manual",
     ) -> dict:
         total_started = time.perf_counter()
         t_region = time.perf_counter()
-        gmpe, region = GMPESelector.select(latitude, longitude, gmpe_params)
+        gmpe, region = GMPESelector.select(latitude, longitude)
         region_ms = (time.perf_counter() - t_region) * 1000
 
         t_clone = time.perf_counter()

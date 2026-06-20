@@ -36,13 +36,8 @@ def test_simulation_runner_response_shape(monkeypatch):
     monkeypatch.setattr(simulation_worker, "save_simulation", lambda **kwargs: 123)
     monkeypatch.setattr(
         simulation_worker,
-        "generate_contour_geojson",
-        lambda features, raw_pga: {"type": "FeatureCollection", "features": []},
-    )
-    monkeypatch.setattr(
-        simulation_worker,
-        "generate_intensity_contour_geojson",
-        lambda features, mmi_values: {"type": "FeatureCollection", "features": []},
+        "generate_both_contours",
+        lambda features, pga_values, mmi_values: ({"type": "FeatureCollection", "features": []}, {"type": "FeatureCollection", "features": []}),
     )
 
     result = SimulationRunner(context).run_simulation(

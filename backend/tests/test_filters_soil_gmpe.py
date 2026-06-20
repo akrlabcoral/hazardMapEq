@@ -6,7 +6,7 @@ import pytest
 
 from app.ingest.filter import is_relevant
 from app.ingest.normalizer import EarthquakeEvent
-from app.layers.pga.gmpe import CustomOverrideGMPE
+from app.layers.pga.gmpe import HimalayanGMPE
 from app.layers.pga.selector import GMPESelector
 from app.soil.amplification import get_amplification_batch, get_amplification_factor
 from app.soil.site_class import get_site_class, get_site_classes_batch
@@ -35,9 +35,9 @@ def test_relevance_filter_rejects_deep_events():
     assert is_relevant(_event(depth_km=301)) is False
 
 
-def test_custom_gmpe_override_is_preserved():
-    gmpe, _region = GMPESelector.select(28.6, 77.2, {"c1": 1.0})
-    assert isinstance(gmpe, CustomOverrideGMPE)
+def test_gmpe_selector_uses_regional_model():
+    gmpe, _region = GMPESelector.select(28.6, 77.2)
+    assert isinstance(gmpe, HimalayanGMPE)
 
 
 def test_soil_class_and_amplification_batch():

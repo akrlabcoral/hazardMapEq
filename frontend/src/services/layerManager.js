@@ -1,6 +1,61 @@
 // Static layer configurations for MapLibre
 
 export const GPS_VECTOR_ARROW_ICON_ID = 'gps-vector-arrow-icon';
+export const GPS_VECTOR_COLOR = '#3b82f6';
+const GPS_VECTOR_LENGTH_SCALE = 4;
+
+const scaleGpsVectorData = (data) => {
+  if (!data?.features) return data;
+
+  const scaledVectorEnds = new Map();
+  const features = data.features.map((feature) => {
+    if (feature?.properties?.type !== 'vector' || feature.geometry?.type !== 'LineString') {
+      return feature;
+    }
+
+    const coordinates = feature.geometry.coordinates;
+    const start = coordinates?.[0];
+    const end = coordinates?.[coordinates.length - 1];
+    if (!start || !end) return feature;
+
+    const scaledEnd = [
+      start[0] + (end[0] - start[0]) * GPS_VECTOR_LENGTH_SCALE,
+      start[1] + (end[1] - start[1]) * GPS_VECTOR_LENGTH_SCALE,
+    ];
+    const station = feature.properties?.station;
+    if (station) {
+      scaledVectorEnds.set(station, scaledEnd);
+    }
+
+    return {
+      ...feature,
+      geometry: {
+        ...feature.geometry,
+        coordinates: [start, scaledEnd],
+      },
+    };
+  });
+
+  return {
+    ...data,
+    features: features.map((feature) => {
+      if (feature?.properties?.type !== 'head' || feature.geometry?.type !== 'Point') {
+        return feature;
+      }
+
+      const scaledEnd = scaledVectorEnds.get(feature.properties?.station);
+      if (!scaledEnd) return feature;
+
+      return {
+        ...feature,
+        geometry: {
+          ...feature.geometry,
+          coordinates: scaledEnd,
+        },
+      };
+    }),
+  };
+};
 
 export const LAYER_CONFIGS = {
   indiaBoundary: {
@@ -115,6 +170,7 @@ export const LAYER_CONFIGS = {
     sourceId: 'gps-vectors-source',
     dataUrl: 'gps_vectors.geojson',
     lazy: true,
+    transformData: scaleGpsVectorData,
     layers: [
       {
         id: 'gps-vectors-circle',
@@ -123,7 +179,7 @@ export const LAYER_CONFIGS = {
         filter: ['==', 'type', 'anchor'],
         paint: {
           'circle-radius': 3,
-          'circle-color': '#ef4444',
+          'circle-color': GPS_VECTOR_COLOR,
           'circle-stroke-color': '#000000',
           'circle-stroke-width': 1
         }
@@ -134,7 +190,7 @@ export const LAYER_CONFIGS = {
         source: 'gps-vectors-source',
         filter: ['==', 'type', 'vector'],
         paint: {
-          'line-color': '#ef4444',
+          'line-color': GPS_VECTOR_COLOR,
           'line-width': 1.0,
           'line-opacity': 0.9
         }

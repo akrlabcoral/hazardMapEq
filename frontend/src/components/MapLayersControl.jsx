@@ -35,7 +35,7 @@ export default function MapLayersControl({ isAdmin = true }) {
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className={`flex h-10 w-10 items-center justify-center square-full border border-slate-700/60 bg-slate-900/80 text-slate-300 shadow-lg backdrop-blur-md transition-colors hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300 ${
+        className={`flex h-10 w-10 items-center justify-center rounded-full border border-slate-700/60 bg-slate-900/80 text-slate-300 shadow-lg backdrop-blur-md transition-colors hover:bg-slate-800 hover:text-white focus:outline-none focus:ring-2 focus:ring-cyan-300 ${
           isOpen ? 'bg-slate-700/80 text-white' : ''
         }`}
         aria-label="Map layers"

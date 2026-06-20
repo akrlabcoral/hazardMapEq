@@ -9,6 +9,7 @@ from app.ingest.filter import is_relevant
 from app.ingest.normalizer import EarthquakeEvent, event_to_payload
 from app.models.repository import save_earthquake_event
 from app.models.historic_repository import save_historic_event
+from app.services.tsunami_warning import classify_tsunami_warning
 
 logger = logging.getLogger("hazardmap.ingest.processor")
 
@@ -29,6 +30,7 @@ async def process_event(
     relevant = is_relevant(event)
     payload = event_to_payload(event)
     payload["is_relevant"] = relevant
+    payload["tsunami_warning"] = classify_tsunami_warning(event)
 
     await broadcast({
         "type": "earthquake_detected",

@@ -80,8 +80,8 @@ export default function MapLegend() {
 
         {show('liveEarthquakes') && (
           <div className="flex items-center gap-2.5 mt-1.5">
-            <div className="w-3.5 h-3.5 rounded-full bg-red-500 border border-white/80 flex-shrink-0 shadow-[0_0_6px_rgba(239,68,68,0.5)]"></div>
-            <span className="text-slate-400">Live earthquakes</span>
+            <Star className="w-4 h-4 fill-red-600 text-white stroke-[1.5px]" style={{ filter: 'drop-shadow(0 0 4px rgb(255, 0, 0))' }} />
+            <span className="text-white">Live earthquakes</span>
           </div>
         )}
 
@@ -97,12 +97,12 @@ export default function MapLegend() {
           <div className="mt-3 pt-3 border-t border-slate-700/40">
             <div className="text-[10px] text-white uppercase tracking-wider mb-2">GPS Velocity Vectors</div>
             <div className="flex items-center gap-2.5 mt-1.5">
-              <div className="w-3 h-3 rounded-full bg-red-500 border border-black flex-shrink-0"></div>
+              <div className="w-3 h-3 rounded-full bg-blue-500 border border-black flex-shrink-0"></div>
               <span className="text-white">GPS Station (Anchor Point)</span>
             </div>
             <div className="flex items-center gap-2.5 mt-1.5">
-              <div className="w-6 h-0.5 bg-red-500 ml-[-6px] mr-1 flex-shrink-0 relative">
-                <Navigation className="absolute right-[-7px] top-1/2 h-3 w-3 -translate-y-1/2 rotate-90 fill-red-500 text-red-500" />
+              <div className="w-6 h-0.5 bg-blue-500 ml-[-6px] mr-1 flex-shrink-0 relative">
+                <Navigation className="absolute right-[-7px] top-1/2 h-3 w-3 -translate-y-1/2 rotate-90 fill-blue-500 text-blue-500" />
               </div>
               <span className="text-white text-[10px] leading-tight">Line length ∝ Velocity<br/>Arrow indicates drift direction</span>
             </div>

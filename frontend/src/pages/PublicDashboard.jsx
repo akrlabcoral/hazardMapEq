@@ -31,6 +31,13 @@ export default function PublicDashboard() {
     if (!current || current === 'disasters' || current === 'layers') {
       forceActiveSection('live_events');
     }
+    useStore.setState((state) => ({
+      gisLayers: {
+        ...state.gisLayers,
+        satellite: true,
+        gpsVectors: true,
+      },
+    }));
   }, [forceActiveSection]);
 
   // Start WebSocket connection — real-time earthquake events + auto-sim results
@@ -55,7 +62,7 @@ export default function PublicDashboard() {
             <Sidebar isAdmin={false} />
           </div>
 
-          <div className="flex-1 pt-4 pb-6 pointer-events-none [&>*]:pointer-events-auto flex flex-col min-h-0">
+          <div className="flex-1 pt-0 pb-0 pointer-events-none [&>*]:pointer-events-auto flex flex-col min-h-0">
             <AnimatePresence mode="wait">
               {activeSection && (
                 <motion.div
@@ -66,11 +73,11 @@ export default function PublicDashboard() {
                   className="w-[260px] h-full flex flex-col"
                 >
                   {activeSection === 'live_events' ? (
-                    <div className="h-[500px]">
+                    <div className="min-h-0 flex-1">
                       <LiveEventsPanel />
                     </div>
                   ) : activeSection === 'historic_events' ? (
-                    <div className="h-[500px]">
+                    <div className="min-h-0 flex-1">
                       <HistoricPanel />
                     </div>
                   ) : (

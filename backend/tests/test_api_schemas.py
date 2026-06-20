@@ -17,18 +17,12 @@ def _valid_payload(**overrides):
     return payload
 
 
-def test_earthquake_input_accepts_known_gmpe_params():
-    params = EarthquakeInput(**_valid_payload(gmpe_params={"c1": 1.35, "c2": 0.5, "c3": 0.0, "c4": -0.005, "C": 1.0}))
+def test_earthquake_input_accepts_valid_payload():
+    params = EarthquakeInput(**_valid_payload())
 
-    assert params.gmpe_params["c1"] == 1.35
+    assert params.magnitude == 5.0
 
 
-def test_earthquake_input_rejects_unknown_or_unbounded_gmpe_params():
+def test_earthquake_input_rejects_removed_gmpe_params():
     with pytest.raises(ValidationError):
-        EarthquakeInput(**_valid_payload(gmpe_params={"bad": 1.0}))
-
-    with pytest.raises(ValidationError):
-        EarthquakeInput(**_valid_payload(gmpe_params={"c1": float("inf")}))
-
-    with pytest.raises(ValidationError):
-        EarthquakeInput(**_valid_payload(gmpe_params={"c1": 1001.0}))
+        EarthquakeInput(**_valid_payload(gmpe_params={"c1": 1.35}))

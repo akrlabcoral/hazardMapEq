@@ -13,7 +13,6 @@ __all__ = [
     "HimalayanGMPE",
     "NortheastGMPE",
     "PeninsularGMPE",
-    "CustomOverrideGMPE",
 ]
 
 
@@ -88,16 +87,3 @@ class PeninsularGMPE(GenericLogPolynomialGMPE):
         # Example tuned parameters
         super().__init__(c1=1.30, c2=0.45, c3=0.0, c4=-0.003, C=0.95)
 
-
-class CustomOverrideGMPE(GenericLogPolynomialGMPE):
-    """
-    Fallback GMPE for when the user provides custom gmpe_params in the API.
-    """
-    def __init__(self, params: dict):
-        super().__init__(
-            c1=params.get("c1", 1.35),
-            c2=params.get("c2", 0.5),
-            c3=params.get("c3", 0.0),
-            c4=params.get("c4", -0.005),
-            C=params.get("C", 1.0)
-        )
