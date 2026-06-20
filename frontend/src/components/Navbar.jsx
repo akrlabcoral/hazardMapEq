@@ -64,7 +64,7 @@ export default function Navbar({ isAdmin = true }) {
                   className="absolute right-0 mt-2 w-80 bg-slate-900 border border-slate-700/80 rounded-xl shadow-2xl z-50 overflow-hidden backdrop-blur-md"
                 >
                   {(() => {
-                    const relevantEvents = liveEvents.filter(e => e.is_relevant || e.tsunami_warning?.is_warning);
+                    const relevantEvents = liveEvents.filter(e => e.is_relevant);
                     return (
                       <>
                         <div className="px-4 py-3 border-b border-slate-700/50 bg-slate-800/40 flex justify-between items-center">
@@ -85,7 +85,6 @@ export default function Navbar({ isAdmin = true }) {
                             <div className="flex flex-col">
                               {relevantEvents.slice(0, 5).map((event) => {
                           const mag = event.magnitude ?? 0;
-                          const isTsunami = Boolean(event.tsunami_warning?.is_warning);
                           const isMajor = mag >= 5.0;
                           
                           return (
@@ -98,15 +97,15 @@ export default function Navbar({ isAdmin = true }) {
                               }}
                             >
                               <div className="flex items-center justify-between">
-                                <span className={`font-bold text-sm ${isTsunami ? 'text-sky-400' : isMajor ? 'text-red-400' : 'text-orange-400'}`}>
-                                  {isTsunami ? 'TSUNAMI' : `M ${mag.toFixed(1)}`}
+                                <span className={`font-bold text-sm ${isMajor ? 'text-red-400' : 'text-orange-400'}`}>
+                                  M {mag.toFixed(1)}
                                 </span>
                                 <span className="text-xs text-slate-500">
                                   {event.time ? new Date(event.time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now'}
                                 </span>
                               </div>
                               <span className="text-xs text-slate-300 truncate" title={event.place}>
-                                {isTsunami ? `M ${mag.toFixed(1)} — ${event.place || 'Bay of Bengal'}` : event.place || 'Unknown location'}
+                                {event.place || 'Unknown location'}
                               </span>
                             </button>
                           );

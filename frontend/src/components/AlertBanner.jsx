@@ -23,14 +23,10 @@ export default function AlertBanner() {
   if (!activeAlert) return null;
 
   const mag = activeAlert.magnitude;
-  const tsunamiWarning = activeAlert.tsunami_warning;
-  const isTsunami = Boolean(tsunamiWarning?.is_warning);
   const isExtreme = mag >= 6.0;
-  const bannerBackground = isTsunami
-    ? 'linear-gradient(135deg, #0f172a, #0369a1)'
-    : isExtreme
-      ? 'linear-gradient(135deg, #7f1d1d, #dc2626)'
-      : 'linear-gradient(135deg, #78350f, #d97706)';
+  const bannerBackground = isExtreme
+    ? 'linear-gradient(135deg, #7f1d1d, #dc2626)'
+    : 'linear-gradient(135deg, #78350f, #d97706)';
 
   return (
     <div style={{
@@ -61,15 +57,14 @@ export default function AlertBanner() {
         borderRadius: '50%',
         background: '#fff',
         flexShrink: 0,
-        animation: isExtreme || isTsunami ? 'alertPulse 1s infinite' : 'none',
+        animation: isExtreme ? 'alertPulse 1s infinite' : 'none',
       }} />
 
       {/* Icon + text */}
       <span>
-        ⚠ <strong>{isTsunami ? 'TSUNAMI WARNING' : `M${mag.toFixed(1)} Earthquake`}</strong>
-        {isTsunami ? ` — M${mag.toFixed(1)} earthquake near ${tsunamiWarning.region || 'Bay of Bengal'}` : ''}
+        ⚠ <strong>{`M${mag.toFixed(1)} Earthquake`}</strong>
         {activeAlert.place ? ` — ${activeAlert.place}` : ''}
-        {isTsunami && tsunamiWarning.distance_km != null ? ` — ${tsunamiWarning.distance_km} km from plate boundary` : ' — Simulation running...'}
+        {' — Simulation running...'}
       </span>
 
       {/* Dismiss */}

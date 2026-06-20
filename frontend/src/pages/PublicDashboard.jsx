@@ -57,7 +57,7 @@ export default function PublicDashboard() {
         <MapLegend />
 
         {/* Left Column Overlay (Sidebar + Panels) */}
-        <div className="absolute inset-y-0 left-0 pointer-events-none z-10 flex flex-col w-[260px]">
+        <div className="absolute inset-y-0 left-0 pointer-events-none z-10 flex flex-col w-[260px] max-w-[calc(100vw-1rem)]">
           <div className="pointer-events-auto">
             <Sidebar isAdmin={false} />
           </div>
@@ -70,7 +70,7 @@ export default function PublicDashboard() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className="w-[260px] h-full flex flex-col"
+                  className="w-[260px] max-w-full h-full flex flex-col min-h-0"
                 >
                   {activeSection === 'live_events' ? (
                     <div className="min-h-0 flex-1">

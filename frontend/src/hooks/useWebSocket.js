@@ -1,7 +1,10 @@
 import { useEffect, useRef, useCallback } from 'react';
 import useStore from '../store/useStore';
 import { debugLog } from '../utils/debug';
-import { buildLiveEarthquakeInfoPanel, buildSimulationInfoPanel } from '../services/featureInspectionManager';
+import {
+  buildLiveEarthquakeInfoPanel,
+  buildSimulationInfoPanel,
+} from '../services/featureInspectionManager';
 
 /**
  * useWebSocket — manages a single WebSocket connection to /scientific-api/ws/live.
@@ -24,7 +27,6 @@ export function useWebSocket() {
   const setWsConnected     = useStore((s) => s.setWsConnected);
   const addLiveEvent       = useStore((s) => s.addLiveEvent);
   const setActiveAlert     = useStore((s) => s.setActiveAlert);
-  const setActiveTsunamiWarning = useStore((s) => s.setActiveTsunamiWarning);
   const setSimulationResults   = useStore((s) => s.setSimulationResults);
   const setIsSimulationRunning = useStore((s) => s.setIsSimulationRunning);
   const setPendingSimulationRequestId = useStore((s) => s.setPendingSimulationRequestId);
@@ -66,10 +68,7 @@ export function useWebSocket() {
         addLiveEvent(msg.event);
         const liveInfoPanel = buildLiveEarthquakeInfoPanel(msg.event);
         if (liveInfoPanel) setInfoPanel(liveInfoPanel);
-        if (msg.event.tsunami_warning?.is_warning) {
-          setActiveTsunamiWarning(msg.event);
-        }
-        if (msg.event.tsunami_warning?.is_warning || (msg.event.magnitude >= 6.0 && msg.event.is_relevant)) {
+        if (msg.event.magnitude >= 6.0 && msg.event.is_relevant) {
           setActiveAlert(msg.event);
         }
         break;
@@ -113,7 +112,7 @@ export function useWebSocket() {
       default:
         break;
     }
-  }, [addLiveEvent, setActiveAlert, setActiveTsunamiWarning, setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId, setInfoPanel, setPendingSimulationInfoPanel]);
+  }, [addLiveEvent, setActiveAlert, setSimulationResults, setIsSimulationRunning, setPendingSimulationRequestId, setInfoPanel, setPendingSimulationInfoPanel]);
   // Note: autoSimEnabled intentionally omitted from deps — read via getState() above
   // to avoid triggering a WebSocket reconnect every time the toggle changes.
 

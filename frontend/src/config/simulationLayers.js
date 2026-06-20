@@ -15,17 +15,10 @@ export const SIM_LAYERS = {
 };
 
 export const LIVE_EARTHQUAKE_SOURCE = 'live-earthquakes-source';
-export const TSUNAMI_WAVE_SOURCE = 'tsunami-wave-source';
 
 export const LIVE_EARTHQUAKE_LAYERS = {
   PULSE: 'live-earthquake-pulse',
   POINT: 'live-earthquake-point',
-};
-
-export const TSUNAMI_WAVE_LAYERS = {
-  GLOW: 'tsunami-wavefront-glow',
-  LINES: 'tsunami-wavefront-lines',
-  LABELS: 'tsunami-wavefront-labels',
 };
 
 export const initSimulationLayers = (mapInstance) => {
@@ -37,7 +30,6 @@ export const initSimulationLayers = (mapInstance) => {
   mapLayerService.addSourceSafe(mapInstance, 'sim-shockwave-source',  { type: 'geojson', data: emptyFC });
   mapLayerService.addSourceSafe(mapInstance, 'sim-epicenter-source',  { type: 'geojson', data: emptyFC });
   mapLayerService.addSourceSafe(mapInstance, LIVE_EARTHQUAKE_SOURCE,  { type: 'geojson', data: emptyFC });
-  mapLayerService.addSourceSafe(mapInstance, TSUNAMI_WAVE_SOURCE,     { type: 'geojson', data: emptyFC });
 
   // --- Damage grid fill (normalized fused_hazard: 0.0 least damage, 1.0 most damage) ---
   mapLayerService.addLayerSafe(mapInstance, {
@@ -112,51 +104,6 @@ export const initSimulationLayers = (mapInstance) => {
       'line-color': '#ef4444',
       'line-width': 3,
       'line-opacity': 0.6
-    }
-  });
-
-  // --- Tsunami warning wavefronts ---
-  mapLayerService.addLayerSafe(mapInstance, {
-    id: TSUNAMI_WAVE_LAYERS.GLOW,
-    type: 'line',
-    source: TSUNAMI_WAVE_SOURCE,
-    filter: ['==', ['get', 'geomType'], 'LineString'],
-    paint: {
-      'line-color': '#38bdf8',
-      'line-width': ['coalesce', ['get', 'glowWidth'], 7],
-      'line-opacity': ['coalesce', ['get', 'glowOpacity'], 0.25],
-    }
-  });
-
-  mapLayerService.addLayerSafe(mapInstance, {
-    id: TSUNAMI_WAVE_LAYERS.LINES,
-    type: 'line',
-    source: TSUNAMI_WAVE_SOURCE,
-    filter: ['==', ['get', 'geomType'], 'LineString'],
-    paint: {
-      'line-color': '#ffffff',
-      'line-width': ['coalesce', ['get', 'lineWidth'], 2],
-      'line-opacity': ['coalesce', ['get', 'lineOpacity'], 0.85],
-    }
-  });
-
-  mapLayerService.addLayerSafe(mapInstance, {
-    id: TSUNAMI_WAVE_LAYERS.LABELS,
-    type: 'symbol',
-    source: TSUNAMI_WAVE_SOURCE,
-    filter: ['==', ['get', 'geomType'], 'Point'],
-    layout: {
-      'text-field': ['get', 'label'],
-      'text-size': 11,
-      'text-font': ['Open Sans Bold', 'Open Sans Regular'],
-      'text-allow-overlap': true,
-      'text-ignore-placement': true,
-    },
-    paint: {
-      'text-color': '#ffffff',
-      'text-halo-color': '#0369a1',
-      'text-halo-width': 1.5,
-      'text-opacity': ['coalesce', ['get', 'labelOpacity'], 0.85],
     }
   });
 

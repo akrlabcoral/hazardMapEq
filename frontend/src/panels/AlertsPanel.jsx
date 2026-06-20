@@ -7,7 +7,7 @@ export function AlertsPanel() {
       <ShieldCheck size={48} className="mb-4 text-emerald-500/50" strokeWidth={1} />
       <p className="text-sm font-medium text-slate-300">No Active Alerts</p>
       <p className="text-xs mt-1 opacity-70 text-center">
-        Extreme earthquakes and tsunami warnings will appear here.
+        Extreme earthquakes will appear here.
       </p>
     </div>
   );

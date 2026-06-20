@@ -48,7 +48,7 @@ export default function AdminDashboard() {
         <UploadProgressManager />
 
         {/* Left Column Overlay (Sidebar + Panels) */}
-        <div className="absolute inset-y-0 left-0 pointer-events-none z-10 flex flex-col w-[480px]">
+        <div className="absolute inset-y-0 left-0 pointer-events-none z-10 flex flex-col w-[480px] max-w-[calc(100vw-1rem)]">
           <div className="pointer-events-auto">
             <Sidebar isAdmin={true} />
           </div>
@@ -61,7 +61,7 @@ export default function AdminDashboard() {
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className={activeSection === 'disasters' ? 'w-[480px]' : activeSection === 'live_events' || activeSection === 'historic_events' ? 'w-[260px] h-full flex flex-col' : 'w-[260px]'}
+                  className={`max-w-full ${activeSection === 'disasters' ? 'w-[480px] h-full flex flex-col min-h-0' : activeSection === 'live_events' || activeSection === 'historic_events' ? 'w-[260px] h-full flex flex-col min-h-0' : 'w-[260px] h-full flex flex-col min-h-0'}`}
                 >
                   {activeSection === 'live_events' ? (
                     <div className="min-h-0 flex-1">
