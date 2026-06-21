@@ -1,7 +1,7 @@
 // Static layer configurations for MapLibre
 
 export const GPS_VECTOR_ARROW_ICON_ID = 'gps-vector-arrow-icon';
-export const GPS_VECTOR_COLOR = '#3b82f6';
+export const GPS_VECTOR_COLOR = '#f2ff00';
 const GPS_VECTOR_LENGTH_SCALE = 4;
 
 const scaleGpsVectorData = (data) => {
@@ -160,7 +160,7 @@ export const LAYER_CONFIGS = {
             'case',
             ['boolean', ['feature-state', 'hover'], false],
             1.0,
-            0.6
+            1.0
           ]
         }
       }
