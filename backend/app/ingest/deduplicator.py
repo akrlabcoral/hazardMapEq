@@ -10,8 +10,8 @@ Two levels:
 """
 from __future__ import annotations
 
+from app.hazards.earthquake.repository import is_duplicate, mark_seen, try_mark_seen
 from app.ingest.normalizer import EarthquakeEvent
-from app.models.repository import is_duplicate, mark_seen, try_mark_seen
 
 
 def is_seen(event: EarthquakeEvent) -> bool:

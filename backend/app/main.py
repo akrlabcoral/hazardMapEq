@@ -21,15 +21,14 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 
-from app.api import simulate
-from app.api import ws as ws_module
+from app.api.common.health import router as health_router
+from app.api.router import router as api_router
 from app.api.ws import redis_listener
-from app.api import events as events_module
-from app.api import historic as historic_module
 from app.config import settings
-from app.soil import cache as soil_cache
-from app.soil.loader import load_all_soil_rasters
-from app.models.repository import close_pool, init_db, init_pool
+from app.core.database import close_pool, init_db, init_pool
+from app.core.logging import configure_logging
+from app.shared.cache import raster_cache
+from app.shared.gis.raster_loader import load_all_soil_rasters
 from app.ingest.poller import run_poller, run_ncs_poller
 from app.jobs.queue import get_queue
 from app.jobs.simulation_worker import SimulationRunner
@@ -39,10 +38,7 @@ from app.services.recovery import recover_unsimulated_events
 from app.services.redis_client import redis_manager
 
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(name)s %(levelname)s %(message)s",
-)
+configure_logging(logging.INFO)
 logger = logging.getLogger("hazardmap.main")
 
 _background_tasks = BackgroundTaskManager()
@@ -84,7 +80,7 @@ async def lifespan(app: FastAPI):
     await _background_tasks.stop_all()
 
     logger.info("[Shutdown] Closing soil raster handles...")
-    soil_cache.close_all()
+    raster_cache.close_all()
 
     logger.info("[Shutdown] Closing DB connection pool...")
     close_pool()
@@ -106,17 +102,11 @@ app.add_middleware(
 )
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 
-app.include_router(simulate.router,       prefix="/api")
-app.include_router(ws_module.router,      prefix="/api")
-app.include_router(events_module.router,  prefix="/api")
-app.include_router(historic_module.router, prefix="/api/historic", tags=["historic"])
+app.include_router(api_router, prefix="/api")
+app.include_router(health_router)
 if settings.enable_dev_routes:
     from app.api import dev as dev_module
     app.include_router(dev_module.router, prefix="/api")
-
-@app.get("/health", tags=["system"])
-def health_check():
-    return {"status": "ok"}
 
 if __name__ == "__main__":
     import uvicorn

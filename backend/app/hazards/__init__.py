@@ -1,0 +1,2 @@
+"""Natural hazard plugin packages."""
+

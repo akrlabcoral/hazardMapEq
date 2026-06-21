@@ -1,0 +1,2 @@
+"""Hazard API router package."""
+

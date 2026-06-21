@@ -4,11 +4,10 @@ import asyncio
 import logging
 
 from app.api.ws import broadcast
+from app.hazards.earthquake.repository import save_earthquake_event, save_historic_event
 from app.ingest import deduplicator
 from app.ingest.filter import is_relevant
 from app.ingest.normalizer import EarthquakeEvent, event_to_payload
-from app.models.repository import save_earthquake_event
-from app.models.historic_repository import save_historic_event
 
 logger = logging.getLogger("hazardmap.ingest.processor")
 

@@ -7,8 +7,10 @@ import redis
 from rq import get_current_job
 
 from app.config import settings
+from app.core.logging import configure_logging
+from app.hazards.earthquake.repository import mark_event_sim_failed, mark_event_simulated
 from app.jobs.simulation_worker import SimulationRunner
-from app.models.repository import init_pool, mark_event_sim_failed, mark_event_simulated
+from app.models.repository import init_pool
 from app.models.simulation_job_repository import (
     mark_simulation_job_completed,
     mark_simulation_job_failed,
@@ -16,10 +18,7 @@ from app.models.simulation_job_repository import (
 )
 from app.soil.loader import load_all_soil_rasters
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s %(name)s %(levelname)s %(message)s",
-)
+configure_logging(logging.INFO)
 logger = logging.getLogger("hazardmap.rq_worker")
 
 
@@ -169,14 +168,14 @@ def run_simulation_job(event_dict: dict) -> dict:
             request_id,
         )
 
-        logger.info(f"[RQ] Job complete for {event_dict.get('source_id')}")
+        logger.info("[RQ] Job complete for %s", event_dict.get("source_id"))
         return {
             "simulation_id": result["simulation_id"],
             "event_id": event_dict.get("db_id"),
         }
 
     except Exception as exc:
-        logger.exception(f"[RQ] Job failed for {event_dict.get('source_id')}: {exc}")
+        logger.exception("[RQ] Job failed for %s: %s", event_dict.get("source_id"), exc)
         if _retries_remaining() > 0:
             logger.info(
                 "[RQ] Job for %s will be retried; retries_remaining=%d",

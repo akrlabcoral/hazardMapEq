@@ -1,23 +1,10 @@
-import hashlib
-
 from fastapi import APIRouter, HTTPException, Query, Request, Response
 from fastapi.responses import ORJSONResponse
 
-from app.models.historic_repository import get_historic_events_geojson
+from app.core.errors import ValidationError
+from app.hazards.earthquake.service import earthquake_service
 
 router = APIRouter()
-
-
-def _historic_etag(data: dict) -> str:
-    digest = hashlib.sha1()
-    for feature in data.get("features", []):
-        props = feature.get("properties", {})
-        digest.update(str(props.get("id", "")).encode())
-        digest.update(str(props.get("time", "")).encode())
-        digest.update(str(props.get("mag", "")).encode())
-        digest.update(str(props.get("depth", "")).encode())
-        digest.update(str(props.get("place", "")).encode())
-    return f'W/"historic-{len(data.get("features", []))}-{digest.hexdigest()}"'
 
 
 @router.get("")
@@ -29,15 +16,15 @@ def get_historic_events(
 ):
     """Return historic earthquake events as a GeoJSON FeatureCollection."""
     try:
-        data = get_historic_events_geojson(
+        data = earthquake_service.get_historic_events(
             min_magnitude=min_magnitude,
             limit=limit,
             bbox=bbox,
         )
-    except ValueError as exc:
+    except ValidationError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
-    etag = _historic_etag(data)
+    etag = earthquake_service.historic_etag(data)
     headers = {
         "Cache-Control": "public, max-age=300",
         "ETag": etag,

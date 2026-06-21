@@ -3,8 +3,8 @@ from __future__ import annotations
 import asyncio
 import logging
 
+from app.hazards.earthquake.repository import get_unsimulated_events
 from app.ingest.normalizer import EarthquakeEvent
-from app.models.repository import get_unsimulated_events
 from app.services.redis_client import redis_manager
 
 logger = logging.getLogger("hazardmap.recovery")
