@@ -79,8 +79,8 @@ export const LAYER_CONFIGS = {
         beforeId: 'sim-wb-grid-fill',
         paint: {
           'line-color': '#000000',
-          'line-width': 0.5,
-          'line-opacity': 0.6
+          'line-width': 1.0,
+          'line-opacity': 1.0
         }
       }
     ]
@@ -127,7 +127,7 @@ export const LAYER_CONFIGS = {
             'case',
             ['boolean', ['feature-state', 'hover'], false],
             1.0,
-            0.6
+            1.0
           ]
         }
       }

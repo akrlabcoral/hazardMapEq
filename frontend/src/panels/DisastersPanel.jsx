@@ -20,7 +20,7 @@ export function DisastersPanel() {
   const { handleRunSimulation } = useSimulation();
 
   return (
-    <div className="space-y-9 max-h-[520px] overflow-y-auto pr-1">
+    <div className="space-y-8.5 max-h-[520px] overflow-y-auto pr-1">
       {/* Action Buttons */}
       <div className="flex gap-3">
         <button

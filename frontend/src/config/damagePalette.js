@@ -8,9 +8,7 @@ export const EARTHQUAKE_DAMAGE_PALETTE = [
   { id: 'minimal', label: 'Minimal', color: '#0b006e' },
 ];
 
-// MapLibre expressions are defined low-to-high so 0.0 is least damage and
-// 1.0 is most damage. Values below the visible minimum fade by opacity instead
-// of using a "None" color so underlying map layers remain visible.
+
 export const EARTHQUAKE_DAMAGE_FILL_COLOR = [
   'interpolate',
   ['linear'],

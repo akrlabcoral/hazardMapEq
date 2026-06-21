@@ -9,7 +9,7 @@ export default function InfoPanel() {
   if (!infoPanel) return null;
 
   return (
-    <aside className="absolute top-0 left-65 z-50 w-[320px] max-w-[calc(100vw-2.5rem)] max-h-[calc(100vh-8rem)] overflow-hidden border border-slate-700/80 bg-slate-950/90 shadow-2xl backdrop-blur-md pointer-events-auto">
+    <aside className="absolute top-0 left-65 z-50 w-[320px] max-w-[calc(100vw-2.5rem)] max-h-[calc(100vh-8rem)] overflow-hidden border border-slate-700/80 bg-red-950/90 shadow-2xl backdrop-blur-md pointer-events-auto">
       <div className="flex items-start gap-3 border-b border-slate-800 p-4">
         <div
           className="mt-1 h-3 w-3 rounded-full shrink-0"

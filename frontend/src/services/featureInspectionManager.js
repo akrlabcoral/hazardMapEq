@@ -130,8 +130,6 @@ export const buildSimulationInfoPanel = (result, epicenter, event = null) => {
           { label: 'Magnitude', value: formatMagnitude(event?.mag ?? event?.magnitude) },
           { label: 'Depth', value: formatDepth(event?.depth ?? event?.depth_km) },
           { label: 'Coordinates', value: formatCoordinates(coordinates) },
-          { label: 'States', value: stateCount === null ? null : formatNumber(stateCount, 0) },
-          { label: 'Districts', value: districtCount === null ? null : formatNumber(districtCount, 0) },
         ]),
       },
     ],
@@ -315,7 +313,6 @@ registerInspector({
           title: 'Hazard Zone',
           rows: rows([
             { label: 'Risk level', value: riskLevel },
-            { label: 'Intensity', value: props.intensity || classifyIntensity(localPga) },
             { label: 'MMI', value: props.mmi ? formatNumber(props.mmi, 2) : null },
             { label: 'Local PGA', value: localPga ? `${formatNumber(localPga, 4)}g` : null },
             { label: 'Base PGA', value: props.pga_base ? `${formatNumber(props.pga_base, 4)}g` : null },

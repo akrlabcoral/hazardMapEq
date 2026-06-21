@@ -12,7 +12,7 @@ export const BUILT_IN_RASTERS = [
   },
   {
     id: "population-exposure",
-    name: "Population Exposure (WorldPop)",
+    name: "Population Exposure",
     type: "raster",
     sourceType: "geotiff",
     url: "/rasters/india_population_1km_3857.tif",
