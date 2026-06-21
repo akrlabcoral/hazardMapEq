@@ -3,7 +3,7 @@
 // All business logic has been extracted to dedicated panels and hooks.
 
 import React from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import AdminNavbar from '../components/AdminNavbar';
 import AdminSidebar from '../components/AdminSidebar';
 import MapView from '../components/MapView';
@@ -14,20 +14,18 @@ import UploadProgressManager from '../components/UploadProgressManager';
 import AlertBanner from '../components/AlertBanner';
 import AdminMapToolbar from '../components/AdminMapToolbar';
 import MapLayersControl from '../components/MapLayersControl';
-import { DisastersPanel } from '../panels/DisastersPanel';
+import HazardWorkflowDock from '../components/hazards/HazardWorkflowDock';
 import { AlertsPanel } from '../panels/AlertsPanel';
-import useStore from '../store/useStore';
-import { useWebSocket } from '../hooks/useWebSocket';
 import LiveEventsPanel from '../panels/LiveEventsPanel';
 import HistoricPanel from '../panels/HistoricPanel';
 import TsunamiPanel from '../panels/TsunamiPanel';
 import LandslidePanel from '../panels/LandslidePanel';
 import OtherHazardsPanel from '../panels/OtherHazardsPanel';
+import useStore from '../store/useStore';
+import { useWebSocket } from '../hooks/useWebSocket';
 
 const PANEL_TITLE = {
-  disasters: 'DISASTERS PANEL',
-  alerts:    'ALERTS',
-  historic_events: 'HISTORIC EVENTS',
+  alerts: 'ALERTS',
   tsunami: 'TSUNAMI ESTIMATE',
   landslide: 'LANDSLIDE',
   other_hazards: 'MORE HAZARDS',
@@ -35,6 +33,7 @@ const PANEL_TITLE = {
 
 export default function AdminDashboard() {
   const activeSection = useStore((s) => s.activeSection);
+  const forceActiveSection = useStore((s) => s.forceActiveSection);
 
   // Start WebSocket connection — real-time earthquake events + auto-sim results
   useWebSocket();
@@ -54,20 +53,20 @@ export default function AdminDashboard() {
         <UploadProgressManager />
 
         {/* Left Column Overlay (Sidebar + Panels) */}
-        <div className="absolute inset-y-0 left-0 pointer-events-none z-10 flex flex-col w-[480px] max-w-[calc(100vw-1rem)]">
+        <div className="absolute inset-y-0 left-0 pointer-events-none z-10 flex flex-col w-[260px] max-w-[calc(100vw-1rem)]">
           <div className="pointer-events-auto">
             <AdminSidebar />
           </div>
 
           <div className="flex-1 pt-0 pb-0 pointer-events-none [&>*]:pointer-events-auto flex flex-col min-h-0">
             <AnimatePresence mode="wait">
-              {activeSection && (
+              {activeSection && activeSection !== 'disasters' && (
                 <motion.div
                   key={activeSection}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
-                  className={`max-w-full ${activeSection === 'disasters' ? 'w-[480px] h-full flex flex-col min-h-0' : activeSection === 'live_events' || activeSection === 'historic_events' ? 'w-[260px] h-full flex flex-col min-h-0' : 'w-[260px] h-full flex flex-col min-h-0'}`}
+                  className="w-[260px] max-w-full h-full flex flex-col min-h-0"
                 >
                   {activeSection === 'live_events' ? (
                     <div className="min-h-0 flex-1">
@@ -78,19 +77,24 @@ export default function AdminDashboard() {
                       <HistoricPanel />
                     </div>
                   ) : (
-                    <ControlPanel title={PANEL_TITLE[activeSection] ?? activeSection.toUpperCase()}>
-                      {activeSection === 'disasters' && <DisastersPanel />}
-                      {activeSection === 'alerts'    && <AlertsPanel />}
-                      {activeSection === 'tsunami'   && <TsunamiPanel />}
-                      {activeSection === 'landslide' && <LandslidePanel />}
-                      {activeSection === 'other_hazards' && <OtherHazardsPanel />}
-                    </ControlPanel>
+                    PANEL_TITLE[activeSection] && (
+                      <ControlPanel title={PANEL_TITLE[activeSection]}>
+                        {activeSection === 'alerts' && <AlertsPanel />}
+                        {activeSection === 'tsunami' && <TsunamiPanel />}
+                        {activeSection === 'landslide' && <LandslidePanel />}
+                        {activeSection === 'other_hazards' && <OtherHazardsPanel />}
+                      </ControlPanel>
+                    )
                   )}
                 </motion.div>
               )}
             </AnimatePresence>
           </div>
         </div>
+
+        {activeSection === 'disasters' && (
+          <HazardWorkflowDock onClose={() => forceActiveSection(null)} />
+        )}
       </div>
     </div>
   );

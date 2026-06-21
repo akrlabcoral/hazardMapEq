@@ -4,10 +4,10 @@ import useStore from '../store/useStore';
 
 const hazardNavItems = {
   earthquake: [
-    { id: 'disasters',   icon: Play,          label: 'Earthquake Simulation' },
-    { id: 'alerts',      icon: AlertTriangle, label: 'Alerts'                },
-    { id: 'live_events', icon: Radio,         label: 'Live Events'           },
-    { id: 'historic_events', icon: Archive,   label: 'Historic Earthquakes'  },
+    { id: 'disasters', icon: Play, label: 'Earthquake Simulation' },
+    { id: 'alerts', icon: AlertTriangle, label: 'Alerts' },
+    { id: 'live_events', icon: Radio, label: 'Live Events' },
+    { id: 'historic_events', icon: Archive, label: 'Historic Earthquakes' },
   ],
   tsunami: [
     { id: 'tsunami', icon: Waves, label: 'Tsunami Estimate' },
@@ -77,11 +77,11 @@ export default function Sidebar({ isAdmin = false }) {
                 <div className="ml-2 font-medium tracking-wide text-left overflow-hidden whitespace-nowrap">
                   {item.label}
                 </div>
-  </button>
-</div>
-);
-})}
-</div>
-</aside>
-);
+              </button>
+            </div>
+          );
+        })}
+      </div>
+    </aside>
+  );
 }

@@ -12,7 +12,6 @@ import MapLayersControl from '../components/MapLayersControl';
 import { AlertsPanel } from '../panels/AlertsPanel';
 import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
-
 import LiveEventsPanel from '../panels/LiveEventsPanel';
 import HistoricPanel from '../panels/HistoricPanel';
 import TsunamiPanel from '../panels/TsunamiPanel';
@@ -20,7 +19,7 @@ import LandslidePanel from '../panels/LandslidePanel';
 import OtherHazardsPanel from '../panels/OtherHazardsPanel';
 
 const PANEL_TITLE = {
-  alerts:    'ALERTS',
+  alerts: 'ALERTS',
   tsunami: 'TSUNAMI ESTIMATE',
   landslide: 'LANDSLIDE',
   other_hazards: 'MORE HAZARDS',
@@ -45,9 +44,7 @@ export default function PublicDashboard() {
   const activeHazard = useStore((s) => s.activeHazard);
   const forceActiveSection = useStore((s) => s.forceActiveSection);
 
-  // On mount, if no section is active (or if an admin-only section like disasters leaked over), default to live_events
   useEffect(() => {
-    // Read fresh state to avoid closure staleness in StrictMode
     const { activeSection: current, activeHazard: hazard } = useStore.getState();
     const validSections = PUBLIC_SECTIONS_BY_HAZARD[hazard] || PUBLIC_SECTIONS_BY_HAZARD.earthquake;
     if (!current || current === 'disasters' || current === 'layers' || !validSections.includes(current)) {

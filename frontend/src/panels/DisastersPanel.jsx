@@ -11,8 +11,8 @@ import { MagnitudeDepthRow } from './disasters/MagnitudeDepthRow';
 export function DisastersPanel() {
   const { earthquakeEpicenter, isSimulationRunning, clearSimulationState } = useStore(
     useShallow((s) => ({
-      earthquakeEpicenter:  s.earthquakeEpicenter,
-      isSimulationRunning:  s.isSimulationRunning,
+      earthquakeEpicenter: s.earthquakeEpicenter,
+      isSimulationRunning: s.isSimulationRunning,
       clearSimulationState: s.clearSimulationState,
     }))
   );
@@ -20,8 +20,7 @@ export function DisastersPanel() {
   const { handleRunSimulation } = useSimulation();
 
   return (
-    <div className="space-y-8.5 max-h-[520px] overflow-y-auto pr-1">
-      {/* Action Buttons */}
+    <div className="space-y-4">
       <div className="flex gap-3">
         <button
           onClick={clearSimulationState}

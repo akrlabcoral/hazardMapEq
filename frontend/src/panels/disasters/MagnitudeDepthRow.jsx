@@ -8,7 +8,6 @@ export function MagnitudeDepthRow() {
 
   return (
     <div className="flex gap-3">
-      {/* Magnitude */}
       <div className="flex-1 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
         <div className="flex justify-between items-center mb-2">
           <span className="font-semibold text-slate-100 text-sm">Magnitude</span>
@@ -26,7 +25,6 @@ export function MagnitudeDepthRow() {
         </div>
       </div>
 
-      {/* Depth */}
       <div className="flex-1 p-3 bg-slate-800/50 rounded-lg border border-slate-700/50">
         <div className="flex justify-between items-center mb-2">
           <span className="font-semibold text-slate-100 text-sm">Depth</span>

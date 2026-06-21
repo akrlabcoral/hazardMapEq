@@ -180,6 +180,7 @@ export default function MapView({ isAdmin = false }) {
   const simulationResults = useStore((state) => state.simulationResults);
   const pendingSimulationInfoPanel = useStore((state) => state.pendingSimulationInfoPanel);
   const mapStyle          = useStore((state) => state.mapStyle);
+  const activeSection     = useStore((state) => state.activeSection);
   const isPlacingEpicenter = useStore((state) => state.isPlacingEpicenter);
   const isSimulationRunning = useStore((state) => state.isSimulationRunning);
   const liveEvents = useStore((state) => state.liveEvents);
@@ -546,6 +547,10 @@ export default function MapView({ isAdmin = false }) {
     };
   }, [simulationResults, pendingSimulationInfoPanel, earthquakeEpicenter, intensityVisible]);
 
+  const zoomControlsPosition = isAdmin && activeSection === 'disasters'
+    ? 'bottom-[calc(clamp(260px,30vh,320px)+2rem)] z-30'
+    : 'bottom-10 z-20';
+
   return (
     <div className="absolute inset-0 z-0">
       <div
@@ -558,7 +563,7 @@ export default function MapView({ isAdmin = false }) {
               : 'cursor-grab active:cursor-grabbing'
         }`}
       />
-      <div className="absolute bottom-10 right-2 z-20 flex  overflow-hidden rounded border border-white/10 bg-slate-800/90 shadow-2xl backdrop-blur pointer-events-auto">
+      <div className={`absolute right-2 ${zoomControlsPosition} flex overflow-hidden rounded border border-white/10 bg-slate-800/90 shadow-2xl backdrop-blur pointer-events-auto`}>
         <button
           type="button"
           onClick={zoomOut}

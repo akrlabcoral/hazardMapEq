@@ -100,7 +100,7 @@ export default function TsunamiPanel() {
   };
 
   return (
-    <div className="space-y-4 max-h-[520px] overflow-y-auto pr-1">
+    <div className="space-y-4">
       <div className="rounded-lg border border-cyan-400/30 bg-cyan-950/30 p-3 text-xs text-cyan-100">
         This tsunami estimate is based on simplified empirical formulas and should not be used for official warning or emergency decision-making.
       </div>

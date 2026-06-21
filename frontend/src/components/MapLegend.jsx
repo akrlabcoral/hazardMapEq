@@ -34,7 +34,7 @@ export default function MapLegend() {
   const show = (itemId) => visibleItems.has(itemId);
 
   return (
-    <div className="absolute top-25 right-2.5 z-20 flex flex-col items-end justify-end gap-2 pointer-events-auto">
+    <div className="absolute top-25 right-2.5 z-20 flex flex-col items-end justify-end gap-2 pointer-events-auto ">
       <button 
         onClick={() => setIsVisible(!isVisible)}
         className="p-2.5 bg-slate-900/80 hover:bg-slate-800 backdrop-blur-md border border-slate-700/60 rounded-full text-slate-400 hover:text-white transition-colors shadow-lg flex items-center justify-center"
@@ -50,7 +50,7 @@ export default function MapLegend() {
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20, transition: { duration: 0.2 } }}
             transition={{ duration: 0.4, delay: 0.1 }}
-            className="bg-slate-900/85 backdrop-blur-xl border border-slate-700/60 p-4 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] text-xs w-64 max-h-[calc(100vh-6rem)] overflow-y-auto"
+            className=" bg-slate-900/40 backdrop-blur-xl border border-slate-700/60 p-4 rounded-xl shadow-[0_0_30px_rgba(0,0,0,0.5)] text-xs w-64 max-h-[calc(100vh-6rem)] overflow-y-auto "
           >
 
             {/* Header with neon accent */}
