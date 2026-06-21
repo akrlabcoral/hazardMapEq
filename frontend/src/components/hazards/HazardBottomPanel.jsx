@@ -15,7 +15,7 @@ export default function HazardBottomPanel({ layout, onClose }) {
         animate={{ opacity: 1, y: 0 }}
         exit={{ opacity: 0, y: 28 }}
         transition={{ duration: 0.22, ease: 'easeOut' }}
-        className="pointer-events-auto absolute inset-x-0 bottom-0 z-20 border border-slate-600/60 bg-slate-900 shadow-[0_0_45px_rgba(0,0,0,0.45)]"
+        className="pointer-events-auto absolute h-[235px] inset-x-0 bottom-0 z-20 border border-slate-600/60 bg-slate-900 shadow-[0_0_0px_rgba(0,0,0,0.45)]"
       >
         <div className="absolute left-0 right-0 top-0 h-[1px] bg-gradient-to-r from-transparent via-cyan-400/50 to-transparent" />
         <div className="flex h-[clamp(260px,30vh,320px)] min-h-0 flex-col overflow-hidden p-4">

@@ -17,24 +17,28 @@ import HistoricPanel from '../panels/HistoricPanel';
 import TsunamiPanel from '../panels/TsunamiPanel';
 import LandslidePanel from '../panels/LandslidePanel';
 import OtherHazardsPanel from '../panels/OtherHazardsPanel';
+import TsunamiEmptyPanel from '../panels/TsunamiEmptyPanel';
 
 const PANEL_TITLE = {
   alerts: 'ALERTS',
   tsunami: 'TSUNAMI ESTIMATE',
+  tsunami_alerts: 'TSUNAMI ALERTS',
+  tsunami_live_events: 'LIVE TSUNAMI EVENTS',
+  historic_tsunami: 'HISTORIC TSUNAMI',
   landslide: 'LANDSLIDE',
   other_hazards: 'MORE HAZARDS',
 };
 
 const DEFAULT_PUBLIC_SECTION_BY_HAZARD = {
   earthquake: 'live_events',
-  tsunami: 'tsunami',
+  tsunami: 'tsunami_alerts',
   landslide: 'landslide',
   other: 'other_hazards',
 };
 
 const PUBLIC_SECTIONS_BY_HAZARD = {
   earthquake: ['alerts', 'live_events', 'historic_events'],
-  tsunami: ['tsunami'],
+  tsunami: ['tsunami_alerts', 'tsunami_live_events', 'historic_tsunami'],
   landslide: ['landslide'],
   other: ['other_hazards'],
 };
@@ -104,6 +108,9 @@ export default function PublicDashboard() {
                       <ControlPanel title={PANEL_TITLE[activeSection]}>
                         {activeSection === 'alerts' && <AlertsPanel />}
                         {activeSection === 'tsunami' && <TsunamiPanel />}
+                        {activeSection === 'tsunami_alerts' && <TsunamiEmptyPanel type="alerts" />}
+                        {activeSection === 'tsunami_live_events' && <TsunamiEmptyPanel type="live" />}
+                        {activeSection === 'historic_tsunami' && <TsunamiEmptyPanel type="historic" />}
                         {activeSection === 'landslide' && <LandslidePanel />}
                         {activeSection === 'other_hazards' && <OtherHazardsPanel />}
                       </ControlPanel>

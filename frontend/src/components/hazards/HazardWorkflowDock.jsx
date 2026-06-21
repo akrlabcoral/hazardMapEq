@@ -308,6 +308,64 @@ const placeholderLayout = (id, title, icon) => ({
   actions: [],
 });
 
+const landslideLayout = {
+  id: 'landslide',
+  title: 'Landslide Assessment',
+  status: 'Placeholder',
+  sections: [
+    {
+      id: 'landslide-trigger',
+      title: 'Trigger',
+      icon: Mountain,
+      accent: 'amber',
+      content: (
+        <div className="space-y-2 text-xs text-slate-300">
+          <div className="rounded-lg bg-slate-950/50 px-2 py-1.5">Rainfall / shaking input pending</div>
+          <div className="rounded-lg bg-slate-950/50 px-2 py-1.5">Trigger threshold pending</div>
+        </div>
+      ),
+    },
+    {
+      id: 'landslide-terrain',
+      title: 'Terrain',
+      icon: Ruler,
+      content: (
+        <div className="space-y-2 text-xs text-slate-300">
+          <div className="rounded-lg bg-slate-950/50 px-2 py-1.5">Slope layer pending</div>
+          <div className="rounded-lg bg-slate-950/50 px-2 py-1.5">Aspect / elevation pending</div>
+        </div>
+      ),
+    },
+    {
+      id: 'landslide-soil',
+      title: 'Soil',
+      icon: Gauge,
+      content: (
+        <div className="space-y-2 text-xs text-slate-300">
+          <div className="rounded-lg bg-slate-950/50 px-2 py-1.5">Soil class pending</div>
+          <div className="rounded-lg bg-slate-950/50 px-2 py-1.5">Moisture factor pending</div>
+        </div>
+      ),
+    },
+    {
+      id: 'landslide-results',
+      title: 'Results',
+      icon: Calculator,
+      accent: 'amber',
+      content: (
+        <div className="space-y-2 text-xs text-slate-300">
+          <div className="rounded-lg bg-slate-950/50 px-2 py-1.5">Susceptibility not calculated</div>
+          <div className="rounded-lg bg-slate-950/50 px-2 py-1.5">Exposure summary pending</div>
+        </div>
+      ),
+    },
+  ],
+  actions: [
+    { id: 'landslide-clear', label: 'Clear', icon: RotateCcw, disabled: true },
+    { id: 'landslide-run', label: 'Run Model', icon: Play, variant: 'primary', disabled: true },
+  ],
+};
+
 export default function HazardWorkflowDock({ onClose }) {
   const activeHazard = useStore((state) => state.activeHazard);
   const earthquakeLayout = useEarthquakeLayout();
@@ -315,7 +373,7 @@ export default function HazardWorkflowDock({ onClose }) {
 
   const layout = useMemo(() => {
     if (activeHazard === 'tsunami') return tsunamiLayout;
-    if (activeHazard === 'landslide') return placeholderLayout('landslide', 'Landslide', Mountain);
+    if (activeHazard === 'landslide') return landslideLayout;
     if (activeHazard === 'other') return placeholderLayout('other-hazards', 'More Hazards', Waves);
     return earthquakeLayout;
   }, [activeHazard, earthquakeLayout, tsunamiLayout]);

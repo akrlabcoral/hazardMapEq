@@ -13,25 +13,25 @@ const HAZARDS = [
     id: 'tsunami',
     label: 'Tsunami',
     icon: Waves,
-    defaultSection: { admin: 'tsunami', public: 'tsunami' },
+    defaultSection: { admin: 'tsunami', public: 'tsunami_alerts' },
   },
-  {
-    id: 'landslide',
-    label: 'Landslide',
-    icon: Mountain,
-    defaultSection: { admin: 'landslide', public: 'landslide' },
-  },
-  {
-    id: 'other',
-    label: 'More',
-    icon: Layers3,
-    defaultSection: { admin: 'other_hazards', public: 'other_hazards' },
-  },
+  //{
+  //  id: 'landslide',
+  //  label: 'landslide',
+  //  icon: Mountain,
+  //  defaultSection: { admin: 'landslide', public: 'landslide' },
+  //},
+  //{
+  //  id: 'other',
+  //  label: '*',
+  //  icon: Layers3,
+  //  defaultSection: { admin: 'other_hazards', public: 'other_hazards' },
+  //},
 ];
 
 const VALID_SECTIONS_BY_HAZARD = {
   earthquake: ['disasters', 'alerts', 'live_events', 'historic_events'],
-  tsunami: ['tsunami'],
+  tsunami: ['tsunami', 'tsunami_alerts', 'tsunami_live_events', 'historic_tsunami'],
   landslide: ['landslide'],
   other: ['other_hazards'],
 };

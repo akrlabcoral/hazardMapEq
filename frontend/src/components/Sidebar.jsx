@@ -11,6 +11,9 @@ const hazardNavItems = {
   ],
   tsunami: [
     { id: 'tsunami', icon: Waves, label: 'Tsunami Estimate' },
+    { id: 'tsunami_alerts', icon: AlertTriangle, label: 'Tsunami Alerts' },
+    { id: 'tsunami_live_events', icon: Radio, label: 'Live Tsunami Events' },
+    { id: 'historic_tsunami', icon: Archive, label: 'Historic Tsunami' },
   ],
   landslide: [
     { id: 'landslide', icon: Mountain, label: 'Landslide' },
@@ -36,7 +39,10 @@ export default function Sidebar({ isAdmin = false }) {
   const previousHazard = useRef(activeHazard);
   const visibleNavItems = useMemo(() => {
     const navItems = hazardNavItems[activeHazard] || hazardNavItems.earthquake;
-    return navItems.filter(item => isAdmin || item.id !== 'disasters');
+    return navItems.filter(item => {
+      if (isAdmin) return true;
+      return item.id !== 'disasters' && item.id !== 'tsunami';
+    });
   }, [activeHazard, isAdmin]);
 
   useEffect(() => {
