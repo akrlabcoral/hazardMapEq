@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Shield, Bell, Earth, UserCircle, Menu, Moon, Sun } from 'lucide-react';
+import { Bell, Earth, Moon, Sun } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useStore from '../store/useStore';
+import HazardSelector from './HazardSelector';
 
 export default function Navbar({ isAdmin = true }) {
   const mapStyle       = useStore((state) => state.mapStyle);
@@ -9,6 +10,7 @@ export default function Navbar({ isAdmin = true }) {
   const activeAlert    = useStore((state) => state.activeAlert);
   const dismissAlert   = useStore((state) => state.dismissAlert);
   const liveEvents     = useStore((state) => state.liveEvents || []);
+  const setActiveHazard = useStore((state) => state.setActiveHazard);
   const forceActiveSection = useStore((state) => state.forceActiveSection);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -23,7 +25,9 @@ export default function Navbar({ isAdmin = true }) {
         </div>
       </div>
 
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4">
+        <HazardSelector isAdmin={isAdmin} />
+
         <button 
           onClick={toggleMapStyle}
           className="p-2 hover:bg-slate-800 rounded-lg transition-colors"
@@ -93,6 +97,7 @@ export default function Navbar({ isAdmin = true }) {
                               className="text-left px-4 py-3 border-b border-slate-700/30 hover:bg-slate-800/60 transition-colors flex flex-col gap-1 last:border-0"
                               onClick={() => {
                                 setIsDropdownOpen(false);
+                                setActiveHazard('earthquake');
                                 forceActiveSection('live_events');
                               }}
                             >
@@ -120,6 +125,7 @@ export default function Navbar({ isAdmin = true }) {
                         className="w-full py-1.5 text-xs text-center text-cyan-400 hover:text-cyan-300 hover:bg-slate-800 rounded transition-colors font-semibold"
                         onClick={() => {
                           setIsDropdownOpen(false);
+                          setActiveHazard('earthquake');
                           forceActiveSection('live_events');
                         }}
                       >

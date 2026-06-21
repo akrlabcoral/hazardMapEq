@@ -26,6 +26,9 @@ export const initTsunamiLayers = (mapInstance) => {
     id: TSUNAMI_LAYERS.markerGlow,
     type: 'circle',
     source: TSUNAMI_SOURCES.source,
+    layout: {
+      visibility: 'none',
+    },
     paint: {
       'circle-radius': 24,
       'circle-color': '#38bdf8',
@@ -38,6 +41,9 @@ export const initTsunamiLayers = (mapInstance) => {
     id: TSUNAMI_LAYERS.marker,
     type: 'circle',
     source: TSUNAMI_SOURCES.source,
+    layout: {
+      visibility: 'none',
+    },
     paint: {
       'circle-radius': 9,
       'circle-color': [
@@ -53,6 +59,16 @@ export const initTsunamiLayers = (mapInstance) => {
       'circle-stroke-color': '#ffffff',
       'circle-stroke-width': 2,
     },
+  });
+};
+
+export const setTsunamiLayerVisibility = (mapInstance, isVisible) => {
+  if (!mapInstance?.getStyle()) return;
+  const visibility = isVisible ? 'visible' : 'none';
+  [TSUNAMI_LAYERS.markerGlow, TSUNAMI_LAYERS.marker].forEach((layerId) => {
+    if (mapInstance.getLayer(layerId)) {
+      mapInstance.setLayoutProperty(layerId, 'visibility', visibility);
+    }
   });
 };
 

@@ -16,22 +16,42 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import LiveEventsPanel from '../panels/LiveEventsPanel';
 import HistoricPanel from '../panels/HistoricPanel';
 import TsunamiPanel from '../panels/TsunamiPanel';
+import LandslidePanel from '../panels/LandslidePanel';
+import OtherHazardsPanel from '../panels/OtherHazardsPanel';
 
 const PANEL_TITLE = {
   alerts:    'ALERTS',
   tsunami: 'TSUNAMI ESTIMATE',
+  landslide: 'LANDSLIDE',
+  other_hazards: 'MORE HAZARDS',
+};
+
+const DEFAULT_PUBLIC_SECTION_BY_HAZARD = {
+  earthquake: 'live_events',
+  tsunami: 'tsunami',
+  landslide: 'landslide',
+  other: 'other_hazards',
+};
+
+const PUBLIC_SECTIONS_BY_HAZARD = {
+  earthquake: ['alerts', 'live_events', 'historic_events'],
+  tsunami: ['tsunami'],
+  landslide: ['landslide'],
+  other: ['other_hazards'],
 };
 
 export default function PublicDashboard() {
   const activeSection = useStore((s) => s.activeSection);
+  const activeHazard = useStore((s) => s.activeHazard);
   const forceActiveSection = useStore((s) => s.forceActiveSection);
 
   // On mount, if no section is active (or if an admin-only section like disasters leaked over), default to live_events
   useEffect(() => {
     // Read fresh state to avoid closure staleness in StrictMode
-    const current = useStore.getState().activeSection;
-    if (!current || current === 'disasters' || current === 'layers') {
-      forceActiveSection('live_events');
+    const { activeSection: current, activeHazard: hazard } = useStore.getState();
+    const validSections = PUBLIC_SECTIONS_BY_HAZARD[hazard] || PUBLIC_SECTIONS_BY_HAZARD.earthquake;
+    if (!current || current === 'disasters' || current === 'layers' || !validSections.includes(current)) {
+      forceActiveSection(DEFAULT_PUBLIC_SECTION_BY_HAZARD[hazard] || 'live_events');
     }
     useStore.setState((state) => ({
       gisLayers: {
@@ -40,7 +60,7 @@ export default function PublicDashboard() {
         gpsVectors: true,
       },
     }));
-  }, [forceActiveSection]);
+  }, [activeHazard, forceActiveSection]);
 
   // Start WebSocket connection — real-time earthquake events + auto-sim results
   useWebSocket();
@@ -87,6 +107,8 @@ export default function PublicDashboard() {
                       <ControlPanel title={PANEL_TITLE[activeSection]}>
                         {activeSection === 'alerts' && <AlertsPanel />}
                         {activeSection === 'tsunami' && <TsunamiPanel />}
+                        {activeSection === 'landslide' && <LandslidePanel />}
+                        {activeSection === 'other_hazards' && <OtherHazardsPanel />}
                       </ControlPanel>
                     )
                   )}

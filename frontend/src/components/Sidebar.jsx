@@ -1,20 +1,54 @@
-import React from 'react';
-import { AlertTriangle, Play, Radio, Archive, Waves } from 'lucide-react';
+import React, { useEffect, useMemo, useRef } from 'react';
+import { AlertTriangle, Play, Radio, Archive, Waves, Mountain, Layers3 } from 'lucide-react';
 import useStore from '../store/useStore';
 
-const navItems = [
-  { id: 'disasters',   icon: Play,          label: 'Earthquake Simulation' },
-  { id: 'alerts',      icon: AlertTriangle, label: 'Alerts'                },
-  { id: 'live_events', icon: Radio,         label: 'Live Events'           },
-  { id: 'historic_events', icon: Archive,   label: 'Historic Earthquakes'  },
-  { id: 'tsunami',     icon: Waves,         label: 'Tsunami Estimate'      },
-];
+const hazardNavItems = {
+  earthquake: [
+    { id: 'disasters',   icon: Play,          label: 'Earthquake Simulation' },
+    { id: 'alerts',      icon: AlertTriangle, label: 'Alerts'                },
+    { id: 'live_events', icon: Radio,         label: 'Live Events'           },
+    { id: 'historic_events', icon: Archive,   label: 'Historic Earthquakes'  },
+  ],
+  tsunami: [
+    { id: 'tsunami', icon: Waves, label: 'Tsunami Estimate' },
+  ],
+  landslide: [
+    { id: 'landslide', icon: Mountain, label: 'Landslide' },
+  ],
+  other: [
+    { id: 'other_hazards', icon: Layers3, label: 'More Hazards' },
+  ],
+};
+
+const defaultSectionByHazard = {
+  earthquake: { admin: 'disasters', public: 'live_events' },
+  tsunami: { admin: 'tsunami', public: 'tsunami' },
+  landslide: { admin: 'landslide', public: 'landslide' },
+  other: { admin: 'other_hazards', public: 'other_hazards' },
+};
 
 export default function Sidebar({ isAdmin = false }) {
-  const visibleNavItems = navItems.filter(item => isAdmin || item.id !== 'disasters');
-
+  const activeHazard = useStore((state) => state.activeHazard);
   const activeSection = useStore((state) => state.activeSection);
   const setActiveSection = useStore((state) => state.setActiveSection);
+  const forceActiveSection = useStore((state) => state.forceActiveSection);
+  const mode = isAdmin ? 'admin' : 'public';
+  const previousHazard = useRef(activeHazard);
+  const visibleNavItems = useMemo(() => {
+    const navItems = hazardNavItems[activeHazard] || hazardNavItems.earthquake;
+    return navItems.filter(item => isAdmin || item.id !== 'disasters');
+  }, [activeHazard, isAdmin]);
+
+  useEffect(() => {
+    const hazardChanged = previousHazard.current !== activeHazard;
+    previousHazard.current = activeHazard;
+
+    const visibleIds = visibleNavItems.map((item) => item.id);
+    if (!visibleIds.length) return;
+    if ((hazardChanged && !activeSection) || (activeSection && !visibleIds.includes(activeSection))) {
+      forceActiveSection(defaultSectionByHazard[activeHazard]?.[mode] || visibleIds[0]);
+    }
+  }, [activeHazard, activeSection, forceActiveSection, mode, visibleNavItems]);
 
   return (
     <aside className="glass-panel z-50 border-t-0 border-l-0 flex flex-col shrink-0 w-[260px] shadow-xl relative">

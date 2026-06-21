@@ -11,7 +11,12 @@ import {
   setSimulationHeatmapMode,
   syncLiveEarthquakesSource,
 } from '../hazards/earthquake';
-import { bringTsunamiLayersToFront, initTsunamiLayers, syncTsunamiSource } from '../hazards/tsunami';
+import {
+  bringTsunamiLayersToFront,
+  initTsunamiLayers,
+  setTsunamiLayerVisibility,
+  syncTsunamiSource,
+} from '../hazards/tsunami';
 
 import { animationManager } from '../services/animationManager';
 
@@ -178,6 +183,7 @@ export default function MapView({ isAdmin = false }) {
   const isPlacingEpicenter = useStore((state) => state.isPlacingEpicenter);
   const isSimulationRunning = useStore((state) => state.isSimulationRunning);
   const liveEvents = useStore((state) => state.liveEvents);
+  const activeHazard = useStore((state) => state.activeHazard);
   const tsunamiResult = useStore((state) => state.tsunamiResult);
   const tsunamiSource = useStore((state) => state.tsunamiSource);
 
@@ -276,6 +282,10 @@ export default function MapView({ isAdmin = false }) {
         refreshVisibleLegendItems,
       });
       syncTsunamiSource(map.current, useStore.getState().tsunamiResult, useStore.getState().tsunamiSource);
+      setTsunamiLayerVisibility(
+        map.current,
+        useStore.getState().activeHazard === 'tsunami' && Boolean(useStore.getState().tsunamiResult && useStore.getState().tsunamiSource)
+      );
       bringTsunamiLayersToFront(map.current);
       rasterService.setMap(map.current);
       scheduleLegendRefresh();
@@ -473,10 +483,11 @@ export default function MapView({ isAdmin = false }) {
   useEffect(() => {
     if (!map.current || !map.current.getStyle()) return;
     syncTsunamiSource(map.current, tsunamiResult, tsunamiSource);
+    setTsunamiLayerVisibility(map.current, activeHazard === 'tsunami' && Boolean(tsunamiResult && tsunamiSource));
     mapLayerService.bringSimulationLayersToFront(map.current);
     bringTsunamiLayersToFront(map.current);
     refreshVisibleLegendItems(map.current);
-  }, [tsunamiResult, tsunamiSource]);
+  }, [activeHazard, tsunamiResult, tsunamiSource]);
 
   // Switch between PGA/damage and MMI intensity heatmap modes
   useEffect(() => {

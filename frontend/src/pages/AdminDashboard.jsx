@@ -21,12 +21,16 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import LiveEventsPanel from '../panels/LiveEventsPanel';
 import HistoricPanel from '../panels/HistoricPanel';
 import TsunamiPanel from '../panels/TsunamiPanel';
+import LandslidePanel from '../panels/LandslidePanel';
+import OtherHazardsPanel from '../panels/OtherHazardsPanel';
 
 const PANEL_TITLE = {
   disasters: 'DISASTERS PANEL',
   alerts:    'ALERTS',
   historic_events: 'HISTORIC EVENTS',
   tsunami: 'TSUNAMI ESTIMATE',
+  landslide: 'LANDSLIDE',
+  other_hazards: 'MORE HAZARDS',
 };
 
 export default function AdminDashboard() {
@@ -78,6 +82,8 @@ export default function AdminDashboard() {
                       {activeSection === 'disasters' && <DisastersPanel />}
                       {activeSection === 'alerts'    && <AlertsPanel />}
                       {activeSection === 'tsunami'   && <TsunamiPanel />}
+                      {activeSection === 'landslide' && <LandslidePanel />}
+                      {activeSection === 'other_hazards' && <OtherHazardsPanel />}
                     </ControlPanel>
                   )}
                 </motion.div>
