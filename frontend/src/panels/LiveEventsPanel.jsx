@@ -131,7 +131,7 @@ export default function LiveEventsPanel() {
           filteredEvents.map((event, i) => (
             <div 
               key={event.id ?? i} 
-              className="flex items-center gap-3 p-3 border-b border-slate-700/30 hover:bg-slate-700/30 hover:bg-slate-800 transition-colors rounded-lg group cursor-pointer"
+              className="flex items-center gap-3 p-3 border-b border-slate-700/30 hover:bg-slate-700 transition-all duration-200 rounded-lg group cursor-pointer"
               onClick={() => {
                 const store = useStore.getState();
                 store.setEarthquakeEpicenter({ lat: event.latitude, lng: event.longitude });
