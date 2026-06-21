@@ -1,21 +1,24 @@
 import { SIM_LAYERS } from '../config/simulationLayers';
-
-const SOURCE_IDS = {
-  historicEarthquakes: 'historic-earthquakes-source',
-};
+import {
+  buildLiveEarthquakeInfoPanel,
+  buildSimulationInfoPanel,
+  EARTHQUAKE_LAYERS,
+  EARTHQUAKE_SOURCES,
+  earthquakeInspectionProvider,
+} from '../hazards/earthquake';
+import { TSUNAMI_LAYERS, tsunamiInspectionProvider } from '../hazards/tsunami';
 
 const registry = new Map();
 
 const UNKNOWN = 'Unknown';
 
 const INSPECTION_LAYER_PRIORITY = [
-  'historic-clusters',
-  'historic-cluster-count',
-  'live-earthquake-point',
-  'live-earthquakes-point',
-  'live-event-point',
-  'live-events-point',
-  'historic-unclustered-point',
+  EARTHQUAKE_LAYERS.historicClusters,
+  EARTHQUAKE_LAYERS.historicClusterCount,
+  EARTHQUAKE_LAYERS.livePoint,
+  ...EARTHQUAKE_LAYERS.legacyLivePointIds,
+  EARTHQUAKE_LAYERS.historicPoint,
+  TSUNAMI_LAYERS.marker,
   'gps-vectors-circle',
   'gps-vectors-head',
   'gps-vectors-line',
@@ -42,99 +45,11 @@ const formatNumber = (value, digits = 2) => {
   return num === null ? UNKNOWN : num.toLocaleString(undefined, { maximumFractionDigits: digits });
 };
 
-const formatMagnitude = (value) => {
-  const num = asNumber(value);
-  return num === null ? UNKNOWN : `M ${num.toFixed(1)}`;
-};
-
-const formatDepth = (value) => {
-  const num = asNumber(value);
-  return num === null ? UNKNOWN : `${num.toFixed(1)} km`;
-};
-
-const formatDateTime = (value) => {
-  if (!value) return UNKNOWN;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return UNKNOWN;
-  return date.toLocaleString([], {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-};
-
-const pointCoordinates = (feature, fallbackLngLat) => {
-  const coordinates = feature?.geometry?.type === 'Point' ? feature.geometry.coordinates : null;
-  const lng = asNumber(coordinates?.[0] ?? fallbackLngLat?.lng);
-  const lat = asNumber(coordinates?.[1] ?? fallbackLngLat?.lat);
-  if (lng === null || lat === null) return null;
-  return { lng, lat };
-};
-
-const formatCoordinates = (coordinates) => {
-  if (!coordinates) return UNKNOWN;
-  return `${coordinates.lat.toFixed(4)}, ${coordinates.lng.toFixed(4)}`;
-};
-
-const coordinatesFromEvent = (event) => {
-  const lat = asNumber(event?.latitude ?? event?.lat);
-  const lng = asNumber(event?.longitude ?? event?.lng);
-  if (lat === null || lng === null) return null;
-  return { lat, lng };
-};
-
 const rows = (items) => items
   .filter((item) => isPresent(item.value))
   .map((item) => ({ label: item.label, value: String(item.value) }));
 
-export const buildLiveEarthquakeInfoPanel = (event) => {
-  if (!event) return null;
-  const coordinates = coordinatesFromEvent(event);
-
-  return {
-    type: 'liveEarthquake',
-    title: formatMagnitude(event.mag ?? event.magnitude),
-    subtitle: event.place || event.location || 'Live earthquake',
-    accent: '#ef4444',
-    sections: [
-      {
-        title: 'Live Earthquake',
-        rows: rows([
-          { label: 'Magnitude', value: formatMagnitude(event.mag ?? event.magnitude) },
-          { label: 'Time', value: formatDateTime(event.time ?? event.origin_time) },
-          { label: 'Depth', value: formatDepth(event.depth ?? event.depth_km) },
-          { label: 'Coordinates', value: formatCoordinates(coordinates) },
-        ]),
-      },
-    ],
-  };
-};
-
-export const buildSimulationInfoPanel = (result, epicenter, event = null) => {
-  if (!result?.grid_geojson?.type) return null;
-  const coordinates = coordinatesFromEvent(event) || epicenter;
-  const stateCount = result.state_summary ? Object.keys(result.state_summary).length : null;
-  const districtCount = result.district_summary ? Object.keys(result.district_summary).length : null;
-
-  return {
-    type: 'simulation',
-    title: 'Simulation Complete',
-    subtitle: result.triggered_by === 'manual' ? 'Manual simulation' : 'Live simulation',
-    accent: '#ef4444',
-    sections: [
-      {
-        title: 'Completed Simulation',
-        rows: rows([
-          { label: 'Magnitude', value: formatMagnitude(event?.mag ?? event?.magnitude) },
-          { label: 'Depth', value: formatDepth(event?.depth ?? event?.depth_km) },
-          { label: 'Coordinates', value: formatCoordinates(coordinates) },
-        ]),
-      },
-    ],
-  };
-};
+export { buildLiveEarthquakeInfoPanel, buildSimulationInfoPanel };
 
 const classifyIntensity = (pgaValue) => {
   const pga = asNumber(pgaValue);
@@ -166,6 +81,10 @@ export const registerInspector = (inspector) => {
   });
 };
 
+export const registerInspectionProvider = (provider) => {
+  provider.inspectors.forEach(registerInspector);
+};
+
 export const getInspectableLayerIds = () => Array.from(registry.keys());
 
 export const inspectFeature = (feature, lngLat) => {
@@ -181,21 +100,18 @@ export const sortInspectionFeatures = (features) => [...features].sort((a, b) =>
 });
 
 export const getClusterExpansion = (feature) => {
-  if (!['historic-clusters', 'historic-cluster-count'].includes(feature?.layer?.id)) return null;
+  if (![EARTHQUAKE_LAYERS.historicClusters, EARTHQUAKE_LAYERS.historicClusterCount].includes(feature?.layer?.id)) return null;
   const clusterId = feature.properties?.cluster_id;
   if (!isPresent(clusterId)) return null;
   return {
-    sourceId: SOURCE_IDS.historicEarthquakes,
+    sourceId: EARTHQUAKE_SOURCES.historic,
     clusterId: Number(clusterId),
     center: feature.geometry?.coordinates,
   };
 };
 
-registerInspector({
-  id: 'historicCluster',
-  layerIds: ['historic-clusters', 'historic-cluster-count'],
-  inspect: () => null,
-});
+registerInspectionProvider(earthquakeInspectionProvider);
+registerInspectionProvider(tsunamiInspectionProvider);
 
 registerInspector({
   id: 'state',
@@ -214,61 +130,6 @@ registerInspector({
           title: 'State',
           rows: rows([
             { label: 'State name', value: stateName },
-          ]),
-        },
-      ],
-    };
-  },
-});
-
-registerInspector({
-  id: 'historicEarthquake',
-  layerIds: ['historic-unclustered-point'],
-  inspect: (feature, lngLat) => {
-    const props = feature.properties || {};
-    const coordinates = pointCoordinates(feature, lngLat);
-    const location = props.place || props.location || formatCoordinates(coordinates);
-
-    return {
-      type: 'historicEarthquake',
-      title: formatMagnitude(props.mag ?? props.magnitude),
-      subtitle: location,
-      accent: '#f97316',
-      sections: [
-        {
-          title: 'Historic Earthquake',
-          rows: rows([
-            { label: 'Magnitude', value: formatMagnitude(props.mag ?? props.magnitude) },
-            { label: 'Date/Time', value: formatDateTime(props.time) },
-            { label: 'Depth', value: formatDepth(props.depth) },
-            { label: 'Coordinates', value: formatCoordinates(coordinates) },
-          ]),
-        },
-      ],
-    };
-  },
-});
-
-registerInspector({
-  id: 'liveEarthquake',
-  layerIds: ['live-earthquake-point', 'live-earthquakes-point', 'live-event-point', 'live-events-point'],
-  inspect: (feature, lngLat) => {
-    const props = feature.properties || {};
-    const coordinates = pointCoordinates(feature, lngLat);
-
-    return {
-      type: 'liveEarthquake',
-      title: formatMagnitude(props.mag ?? props.magnitude),
-      subtitle: props.place || props.location || 'Live earthquake',
-      accent: '#ef4444',
-      sections: [
-        {
-          title: 'Live Earthquake',
-          rows: rows([
-            { label: 'Magnitude', value: formatMagnitude(props.mag ?? props.magnitude) },
-            { label: 'Time', value: formatDateTime(props.time) },
-            { label: 'Depth', value: formatDepth(props.depth) },
-            { label: 'Coordinates', value: formatCoordinates(coordinates) },
           ]),
         },
       ],

@@ -1,21 +1,9 @@
-import { SIM_LAYERS } from './simulationLayers';
+import { EARTHQUAKE_LEGEND_ITEMS } from '../hazards/earthquake';
+import { TSUNAMI_LEGEND_ITEMS } from '../hazards/tsunami';
 
 export const LEGEND_ITEMS = [
-  {
-    id: 'epicenter',
-    layerIds: [SIM_LAYERS.EPICENTER],
-    requiresRenderedFeature: true,
-  },
-  {
-    id: 'historicEarthquakes',
-    layerIds: ['historic-clusters', 'historic-unclustered-point'],
-    requiresRenderedFeature: true,
-  },
-  {
-    id: 'liveEarthquakes',
-    layerIds: ['live-earthquake-point', 'live-earthquakes-point', 'live-event-point', 'live-events-point'],
-    requiresRenderedFeature: true,
-  },
+  ...EARTHQUAKE_LEGEND_ITEMS,
+  ...TSUNAMI_LEGEND_ITEMS,
   {
     id: 'tectonicPlates',
     layerIds: ['tectonic-plates-line'],
@@ -24,16 +12,6 @@ export const LEGEND_ITEMS = [
   {
     id: 'gpsVectors',
     layerIds: ['gps-vectors-circle', 'gps-vectors-line', 'gps-vectors-head'],
-    requiresRenderedFeature: true,
-  },
-  {
-    id: 'pgaIntensity',
-    layerIds: [SIM_LAYERS.CONTOUR_FILL, SIM_LAYERS.WB_GRID_FILL],
-    requiresRenderedFeature: true,
-  },
-  {
-    id: 'mmiIntensity',
-    layerIds: [SIM_LAYERS.INTENSITY_FILL],
     requiresRenderedFeature: true,
   },
   {

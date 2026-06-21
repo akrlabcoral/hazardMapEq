@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import Navbar from '../components/Navbar';
-import Sidebar from '../components/Sidebar';
+import PublicNavbar from '../components/PublicNavbar';
+import PublicSidebar from '../components/PublicSidebar';
 import MapView from '../components/MapView';
 import MapLegend from '../components/MapLegend';
 import ControlPanel from '../components/ControlPanel';
@@ -15,9 +15,11 @@ import { useWebSocket } from '../hooks/useWebSocket';
 
 import LiveEventsPanel from '../panels/LiveEventsPanel';
 import HistoricPanel from '../panels/HistoricPanel';
+import TsunamiPanel from '../panels/TsunamiPanel';
 
 const PANEL_TITLE = {
   alerts:    'ALERTS',
+  tsunami: 'TSUNAMI ESTIMATE',
 };
 
 export default function PublicDashboard() {
@@ -47,7 +49,7 @@ export default function PublicDashboard() {
     <div className="relative w-full h-full flex flex-col">
       {/* Global alert banner for M≥5.0 auto-detected events */}
       <AlertBanner />
-      <Navbar isAdmin={false} />
+      <PublicNavbar />
       <PublicMapToolbar />
 
       <div className="flex-1 relative flex overflow-hidden">
@@ -59,7 +61,7 @@ export default function PublicDashboard() {
         {/* Left Column Overlay (Sidebar + Panels) */}
         <div className="absolute inset-y-0 left-0 pointer-events-none z-10 flex flex-col w-[260px] max-w-[calc(100vw-1rem)]">
           <div className="pointer-events-auto">
-            <Sidebar isAdmin={false} />
+            <PublicSidebar />
           </div>
 
           <div className="flex-1 pt-0 pb-0 pointer-events-none [&>*]:pointer-events-auto flex flex-col min-h-0">
@@ -84,6 +86,7 @@ export default function PublicDashboard() {
                     PANEL_TITLE[activeSection] && (
                       <ControlPanel title={PANEL_TITLE[activeSection]}>
                         {activeSection === 'alerts' && <AlertsPanel />}
+                        {activeSection === 'tsunami' && <TsunamiPanel />}
                       </ControlPanel>
                     )
                   )}

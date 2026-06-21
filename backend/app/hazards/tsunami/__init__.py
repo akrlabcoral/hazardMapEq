@@ -1,0 +1,2 @@
+"""Tsunami hazard module."""
+

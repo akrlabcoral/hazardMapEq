@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Navigation, Star } from 'lucide-react';
+import { Eye, EyeOff, Navigation, Star, Waves } from 'lucide-react';
 
 import useStore from '../store/useStore';
 import { EARTHQUAKE_DAMAGE_PALETTE } from '../config/damagePalette';
@@ -34,10 +34,10 @@ export default function MapLegend() {
   const show = (itemId) => visibleItems.has(itemId);
 
   return (
-    <div className="absolute top-25 right-2 z-20 flex flex-col items-end justify-end gap-2 pointer-events-auto">
+    <div className="absolute top-25 right-2.5 z-20 flex flex-col items-end justify-end gap-2 pointer-events-auto">
       <button 
         onClick={() => setIsVisible(!isVisible)}
-        className="p-2 bg-slate-900/80 hover:bg-slate-800 backdrop-blur-md border border-slate-700/60 rounded-full text-slate-400 hover:text-white transition-colors shadow-lg flex items-center justify-center"
+        className="p-2.5 bg-slate-900/80 hover:bg-slate-800 backdrop-blur-md border border-slate-700/60 rounded-full text-slate-400 hover:text-white transition-colors shadow-lg flex items-center justify-center"
         title={isVisible ? "Hide Legend" : "Show Legend"}
       >
         {isVisible ? <EyeOff size={16} /> : <Eye size={16} />}
@@ -82,6 +82,15 @@ export default function MapLegend() {
           <div className="flex items-center gap-2.5 mt-1.5">
             <Star className="w-4 h-4 fill-red-600 text-white stroke-[1.5px]" style={{ filter: 'drop-shadow(0 0 4px rgb(255, 0, 0))' }} />
             <span className="text-white">Live earthquakes</span>
+          </div>
+        )}
+
+        {show('tsunamiSource') && (
+          <div className="flex items-center gap-2.5 mt-1.5">
+            <div className="flex h-4 w-4 items-center justify-center rounded-full border border-white bg-cyan-500 shadow-[0_0_10px_rgba(56,189,248,0.8)]">
+              <Waves className="h-3 w-3 text-white" strokeWidth={2.2} />
+            </div>
+            <span className="text-white">Tsunami source</span>
           </div>
         )}
 

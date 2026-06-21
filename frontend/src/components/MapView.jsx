@@ -4,13 +4,19 @@ import { Home, ZoomIn, ZoomOut } from 'lucide-react';
 import useStore from '../store/useStore';
 import { mapLayerService } from '../services/mapLayerService';
 import { rasterService } from '../services/rasterService';
+import {
+  buildEpicenterFeatureCollection,
+  renderSimulationResults,
+  restoreSimulationAfterStyleLoad,
+  setSimulationHeatmapMode,
+  syncLiveEarthquakesSource,
+} from '../hazards/earthquake';
+import { bringTsunamiLayersToFront, initTsunamiLayers, syncTsunamiSource } from '../hazards/tsunami';
 
 import { animationManager } from '../services/animationManager';
 
 import {
   initSimulationLayers,
-  LIVE_EARTHQUAKE_SOURCE,
-  SIM_LAYERS,
 } from '../config/simulationLayers';
 import {
   getClusterExpansion,
@@ -153,124 +159,6 @@ const applyBoundaryTheme = (mapInstance, mapStyle) => {
   }
 };
 
-const buildEpicenterFeatureCollection = (epicenter) => ({
-  type: 'FeatureCollection',
-  features: epicenter ? [{
-    type: 'Feature',
-    geometry: { type: 'Point', coordinates: [epicenter.lng, epicenter.lat] }
-  }] : []
-});
-
-const asFiniteNumber = (value) => {
-  const number = Number(value);
-  return Number.isFinite(number) ? number : null;
-};
-
-const buildLiveEventsFeatureCollection = (events = []) => ({
-  type: 'FeatureCollection',
-  features: events
-    .map((event, index) => {
-      const longitude = asFiniteNumber(event.longitude ?? event.lon ?? event.lng);
-      const latitude = asFiniteNumber(event.latitude ?? event.lat);
-      if (longitude === null || latitude === null) return null;
-
-      const magnitude = asFiniteNumber(event.magnitude ?? event.mag) ?? 0;
-      const depth = asFiniteNumber(event.depth ?? event.depth_km);
-      const place = event.place || event.location || 'Live earthquake';
-      const time = event.time || event.origin_time || event.created_at || null;
-
-      return {
-        type: 'Feature',
-        geometry: {
-          type: 'Point',
-          coordinates: [longitude, latitude],
-        },
-        properties: {
-          id: event.id ?? index,
-          source_id: event.source_id || '',
-          source: event.source || '',
-          magnitude,
-          mag: magnitude,
-          depth,
-          depth_km: depth,
-          place,
-          location: place,
-          time,
-          is_relevant: Boolean(event.is_relevant),
-        },
-      };
-    })
-    .filter(Boolean),
-});
-
-const syncLiveEarthquakesSource = (mapInstance, events) => {
-  if (!mapInstance?.getStyle()) return;
-  const source = mapInstance.getSource(LIVE_EARTHQUAKE_SOURCE);
-  if (source?.setData) {
-    source.setData(buildLiveEventsFeatureCollection(events));
-  }
-};
-
-const setSimulationHeatmapMode = (mapInstance, hasResults, showIntensity) => {
-  if (!mapInstance?.getStyle()) return;
-
-  const pgaVisibility = hasResults && !showIntensity ? 'visible' : 'none';
-  const intensityVisibility = hasResults && showIntensity ? 'visible' : 'none';
-
-  if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_FILL)) {
-    mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_FILL, 'visibility', pgaVisibility);
-  }
-  if (mapInstance.getLayer(SIM_LAYERS.CONTOUR_STROKE)) {
-    mapInstance.setLayoutProperty(SIM_LAYERS.CONTOUR_STROKE, 'visibility', pgaVisibility);
-  }
-  if (mapInstance.getLayer(SIM_LAYERS.WB_GRID_FILL)) {
-    mapInstance.setLayoutProperty(SIM_LAYERS.WB_GRID_FILL, 'visibility', pgaVisibility);
-  }
-  if (mapInstance.getLayer(SIM_LAYERS.INTENSITY_FILL)) {
-    mapInstance.setLayoutProperty(SIM_LAYERS.INTENSITY_FILL, 'visibility', intensityVisibility);
-  }
-};
-
-const restoreSimulationAfterStyleLoad = (mapInstance) => {
-  if (!mapInstance?.getStyle()) return;
-
-  const store = useStore.getState();
-  const results = store.simulationResults;
-  const epicenter = store.earthquakeEpicenter;
-  const wbGridSrc = mapInstance.getSource('sim-wb-grid-source');
-  const contourSrc = mapInstance.getSource('sim-contour-source');
-  const intensityContourSrc = mapInstance.getSource('sim-intensity-contour-source');
-  const epicenterSrc = mapInstance.getSource('sim-epicenter-source');
-  const emptyFC = { type: 'FeatureCollection', features: [] };
-
-  if (epicenterSrc) {
-    epicenterSrc.setData(buildEpicenterFeatureCollection(epicenter));
-  }
-  syncLiveEarthquakesSource(mapInstance, store.liveEvents);
-
-  if (!results?.grid_geojson?.type) {
-    if (wbGridSrc) wbGridSrc.setData(emptyFC);
-    if (contourSrc) contourSrc.setData(emptyFC);
-    if (intensityContourSrc) intensityContourSrc.setData(emptyFC);
-    setSimulationHeatmapMode(mapInstance, false, store.intensityVisible);
-    animationManager.stopShockwave();
-    refreshVisibleLegendItems(mapInstance);
-    return;
-  }
-
-  if (wbGridSrc) wbGridSrc.setData(results.grid_geojson);
-  if (contourSrc) contourSrc.setData(results.contour_geojson || emptyFC);
-  if (intensityContourSrc) intensityContourSrc.setData(results.intensity_contour_geojson || emptyFC);
-
-  setSimulationHeatmapMode(mapInstance, true, store.intensityVisible);
-
-  mapLayerService.bringSimulationLayersToFront(mapInstance);
-  if (epicenter) {
-    animationManager.startShockwave(mapInstance, epicenter, 300);
-  }
-  refreshVisibleLegendItems(mapInstance);
-};
-
 export default function MapView({ isAdmin = false }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -290,6 +178,8 @@ export default function MapView({ isAdmin = false }) {
   const isPlacingEpicenter = useStore((state) => state.isPlacingEpicenter);
   const isSimulationRunning = useStore((state) => state.isSimulationRunning);
   const liveEvents = useStore((state) => state.liveEvents);
+  const tsunamiResult = useStore((state) => state.tsunamiResult);
+  const tsunamiSource = useStore((state) => state.tsunamiSource);
 
   // Initialize simulation sources and layers on a loaded map
   const setupSimulation = useCallback((mapInstance) => {
@@ -377,9 +267,16 @@ export default function MapView({ isAdmin = false }) {
 
     map.current.on('style.load', () => {
       setupSimulation(map.current);
+      initTsunamiLayers(map.current);
       mapLayerService.initializeSourcesAndLayers(map.current, useStore.getState().gisLayers);
       applyBoundaryTheme(map.current, useStore.getState().mapStyle);
-      restoreSimulationAfterStyleLoad(map.current);
+      restoreSimulationAfterStyleLoad({
+        mapInstance: map.current,
+        store: useStore.getState(),
+        refreshVisibleLegendItems,
+      });
+      syncTsunamiSource(map.current, useStore.getState().tsunamiResult, useStore.getState().tsunamiSource);
+      bringTsunamiLayersToFront(map.current);
       rasterService.setMap(map.current);
       scheduleLegendRefresh();
 
@@ -573,6 +470,14 @@ export default function MapView({ isAdmin = false }) {
     refreshVisibleLegendItems(map.current);
   }, [liveEvents]);
 
+  useEffect(() => {
+    if (!map.current || !map.current.getStyle()) return;
+    syncTsunamiSource(map.current, tsunamiResult, tsunamiSource);
+    mapLayerService.bringSimulationLayersToFront(map.current);
+    bringTsunamiLayersToFront(map.current);
+    refreshVisibleLegendItems(map.current);
+  }, [tsunamiResult, tsunamiSource]);
+
   // Switch between PGA/damage and MMI intensity heatmap modes
   useEffect(() => {
     if (!map.current || !map.current.getStyle()) return;
@@ -587,88 +492,14 @@ export default function MapView({ isAdmin = false }) {
     let styleWaitInterval = null;
 
     const updateSimulationResults = () => {
-      try {
-        const wbGridSrc = map.current.getSource('sim-wb-grid-source');
-        const contourSrc = map.current.getSource('sim-contour-source');
-        const intensityContourSrc = map.current.getSource('sim-intensity-contour-source');
-        if (!wbGridSrc || !contourSrc) return;
-
-        if (!simulationResults) {
-          // simulationResults=null means simulation was just triggered or cleared
-          debugLog('[MapView] simulationResults cleared — hiding layers and clearing data');
-          setSimulationHeatmapMode(map.current, false, intensityVisible);
-          refreshVisibleLegendItems(map.current);
-          
-          const emptyFC = { type: 'FeatureCollection', features: [] };
-          if (wbGridSrc) wbGridSrc.setData(emptyFC);
-          if (contourSrc) contourSrc.setData(emptyFC);
-          if (intensityContourSrc) intensityContourSrc.setData(emptyFC);
-
-          if (map.current.getSource('state-boundaries-source')) {
-            map.current.removeFeatureState({ source: 'state-boundaries-source' });
-          }
-
-          animationManager.stopShockwave();
-          return;
-        }
-
-        if (!simulationResults.grid_geojson || !simulationResults.grid_geojson.type) {
-          console.warn('[MapView] Invalid grid_geojson received, aborting render.');
-          return;
-        }
-
-        // Log the epicenter the backend used (embedded in features) vs current store
-        const currentEpicenter = useStore.getState().earthquakeEpicenter;
-        debugLog('[MapView] Rendering new simulation results. Current store epicenter:', currentEpicenter);
-        debugLog('[MapView] Grid features count:', simulationResults.grid_geojson.features?.length);
-
-        wbGridSrc.setData(simulationResults.grid_geojson);
-        if (simulationResults.contour_geojson) {
-          contourSrc.setData(simulationResults.contour_geojson);
-        }
-        if (intensityContourSrc) {
-          intensityContourSrc.setData(simulationResults.intensity_contour_geojson || { type: 'FeatureCollection', features: [] });
-        }
-        
-        setSimulationHeatmapMode(map.current, true, intensityVisible);
-        mapLayerService.bringSimulationLayersToFront(map.current);
-        refreshVisibleLegendItems(map.current);
-        debugLog('[MapView] Heatmap mode:', intensityVisible ? 'intensity' : 'pga');
-
-        const pendingInfoPanel = useStore.getState().pendingSimulationInfoPanel;
-        if (pendingInfoPanel) {
-          useStore.getState().setInfoPanel(pendingInfoPanel);
-          useStore.getState().clearPendingSimulationInfoPanel();
-        }
-
-        if (simulationResults.state_summary) {
-          const mapping = useStore.getState().stateIdMapping;
-          if (mapping) {
-            Object.values(simulationResults.state_summary).forEach(summary => {
-              const stateId = mapping[summary.state];
-              if (stateId) {
-                map.current.setFeatureState(
-                  { source: 'state-boundaries-source', id: stateId },
-                  { 
-                    avg_pga: summary.avg_pga,
-                    max_pga: summary.max_pga,
-                    risk_category: summary.risk_category,
-                    pop_affected: summary.pop_affected,
-                    damage_score: summary.damage_score
-                  }
-                );
-              }
-            });
-          }
-        }
-
-        if (earthquakeEpicenter) {
-          debugLog('[MapView] Starting shockwave at epicenter:', earthquakeEpicenter);
-          animationManager.startShockwave(map.current, earthquakeEpicenter, 300);
-        }
-      } catch (err) {
-        console.error('[MapView] Failed to render simulation results:', err);
-      }
+      renderSimulationResults({
+        mapInstance: map.current,
+        simulationResults,
+        earthquakeEpicenter,
+        intensityVisible,
+        getStoreState: useStore.getState,
+        refreshVisibleLegendItems,
+      });
     };
 
     // Wait for style to be fully loaded before updating.

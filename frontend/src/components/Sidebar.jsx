@@ -1,5 +1,5 @@
 import React from 'react';
-import { AlertTriangle, Play, Radio, Archive } from 'lucide-react';
+import { AlertTriangle, Play, Radio, Archive, Waves } from 'lucide-react';
 import useStore from '../store/useStore';
 
 const navItems = [
@@ -7,6 +7,7 @@ const navItems = [
   { id: 'alerts',      icon: AlertTriangle, label: 'Alerts'                },
   { id: 'live_events', icon: Radio,         label: 'Live Events'           },
   { id: 'historic_events', icon: Archive,   label: 'Historic Earthquakes'  },
+  { id: 'tsunami',     icon: Waves,         label: 'Tsunami Estimate'      },
 ];
 
 export default function Sidebar({ isAdmin = false }) {
