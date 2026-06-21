@@ -14,10 +14,10 @@ import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 import LiveEventsPanel from '../panels/LiveEventsPanel';
 import HistoricPanel from '../panels/HistoricPanel';
-import TsunamiPanel from '../panels/TsunamiPanel';
+import TsunamiPanel from '../hazards/tsunami/panels/TsunamiPanel';
 import LandslidePanel from '../panels/LandslidePanel';
 import OtherHazardsPanel from '../panels/OtherHazardsPanel';
-import TsunamiEmptyPanel from '../panels/TsunamiEmptyPanel';
+import TsunamiEmptyPanel from '../hazards/tsunami/panels/TsunamiEmptyPanel';
 
 const PANEL_TITLE = {
   alerts: 'ALERTS',

@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { Calculator, MapPin, RotateCcw, Waves } from 'lucide-react';
-import { calculateTsunamiHazard, buildTsunamiInfoPanel } from '../hazards/tsunami';
-import useStore from '../store/useStore';
+import useStore from '../../../store/useStore';
+import { calculateTsunamiHazard } from '../api';
+import { buildTsunamiInfoPanel } from '../infoPanels';
 
 const DEFAULT_FORM = {
   magnitude: '7.0',

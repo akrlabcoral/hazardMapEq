@@ -1,8 +1,5 @@
-// src/panels/disasters/EpicenterControl.jsx
-// Epicenter section: lat/lng display, manual inputs, and Drop Pin button
-
 import { useCallback } from 'react';
-import { useEarthquakeState } from '../../hooks/useEarthquakeState';
+import { useEarthquakeState } from '../useEarthquakeState';
 
 const formatCoords = (epicenter) => {
   if (!epicenter) return 'Lat: --.---, Lng: --.---';

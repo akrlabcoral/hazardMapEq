@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Calculator, Gauge, MapPin, Mountain, Play, RotateCcw, Ruler, Waves } from 'lucide-react';
-import { useSimulation } from '../../hooks/useSimulation';
+import { useSimulation } from '../../hazards/earthquake/useSimulation';
 import { calculateTsunamiHazard, buildTsunamiInfoPanel } from '../../hazards/tsunami';
 import useStore from '../../store/useStore';
 import HazardBottomPanel from './HazardBottomPanel';

@@ -1,12 +1,9 @@
-// src/panels/DisastersPanel.jsx
-// Full Disasters panel — composed from extracted sub-components
-
 import { RefreshCw, Play } from 'lucide-react';
 import { useShallow } from 'zustand/react/shallow';
-import useStore from '../store/useStore';
-import { useSimulation } from '../hooks/useSimulation';
-import { EpicenterControl } from './disasters/EpicenterControl';
-import { MagnitudeDepthRow } from './disasters/MagnitudeDepthRow';
+import useStore from '../../../store/useStore';
+import { useSimulation } from '../useSimulation';
+import { EpicenterControl } from './EpicenterControl';
+import { MagnitudeDepthRow } from './MagnitudeDepthRow';
 
 export function DisastersPanel() {
   const { earthquakeEpicenter, isSimulationRunning, clearSimulationState } = useStore(

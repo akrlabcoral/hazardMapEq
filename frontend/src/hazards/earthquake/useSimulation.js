@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import useStore from '../store/useStore';
-import { debugLog } from '../utils/debug';
-import { buildSimulationInfoPanel } from '../services/featureInspectionManager';
+import useStore from '../../store/useStore';
+import { debugLog } from '../../utils/debug';
+import { buildSimulationInfoPanel } from './infoPanels';
 
 export function useSimulation() {
-  const setSimulationResults   = useStore((s) => s.setSimulationResults);
+  const setSimulationResults = useStore((s) => s.setSimulationResults);
   const setIsSimulationRunning = useStore((s) => s.setIsSimulationRunning);
   const setPendingSimulationRequestId = useStore((s) => s.setPendingSimulationRequestId);
   const setPendingSimulationInfoPanel = useStore((s) => s.setPendingSimulationInfoPanel);
-  
+
   const [error, setError] = useState(null);
   const pollTimeoutRef = useRef(null);
   const pollAbortRef = useRef(null);
@@ -92,23 +92,23 @@ export function useSimulation() {
     stopPolling();
     setIsSimulationRunning(true);
     setError(null);
-    setSimulationResults(null); // Clear previous results
+    setSimulationResults(null);
     setPendingSimulationInfoPanel(null);
 
     try {
       const payload = {
         latitude: epicenter.lat,
         longitude: epicenter.lng,
-        magnitude: magnitude,
-        depth: depth,
+        magnitude,
+        depth,
       };
-      
+
       const response = await fetch('/scientific-api/simulate-earthquake', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload)
       });
-      
+
       debugLog('[Sim] API payload sent:', { lat: epicenter.lat, lng: epicenter.lng, magnitude, depth });
 
       if (!response.ok) {
@@ -130,7 +130,6 @@ export function useSimulation() {
         }));
         setIsSimulationRunning(false);
       }
-      
     } catch (err) {
       console.error('[Sim] Scientific API error:', err);
       setError(err.message);

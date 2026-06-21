@@ -10,8 +10,8 @@ from app.api.ws import client_count
 from app.core.errors import NotFoundError, ServiceUnavailableError, ValidationError
 from app.hazards.base.interfaces import HazardService
 from app.hazards.earthquake import repository
-from app.ingest.poller import poller_stats
-from app.jobs.queue import get_queue
+from app.hazards.earthquake.ingest import poller_stats
+from app.hazards.earthquake.jobs import get_queue
 from app.shared.gis.boundary import is_epicenter_valid
 
 logger = logging.getLogger(__name__)
@@ -104,4 +104,3 @@ class EarthquakeService(HazardService):
 
 
 earthquake_service = EarthquakeService()
-

@@ -29,9 +29,8 @@ from app.core.database import close_pool, init_db, init_pool
 from app.core.logging import configure_logging
 from app.shared.cache import raster_cache
 from app.shared.gis.raster_loader import load_all_soil_rasters
-from app.ingest.poller import run_poller, run_ncs_poller
-from app.jobs.queue import get_queue
-from app.jobs.simulation_worker import SimulationRunner
+from app.hazards.earthquake.ingest import run_ncs_poller, run_poller
+from app.hazards.earthquake.jobs import SimulationRunner, get_queue
 from app.services.background_tasks import BackgroundTaskManager
 from app.services.cleanup_scheduler import run_daily_cleanup
 from app.services.recovery import recover_unsimulated_events

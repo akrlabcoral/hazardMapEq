@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from 'react';
 import useStore from '../store/useStore';
-import { useSimulation } from '../hooks/useSimulation';
+import { useSimulation } from '../hazards/earthquake/useSimulation';
 import { mapLayerService } from '../services/mapLayerService';
 
 // Simple time formatter

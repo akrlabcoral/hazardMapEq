@@ -8,8 +8,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter
 
 from app.api.ws import broadcast
-from app.ingest.normalizer import EarthquakeEvent, event_to_payload
-from app.jobs.queue import enqueue
+from app.hazards.earthquake.ingest import EarthquakeEvent, event_to_payload
+from app.hazards.earthquake.jobs import enqueue
 
 router = APIRouter()
 

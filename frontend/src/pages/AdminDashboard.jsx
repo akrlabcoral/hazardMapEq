@@ -19,7 +19,7 @@ import { AlertsPanel } from '../panels/AlertsPanel';
 import LiveEventsPanel from '../panels/LiveEventsPanel';
 import HistoricPanel from '../panels/HistoricPanel';
 import OtherHazardsPanel from '../panels/OtherHazardsPanel';
-import TsunamiEmptyPanel from '../panels/TsunamiEmptyPanel';
+import TsunamiEmptyPanel from '../hazards/tsunami/panels/TsunamiEmptyPanel';
 import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 

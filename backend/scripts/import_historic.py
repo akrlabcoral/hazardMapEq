@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.models.historic_repository import save_historic_events_batch
-from app.ingest.normalizer import EarthquakeEvent
+from app.hazards.earthquake.ingest.normalizer import EarthquakeEvent
 from app.models.repository import init_db, init_pool, close_pool
 
 def import_geojson(filepath: str):

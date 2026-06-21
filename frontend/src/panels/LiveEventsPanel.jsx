@@ -1,6 +1,6 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import useStore from '../store/useStore';
-import { useSimulation } from '../hooks/useSimulation';
+import { useSimulation } from '../hazards/earthquake/useSimulation';
 
 function timeAgo(isoString) {
   if (!isoString) return '';

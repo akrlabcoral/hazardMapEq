@@ -1,10 +1,10 @@
 import { create } from 'zustand';
 import { createUiSlice } from './slices/uiSlice';
-import { createSimulationSlice } from './slices/simulationSlice';
+import { createSimulationSlice } from '../hazards/earthquake/state';
 import { createMapSlice } from './slices/mapSlice';
 import { createRasterSlice } from './slices/rasterSlice';
 import { createLiveEventsSlice } from './slices/liveEventsSlice';
-import { createTsunamiSlice } from './slices/tsunamiSlice';
+import { createTsunamiSlice } from '../hazards/tsunami/state';
 
 const useStore = create((set, get, api) => ({
   ...createUiSlice(set, get, api),

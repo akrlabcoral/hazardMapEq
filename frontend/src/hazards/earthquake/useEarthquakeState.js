@@ -1,9 +1,5 @@
-// src/hooks/useEarthquakeState.js
-// Custom selector hook — groups all earthquake simulation state together.
-// useShallow prevents re-render when unrelated store keys change.
-
 import { useShallow } from 'zustand/react/shallow';
-import useStore from '../store/useStore';
+import useStore from '../../store/useStore';
 
 export function useEarthquakeState() {
   return useStore(useShallow((s) => ({

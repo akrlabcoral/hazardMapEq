@@ -5,4 +5,3 @@ export const createTsunamiSlice = (set) => ({
   setTsunamiSource: (source) => set({ tsunamiSource: source }),
   clearTsunamiState: () => set({ tsunamiResult: null, tsunamiSource: null }),
 });
-

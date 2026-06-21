@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from app.jobs import simulation_worker
-from app.jobs.simulation_worker import GridContext, SimulationRunner, mmi_to_roman, pga_g_to_mmi
+from app.hazards.earthquake.jobs import simulation_worker
+from app.hazards.earthquake.jobs.simulation_worker import GridContext, SimulationRunner, mmi_to_roman, pga_g_to_mmi
 
 
 def _feature(cell_id, lon, lat):

@@ -2,9 +2,9 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from app.ingest import deduplicator
-from app.ingest.ncs_scraper import _parse_ncs_object
-from app.ingest.normalizer import compute_fingerprint, normalize_usgs_feature
+from app.hazards.earthquake.ingest import deduplicator
+from app.hazards.earthquake.ingest.ncs_scraper import _parse_ncs_object
+from app.hazards.earthquake.ingest.normalizer import compute_fingerprint, normalize_usgs_feature
 
 
 def test_normalize_usgs_feature_and_fingerprint():

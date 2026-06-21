@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 
 import pytest
 
-from app.ingest.filter import is_relevant
-from app.ingest.normalizer import EarthquakeEvent
+from app.hazards.earthquake.ingest.filter import is_relevant
+from app.hazards.earthquake.ingest.normalizer import EarthquakeEvent
 from app.layers.pga.gmpe import HimalayanGMPE
 from app.layers.pga.selector import GMPESelector
 from app.soil.amplification import get_amplification_batch, get_amplification_factor

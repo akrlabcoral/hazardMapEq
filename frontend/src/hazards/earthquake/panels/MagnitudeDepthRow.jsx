@@ -1,7 +1,4 @@
-// src/panels/disasters/MagnitudeDepthRow.jsx
-// Magnitude and Depth inputs side-by-side
-
-import { useEarthquakeState } from '../../hooks/useEarthquakeState';
+import { useEarthquakeState } from '../useEarthquakeState';
 
 export function MagnitudeDepthRow() {
   const { magnitude, setMagnitude, depth, setDepth } = useEarthquakeState();
