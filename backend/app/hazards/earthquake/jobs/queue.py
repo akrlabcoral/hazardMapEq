@@ -1,5 +1,5 @@
 """
-app/jobs/queue.py
+app/hazards/earthquake/jobs/queue.py
 
 Distributed job queue interface for simulation workers.
 Wraps RQ (Redis Queue) to replace the legacy local asyncio.Queue.

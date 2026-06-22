@@ -1,5 +1,5 @@
 """
-app/ingest/filter.py
+app/hazards/earthquake/ingest/filter.py
 
 Relevance filter — only pass events that are:
   1. M >= MIN_MAGNITUDE (currently 0.0 — ingests all magnitudes including micro-tremors)
@@ -7,7 +7,7 @@ Relevance filter — only pass events that are:
   2. Within India's buffered boundary (1.8-degree buffer = ~200 km)
   3. Depth <= 300 km (very deep events have diffuse surface impact)
 
-Reuses BUFFERED_INDIA from app/gis/boundary.py which is already loaded at startup.
+Reuses buffered India boundary geometry loaded at startup.
 """
 from __future__ import annotations
 

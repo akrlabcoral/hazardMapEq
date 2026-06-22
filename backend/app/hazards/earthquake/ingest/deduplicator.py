@@ -1,5 +1,5 @@
 """
-app/ingest/deduplicator.py
+app/hazards/earthquake/ingest/deduplicator.py
 
 PostgreSQL-backed event deduplication.
 No Redis required — uses the existing `dedup_cache` table.

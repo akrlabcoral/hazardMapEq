@@ -1,5 +1,5 @@
 """
-app/ingest/normalizer.py
+app/hazards/earthquake/ingest/normalizer.py
 
 Converts a raw USGS GeoJSON feature into a canonical EarthquakeEvent dataclass.
 """

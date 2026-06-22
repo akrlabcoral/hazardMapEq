@@ -1,5 +1,5 @@
 """
-app/ingest/ncs_scraper.py
+app/hazards/earthquake/ingest/ncs_scraper.py
 
 Scrapes earthquake data from the NCS India website (https://riseq.seismo.gov.in/)
 and maps it into the canonical EarthquakeEvent structure.
