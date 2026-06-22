@@ -8,6 +8,7 @@ from app.hazards.earthquake.repository import save_earthquake_event, save_histor
 from app.hazards.earthquake.ingest import deduplicator
 from app.hazards.earthquake.ingest.filter import is_relevant
 from app.hazards.earthquake.ingest.normalizer import EarthquakeEvent, event_to_payload
+from app.hazards.tsunami.trigger_engine import evaluate_tsunami_trigger
 
 logger = logging.getLogger("hazardmap.ingest.processor")
 
@@ -28,6 +29,7 @@ async def process_event(
     relevant = is_relevant(event)
     payload = event_to_payload(event)
     payload["is_relevant"] = relevant
+    payload["tsunami_trigger"] = evaluate_tsunami_trigger(event).to_dict()
 
     await broadcast({
         "type": "earthquake_detected",

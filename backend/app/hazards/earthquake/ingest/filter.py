@@ -11,11 +11,9 @@ Reuses buffered India boundary geometry loaded at startup.
 """
 from __future__ import annotations
 
-from shapely.geometry import Point
-
 from app.hazards.earthquake.ingest.normalizer import EarthquakeEvent
 from app.config import settings
-from app.gis.boundary import BUFFERED_INDIA
+from app.shared.gis.boundary_service import boundary_service
 
 MIN_MAGNITUDE = settings.auto_sim_min_magnitude
 MAX_DEPTH_KM  = settings.auto_sim_max_depth_km
@@ -27,5 +25,4 @@ def is_relevant(event: EarthquakeEvent) -> bool:
         return False
     if event.depth_km > MAX_DEPTH_KM:
         return False
-    point = Point(event.longitude, event.latitude)
-    return BUFFERED_INDIA.contains(point)
+    return boundary_service.contains_supported_epicenter(event.latitude, event.longitude)

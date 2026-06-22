@@ -53,9 +53,10 @@ def sample_batch(lons: np.ndarray, lats: np.ndarray) -> np.ndarray:
             coords = [(float(lons[i]), float(lats[i])) for i in indices]
             sampled = cache.sample_points(state_name, coords)
             for j, idx in enumerate(indices):
-                raw = sampled[j][0]  # band 1
+                raw_item = sampled[j]
+                raw = raw_item[0] if hasattr(raw_item, "__getitem__") and not isinstance(raw_item, (float, int)) else raw_item
                 # Negative values or <= 0 often indicate nodata in rasters
-                if raw > 0:
+                if raw is not None and raw > 0:
                     result[idx] = np.float32(raw)
         except Exception as e:
             logger.warning("[SoilSampler] Sampling failed for '%s': %s", state_name, e)

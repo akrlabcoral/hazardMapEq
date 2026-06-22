@@ -35,6 +35,15 @@ class Settings:
     )
     grid_path: str = os.environ.get("GRID_PATH", "data/grids/nationwide_20km.geojson")
     vs30_raster_path: str = os.environ.get("VS30_RASTER_PATH", "/app/data/soil/india_vs30.tif")
+    population_raster_path: str = os.environ.get(
+        "POPULATION_RASTER_PATH",
+        "/app/data/population/india_population_1km.tif",
+    )
+    bathymetry_raster_path: str = os.environ.get("BATHYMETRY_RASTER_PATH", "")
+    terrain_raster_path: str = os.environ.get("TERRAIN_RASTER_PATH", "")
+    coastline_vector_path: str = os.environ.get("COASTLINE_VECTOR_PATH", "")
+    admin_boundaries_vector_path: str = os.environ.get("ADMIN_BOUNDARIES_VECTOR_PATH", "")
+    india_boundary_path: str = os.environ.get("INDIA_BOUNDARY_PATH", "/app/data/india/india_boundary.geojson")
     usgs_poll_interval_seconds: int = int(os.environ.get("USGS_POLL_INTERVAL_SECONDS", "60"))
     ncs_poll_interval_seconds: int = int(os.environ.get("NCS_POLL_INTERVAL_SECONDS", "60"))
     auto_sim_min_magnitude: float = float(os.environ.get("AUTO_SIM_MIN_MAGNITUDE", "0.0"))

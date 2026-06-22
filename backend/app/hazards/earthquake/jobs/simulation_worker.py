@@ -15,7 +15,7 @@ from app.layers.pga.engine import PGAEngine
 from app.layers.pga.selector import GMPESelector
 from app.layers.soil.engine import SoilEngine
 from app.models.repository import save_simulation
-from app.services.impact_aggregator import aggregate_impact
+from app.shared.exposure import aggregate_impact
 
 logger = logging.getLogger("hazardmap.worker")
 

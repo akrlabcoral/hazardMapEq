@@ -1,10 +1,12 @@
 from __future__ import annotations
 
+import asyncio
 from datetime import datetime, timezone
 
 from app.hazards.earthquake.ingest import deduplicator
 from app.hazards.earthquake.ingest.ncs_scraper import _parse_ncs_object
-from app.hazards.earthquake.ingest.normalizer import compute_fingerprint, normalize_usgs_feature
+from app.hazards.earthquake.ingest.normalizer import EarthquakeEvent, compute_fingerprint, normalize_usgs_feature
+from app.hazards.earthquake.ingest.processor import process_event
 
 
 def test_normalize_usgs_feature_and_fingerprint():
@@ -79,3 +81,41 @@ def test_deduplicator_try_record_uses_atomic_repository_call(monkeypatch):
 
     assert deduplicator.try_record(Event()) is False
     assert calls["marked"] == ("src", "fp")
+
+
+def test_process_event_adds_tsunami_trigger_to_existing_broadcast(monkeypatch):
+    captured_messages = []
+
+    async def fake_broadcast(message):
+        captured_messages.append(message)
+
+    monkeypatch.setattr("app.hazards.earthquake.ingest.processor.broadcast", fake_broadcast)
+    monkeypatch.setattr("app.hazards.earthquake.ingest.processor.deduplicator.try_record", lambda event: True)
+    monkeypatch.setattr("app.hazards.earthquake.ingest.processor.save_earthquake_event", lambda event: 42)
+    monkeypatch.setattr("app.hazards.earthquake.ingest.processor.save_historic_event", lambda event: None)
+    monkeypatch.setattr("app.hazards.earthquake.ingest.processor.is_relevant", lambda event: False)
+
+    event = EarthquakeEvent(
+        source_id="test:bay",
+        source="TEST",
+        fingerprint="fp",
+        latitude=14.0,
+        longitude=88.0,
+        depth_km=20.0,
+        magnitude=6.8,
+        mag_type="Mw",
+        origin_time=datetime(2026, 6, 1, tzinfo=timezone.utc),
+        place="Bay of Bengal",
+        status="reviewed",
+        alert_level=None,
+    )
+
+    processed, queued = asyncio.run(process_event(event, asyncio.Queue(), "test"))
+
+    assert processed is True
+    assert queued is False
+    assert captured_messages[0]["type"] == "earthquake_detected"
+    tsunami_trigger = captured_messages[0]["event"]["tsunami_trigger"]
+    assert tsunami_trigger["is_triggered"] is True
+    assert tsunami_trigger["threat_level"] == "WATCH"
+    assert tsunami_trigger["matched_region"] == "Bay of Bengal"

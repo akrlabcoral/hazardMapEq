@@ -43,7 +43,7 @@ from scipy.ndimage import gaussian_filter
 from scipy.spatial import Delaunay
 import geopandas as gpd
 
-from app.gis.boundary import get_india_geom
+from app.shared.gis.boundary import get_india_geom
 from app.config import (
     MMI_COLORS,
     MMI_LEVELS,

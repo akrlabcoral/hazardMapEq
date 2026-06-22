@@ -28,6 +28,7 @@ from app.config import settings
 from app.core.database import close_pool, init_db, init_pool
 from app.core.logging import configure_logging
 from app.shared.cache import raster_cache
+from app.shared.gis import close_all_gis_services
 from app.shared.gis.raster_loader import load_all_soil_rasters
 from app.hazards.earthquake.ingest import run_ncs_poller, run_poller
 from app.hazards.earthquake.jobs import SimulationRunner, get_queue
@@ -80,6 +81,7 @@ async def lifespan(app: FastAPI):
 
     logger.info("[Shutdown] Closing soil raster handles...")
     raster_cache.close_all()
+    close_all_gis_services()
 
     logger.info("[Shutdown] Closing DB connection pool...")
     close_pool()
