@@ -1,61 +1,26 @@
 import React from 'react';
-import { Activity, Layers3, Mountain, Waves } from 'lucide-react';
+import { getDefaultSection, getHazards, getHazardPanelIds } from '../hazards/registry';
 import useStore from '../store/useStore';
-
-const HAZARDS = [
-  {
-    id: 'earthquake',
-    label: 'Earthquake',
-    icon: Activity,
-    defaultSection: { admin: 'disasters', public: 'live_events' },
-  },
-  {
-    id: 'tsunami',
-    label: 'Tsunami',
-    icon: Waves,
-    defaultSection: { admin: 'tsunami', public: 'tsunami_alerts' },
-  },
-  //{
-  //  id: 'landslide',
-  //  label: 'landslide',
-  //  icon: Mountain,
-  //  defaultSection: { admin: 'landslide', public: 'landslide' },
-  //},
-  //{
-  //  id: 'other',
-  //  label: '*',
-  //  icon: Layers3,
-  //  defaultSection: { admin: 'other_hazards', public: 'other_hazards' },
-  //},
-];
-
-const VALID_SECTIONS_BY_HAZARD = {
-  earthquake: ['disasters', 'alerts', 'live_events', 'historic_events'],
-  tsunami: ['tsunami', 'tsunami_alerts', 'tsunami_live_events', 'historic_tsunami'],
-  landslide: ['landslide'],
-  other: ['other_hazards'],
-};
 
 export default function HazardSelector({ isAdmin = false }) {
   const activeHazard = useStore((state) => state.activeHazard);
-  const activeSection = useStore((state) => state.activeSection);
+  const activePanel = useStore((state) => state.activePanel);
   const setActiveHazard = useStore((state) => state.setActiveHazard);
-  const forceActiveSection = useStore((state) => state.forceActiveSection);
+  const forceActivePanel = useStore((state) => state.forceActivePanel);
   const mode = isAdmin ? 'admin' : 'public';
 
   const selectHazard = (hazard) => {
     setActiveHazard(hazard.id);
 
-    const validSections = VALID_SECTIONS_BY_HAZARD[hazard.id] || [];
-    const publicSafeSection = !isAdmin && activeSection === 'disasters' ? null : activeSection;
-    if (!publicSafeSection || !validSections.includes(publicSafeSection)) {
-      forceActiveSection(hazard.defaultSection[mode]);
+    const validSections = getHazardPanelIds(hazard.id, mode);
+    if (!activePanel || !validSections.includes(activePanel)) {
+      forceActivePanel(getDefaultSection(hazard.id, mode));
     }
   };
 
   return (
     <div className="flex items-center rounded-xl border border-slate-600/50 bg-slate-900/35 p-1 shadow-inner">
-      {HAZARDS.map((hazard) => {
+      {getHazards().map((hazard) => {
         const Icon = hazard.icon;
         const isActive = activeHazard === hazard.id;
         return (

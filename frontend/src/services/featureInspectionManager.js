@@ -1,14 +1,13 @@
 import { SIM_LAYERS } from '../config/simulationLayers';
-import {
-  buildLiveEarthquakeInfoPanel,
-  buildSimulationInfoPanel,
-  EARTHQUAKE_LAYERS,
-  EARTHQUAKE_SOURCES,
-  earthquakeInspectionProvider,
-} from '../hazards/earthquake';
-import { TSUNAMI_LAYERS, tsunamiInspectionProvider } from '../hazards/tsunami';
+import { buildLiveEarthquakeInfoPanel, buildSimulationInfoPanel } from '../hazards/earthquake';
+import { getHazard, getHazardInspectionProviders } from '../hazards/registry';
 
 const registry = new Map();
+const earthquakeHazard = getHazard('earthquake');
+const tsunamiHazard = getHazard('tsunami');
+const EARTHQUAKE_LAYERS = earthquakeHazard?.layerMetadata?.layers || {};
+const EARTHQUAKE_SOURCES = earthquakeHazard?.layerMetadata?.sources || {};
+const TSUNAMI_LAYERS = tsunamiHazard?.layerMetadata?.layers || {};
 
 const UNKNOWN = 'Unknown';
 
@@ -16,7 +15,7 @@ const INSPECTION_LAYER_PRIORITY = [
   EARTHQUAKE_LAYERS.historicClusters,
   EARTHQUAKE_LAYERS.historicClusterCount,
   EARTHQUAKE_LAYERS.livePoint,
-  ...EARTHQUAKE_LAYERS.legacyLivePointIds,
+  ...(EARTHQUAKE_LAYERS.legacyLivePointIds || []),
   EARTHQUAKE_LAYERS.historicPoint,
   TSUNAMI_LAYERS.marker,
   'gps-vectors-circle',
@@ -110,8 +109,7 @@ export const getClusterExpansion = (feature) => {
   };
 };
 
-registerInspectionProvider(earthquakeInspectionProvider);
-registerInspectionProvider(tsunamiInspectionProvider);
+getHazardInspectionProviders().forEach(registerInspectionProvider);
 
 registerInspector({
   id: 'state',

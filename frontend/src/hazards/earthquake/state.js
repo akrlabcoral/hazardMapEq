@@ -1,4 +1,4 @@
-export const createSimulationSlice = (set) => ({
+export const createEarthquakeSlice = (set) => ({
   isPlacingEpicenter: false,
   setIsPlacingEpicenter: (val) => set({ isPlacingEpicenter: val }),
 
@@ -27,3 +27,7 @@ export const createSimulationSlice = (set) => ({
     pendingSimulationInfoPanel: null,
   }),
 });
+
+export const createSimulationSlice = createEarthquakeSlice;
+
+export default createEarthquakeSlice;

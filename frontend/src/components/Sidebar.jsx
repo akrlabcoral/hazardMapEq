@@ -1,49 +1,17 @@
 import React, { useEffect, useMemo, useRef } from 'react';
-import { AlertTriangle, Play, Radio, Archive, Waves, Mountain, Layers3 } from 'lucide-react';
+import { getDefaultSection, getVisibleHazardPanels } from '../hazards/registry';
 import useStore from '../store/useStore';
-
-const hazardNavItems = {
-  earthquake: [
-    { id: 'disasters', icon: Play, label: 'Earthquake Simulation' },
-    { id: 'alerts', icon: AlertTriangle, label: 'Alerts' },
-    { id: 'live_events', icon: Radio, label: 'Live Events' },
-    { id: 'historic_events', icon: Archive, label: 'Historic Earthquakes' },
-  ],
-  tsunami: [
-    { id: 'tsunami', icon: Waves, label: 'Tsunami Estimate' },
-    { id: 'tsunami_alerts', icon: AlertTriangle, label: 'Tsunami Alerts' },
-    { id: 'tsunami_live_events', icon: Radio, label: 'Live Tsunami Events' },
-    { id: 'historic_tsunami', icon: Archive, label: 'Historic Tsunami' },
-  ],
-  landslide: [
-    { id: 'landslide', icon: Mountain, label: 'Landslide' },
-  ],
-  other: [
-    { id: 'other_hazards', icon: Layers3, label: 'More Hazards' },
-  ],
-};
-
-const defaultSectionByHazard = {
-  earthquake: { admin: 'disasters', public: 'live_events' },
-  tsunami: { admin: 'tsunami', public: 'tsunami' },
-  landslide: { admin: 'landslide', public: 'landslide' },
-  other: { admin: 'other_hazards', public: 'other_hazards' },
-};
 
 export default function Sidebar({ isAdmin = false }) {
   const activeHazard = useStore((state) => state.activeHazard);
-  const activeSection = useStore((state) => state.activeSection);
-  const setActiveSection = useStore((state) => state.setActiveSection);
-  const forceActiveSection = useStore((state) => state.forceActiveSection);
+  const activePanel = useStore((state) => state.activePanel);
+  const setActivePanel = useStore((state) => state.setActivePanel);
+  const forceActivePanel = useStore((state) => state.forceActivePanel);
   const mode = isAdmin ? 'admin' : 'public';
   const previousHazard = useRef(activeHazard);
   const visibleNavItems = useMemo(() => {
-    const navItems = hazardNavItems[activeHazard] || hazardNavItems.earthquake;
-    return navItems.filter(item => {
-      if (isAdmin) return true;
-      return item.id !== 'disasters' && item.id !== 'tsunami';
-    });
-  }, [activeHazard, isAdmin]);
+    return getVisibleHazardPanels(activeHazard, mode);
+  }, [activeHazard, mode]);
 
   useEffect(() => {
     const hazardChanged = previousHazard.current !== activeHazard;
@@ -51,21 +19,21 @@ export default function Sidebar({ isAdmin = false }) {
 
     const visibleIds = visibleNavItems.map((item) => item.id);
     if (!visibleIds.length) return;
-    if ((hazardChanged && !activeSection) || (activeSection && !visibleIds.includes(activeSection))) {
-      forceActiveSection(defaultSectionByHazard[activeHazard]?.[mode] || visibleIds[0]);
+    if ((hazardChanged && !activePanel) || (activePanel && !visibleIds.includes(activePanel))) {
+      forceActivePanel(getDefaultSection(activeHazard, mode) || visibleIds[0]);
     }
-  }, [activeHazard, activeSection, forceActiveSection, mode, visibleNavItems]);
+  }, [activeHazard, activePanel, forceActivePanel, mode, visibleNavItems]);
 
   return (
     <aside className="glass-panel z-50 border-t-0 border-l-0 flex flex-col shrink-0 w-[260px] shadow-xl relative">
       <div className="p-3 overflow-y-auto space-y-1 overflow-x-hidden mt-4">
         {visibleNavItems.map((item) => {
           const Icon = item.icon;
-          const isActive = activeSection === item.id;
+          const isActive = activePanel === item.id;
           return (
             <div key={item.id} className="relative group/navitem">
               <button
-                onClick={() => setActiveSection(item.id)}
+                onClick={() => setActivePanel(item.id)}
                 className={`w-full flex items-center h-12 transition-all duration-300 relative ${
                   isActive 
                     ? 'bg-slate-700/50 text-white' 

@@ -4,25 +4,10 @@ import { Home, ZoomIn, ZoomOut } from 'lucide-react';
 import useStore from '../store/useStore';
 import { mapLayerService } from '../services/mapLayerService';
 import { rasterService } from '../services/rasterService';
-import {
-  buildEpicenterFeatureCollection,
-  renderSimulationResults,
-  restoreSimulationAfterStyleLoad,
-  setSimulationHeatmapMode,
-  syncLiveEarthquakesSource,
-} from '../hazards/earthquake';
-import {
-  bringTsunamiLayersToFront,
-  initTsunamiLayers,
-  setTsunamiLayerVisibility,
-  syncTsunamiSource,
-} from '../hazards/tsunami';
 
 import { animationManager } from '../services/animationManager';
 
-import {
-  initSimulationLayers,
-} from '../config/simulationLayers';
+import { getActiveLayerAdapter, getLayerAdapters } from '../hazards/registry';
 import {
   getClusterExpansion,
   getInspectableLayerIds,
@@ -131,7 +116,7 @@ const arraysEqual = (a, b) => a.length === b.length && a.every((value, index) =>
 
 const refreshVisibleLegendItems = (mapInstance) => {
   if (!mapInstance?.getStyle()) return;
-  const nextItems = getVisibleLegendItemIds(mapInstance);
+  const nextItems = getVisibleLegendItemIds(mapInstance, useStore.getState().activeHazard);
   const currentItems = useStore.getState().visibleLegendItems || [];
   if (!arraysEqual(nextItems, currentItems)) {
     useStore.getState().setVisibleLegendItems(nextItems);
@@ -164,6 +149,36 @@ const applyBoundaryTheme = (mapInstance, mapStyle) => {
   }
 };
 
+const createHazardLayerContext = () => ({
+  getStoreState: useStore.getState,
+  refreshVisibleLegendItems,
+});
+
+const registerHazardLayers = (mapInstance) => {
+  const context = createHazardLayerContext();
+  getLayerAdapters().forEach((adapter) => {
+    adapter.registerLayers(mapInstance, context);
+  });
+};
+
+const syncHazardLayers = (mapInstance, options = {}) => {
+  if (!mapInstance?.getStyle()) return;
+  const store = useStore.getState();
+  const activeAdapter = getActiveLayerAdapter(store.activeHazard);
+  const context = {
+    ...createHazardLayerContext(),
+    ...options,
+  };
+
+  getLayerAdapters().forEach((adapter) => {
+    adapter.syncLayers(mapInstance, store, context);
+    adapter.setVisibility(mapInstance, adapter === activeAdapter, store, context);
+  });
+
+  activeAdapter?.bringToFront(mapInstance, context);
+  refreshVisibleLegendItems(mapInstance);
+};
+
 export default function MapView({ isAdmin = false }) {
   const mapContainer = useRef(null);
   const map = useRef(null);
@@ -180,18 +195,13 @@ export default function MapView({ isAdmin = false }) {
   const simulationResults = useStore((state) => state.simulationResults);
   const pendingSimulationInfoPanel = useStore((state) => state.pendingSimulationInfoPanel);
   const mapStyle          = useStore((state) => state.mapStyle);
-  const activeSection     = useStore((state) => state.activeSection);
+  const activePanel       = useStore((state) => state.activePanel);
   const isPlacingEpicenter = useStore((state) => state.isPlacingEpicenter);
   const isSimulationRunning = useStore((state) => state.isSimulationRunning);
   const liveEvents = useStore((state) => state.liveEvents);
   const activeHazard = useStore((state) => state.activeHazard);
   const tsunamiResult = useStore((state) => state.tsunamiResult);
   const tsunamiSource = useStore((state) => state.tsunamiSource);
-
-  // Initialize simulation sources and layers on a loaded map
-  const setupSimulation = useCallback((mapInstance) => {
-    initSimulationLayers(mapInstance);
-  }, []);
 
   useEffect(() => {
     animationManager.setStoreActions(setIsSimulationRunning);
@@ -273,21 +283,10 @@ export default function MapView({ isAdmin = false }) {
     let isMapEventsInitialized = false;
 
     map.current.on('style.load', () => {
-      setupSimulation(map.current);
-      initTsunamiLayers(map.current);
+      registerHazardLayers(map.current);
       mapLayerService.initializeSourcesAndLayers(map.current, useStore.getState().gisLayers);
       applyBoundaryTheme(map.current, useStore.getState().mapStyle);
-      restoreSimulationAfterStyleLoad({
-        mapInstance: map.current,
-        store: useStore.getState(),
-        refreshVisibleLegendItems,
-      });
-      syncTsunamiSource(map.current, useStore.getState().tsunamiResult, useStore.getState().tsunamiSource);
-      setTsunamiLayerVisibility(
-        map.current,
-        useStore.getState().activeHazard === 'tsunami' && Boolean(useStore.getState().tsunamiResult && useStore.getState().tsunamiSource)
-      );
-      bringTsunamiLayersToFront(map.current);
+      syncHazardLayers(map.current, { isStyleLoad: true });
       rasterService.setMap(map.current);
       scheduleLegendRefresh();
 
@@ -400,7 +399,7 @@ export default function MapView({ isAdmin = false }) {
       }
       useStore.getState().setVisibleLegendItems([]);
     };
-  }, [setEarthquakeEpicenter, setupSimulation, isAdmin]);
+  }, [setEarthquakeEpicenter, isAdmin]);
 
   // Fly to new viewport when it changes
   useEffect(() => {
@@ -462,40 +461,25 @@ export default function MapView({ isAdmin = false }) {
   // Update epicenter marker
   useEffect(() => {
     if (!map.current || !map.current.getStyle()) return;
-    const source = map.current.getSource('sim-epicenter-source');
-    if (!source) return;
-
-    if (!earthquakeEpicenter) {
-      source.setData({ type: 'FeatureCollection', features: [] });
-      return;
-    }
-
-    source.setData(buildEpicenterFeatureCollection(earthquakeEpicenter));
+    syncHazardLayers(map.current);
   }, [earthquakeEpicenter]);
 
   // Keep the retained live event list visible as persistent red map dots.
   useEffect(() => {
     if (!map.current || !map.current.getStyle()) return;
-    syncLiveEarthquakesSource(map.current, liveEvents);
-    mapLayerService.bringSimulationLayersToFront(map.current);
-    refreshVisibleLegendItems(map.current);
+    syncHazardLayers(map.current);
   }, [liveEvents]);
 
   useEffect(() => {
     if (!map.current || !map.current.getStyle()) return;
-    syncTsunamiSource(map.current, tsunamiResult, tsunamiSource);
-    setTsunamiLayerVisibility(map.current, activeHazard === 'tsunami' && Boolean(tsunamiResult && tsunamiSource));
-    mapLayerService.bringSimulationLayersToFront(map.current);
-    bringTsunamiLayersToFront(map.current);
-    refreshVisibleLegendItems(map.current);
+    syncHazardLayers(map.current);
   }, [activeHazard, tsunamiResult, tsunamiSource]);
 
   // Switch between PGA/damage and MMI intensity heatmap modes
   useEffect(() => {
     if (!map.current || !map.current.getStyle()) return;
-    setSimulationHeatmapMode(map.current, Boolean(simulationResults), intensityVisible);
-    refreshVisibleLegendItems(map.current);
-  }, [intensityVisible, simulationResults]);
+    syncHazardLayers(map.current);
+  }, [intensityVisible]);
 
 
   // Render simulation results and trigger shockwave
@@ -503,16 +487,7 @@ export default function MapView({ isAdmin = false }) {
     if (!map.current) return;
     let styleWaitInterval = null;
 
-    const updateSimulationResults = () => {
-      renderSimulationResults({
-        mapInstance: map.current,
-        simulationResults,
-        earthquakeEpicenter,
-        intensityVisible,
-        getStoreState: useStore.getState,
-        refreshVisibleLegendItems,
-      });
-    };
+    const updateSimulationResults = () => syncHazardLayers(map.current);
 
     // Wait for style to be fully loaded before updating.
     // Previous approach used once('styledata') which silently failed when the
@@ -547,7 +522,7 @@ export default function MapView({ isAdmin = false }) {
     };
   }, [simulationResults, pendingSimulationInfoPanel, earthquakeEpicenter, intensityVisible]);
 
-  const zoomControlsPosition = isAdmin && activeSection === 'disasters'
+  const zoomControlsPosition = isAdmin && activePanel === 'workflow'
     ? 'bottom-[calc(clamp(260px,30vh,320px)+2rem)] z-30'
     : 'bottom-10 z-20';
 

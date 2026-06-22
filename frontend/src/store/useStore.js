@@ -1,18 +1,23 @@
 import { create } from 'zustand';
+import { getHazardStateSlices } from '../hazards/stateRegistry';
+import { createHazardSlice } from './slices/hazardSlice';
 import { createUiSlice } from './slices/uiSlice';
-import { createSimulationSlice } from '../hazards/earthquake/state';
 import { createMapSlice } from './slices/mapSlice';
 import { createRasterSlice } from './slices/rasterSlice';
 import { createLiveEventsSlice } from './slices/liveEventsSlice';
-import { createTsunamiSlice } from '../hazards/tsunami/state';
+
+const createRegisteredHazardSlices = (set, get, api) => getHazardStateSlices().reduce(
+  (state, createSlice) => ({ ...state, ...createSlice(set, get, api) }),
+  {}
+);
 
 const useStore = create((set, get, api) => ({
+  ...createHazardSlice(set, get, api),
   ...createUiSlice(set, get, api),
-  ...createSimulationSlice(set, get, api),
   ...createMapSlice(set, get, api),
   ...createRasterSlice(set, get, api),
   ...createLiveEventsSlice(set, get, api),
-  ...createTsunamiSlice(set, get, api),
+  ...createRegisteredHazardSlices(set, get, api),
 }));
 
 export default useStore;

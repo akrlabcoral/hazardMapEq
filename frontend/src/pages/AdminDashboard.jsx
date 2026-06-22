@@ -15,27 +15,17 @@ import AlertBanner from '../components/AlertBanner';
 import AdminMapToolbar from '../components/AdminMapToolbar';
 import MapLayersControl from '../components/MapLayersControl';
 import HazardWorkflowDock from '../components/hazards/HazardWorkflowDock';
-import { AlertsPanel } from '../panels/AlertsPanel';
-import LiveEventsPanel from '../panels/LiveEventsPanel';
-import HistoricPanel from '../panels/HistoricPanel';
-import OtherHazardsPanel from '../panels/OtherHazardsPanel';
-import TsunamiEmptyPanel from '../hazards/tsunami/panels/TsunamiEmptyPanel';
+import { getBottomDockPanelIds, getHazardPanel } from '../hazards/registry';
 import useStore from '../store/useStore';
 import { useWebSocket } from '../hooks/useWebSocket';
 
-const PANEL_TITLE = {
-  alerts: 'ALERTS',
-  tsunami_alerts: 'TSUNAMI ALERTS',
-  tsunami_live_events: 'LIVE TSUNAMI EVENTS',
-  historic_tsunami: 'HISTORIC TSUNAMI',
-  other_hazards: 'MORE HAZARDS',
-};
-
-const BOTTOM_DOCK_SECTIONS = new Set(['disasters', 'tsunami', 'landslide']);
+const BOTTOM_DOCK_SECTIONS = getBottomDockPanelIds('admin');
 
 export default function AdminDashboard() {
-  const activeSection = useStore((s) => s.activeSection);
-  const forceActiveSection = useStore((s) => s.forceActiveSection);
+  const activePanel = useStore((s) => s.activePanel);
+  const activeHazard = useStore((s) => s.activeHazard);
+  const forceActivePanel = useStore((s) => s.forceActivePanel);
+  const panelMeta = getHazardPanel(activeHazard, activePanel, 'admin');
 
   // Start WebSocket connection — real-time earthquake events + auto-sim results
   useWebSocket();
@@ -62,30 +52,22 @@ export default function AdminDashboard() {
 
           <div className="flex-1 pt-0 pb-0 pointer-events-none [&>*]:pointer-events-auto flex flex-col min-h-0">
             <AnimatePresence mode="wait">
-              {activeSection && !BOTTOM_DOCK_SECTIONS.has(activeSection) && (
+              {activePanel && !BOTTOM_DOCK_SECTIONS.has(activePanel) && (
                 <motion.div
-                  key={activeSection}
+                  key={activePanel}
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: -20 }}
                   className="w-[260px] max-w-full h-full flex flex-col min-h-0"
                 >
-                  {activeSection === 'live_events' ? (
+                  {panelMeta?.panelShell === false ? (
                     <div className="min-h-0 flex-1">
-                      <LiveEventsPanel />
-                    </div>
-                  ) : activeSection === 'historic_events' ? (
-                    <div className="min-h-0 flex-1">
-                      <HistoricPanel />
+                      {panelMeta.render?.()}
                     </div>
                   ) : (
-                    PANEL_TITLE[activeSection] && (
-                      <ControlPanel title={PANEL_TITLE[activeSection]}>
-                        {activeSection === 'alerts' && <AlertsPanel />}
-                        {activeSection === 'tsunami_alerts' && <TsunamiEmptyPanel type="alerts" />}
-                        {activeSection === 'tsunami_live_events' && <TsunamiEmptyPanel type="live" />}
-                        {activeSection === 'historic_tsunami' && <TsunamiEmptyPanel type="historic" />}
-                        {activeSection === 'other_hazards' && <OtherHazardsPanel />}
+                    panelMeta?.title && (
+                      <ControlPanel title={panelMeta.title}>
+                        {panelMeta.render?.()}
                       </ControlPanel>
                     )
                   )}
@@ -95,8 +77,8 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {BOTTOM_DOCK_SECTIONS.has(activeSection) && (
-          <HazardWorkflowDock onClose={() => forceActiveSection(null)} />
+        {BOTTOM_DOCK_SECTIONS.has(activePanel) && (
+          <HazardWorkflowDock onClose={() => forceActivePanel(null)} />
         )}
       </div>
     </div>

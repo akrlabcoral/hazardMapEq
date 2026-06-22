@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Bell, Earth, Moon, Sun } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import useStore from '../store/useStore';
+import { getPanelTargetByComponent } from '../hazards/registry';
 import HazardSelector from './HazardSelector';
 
 export default function Navbar({ isAdmin = true }) {
@@ -11,9 +12,18 @@ export default function Navbar({ isAdmin = true }) {
   const dismissAlert   = useStore((state) => state.dismissAlert);
   const liveEvents     = useStore((state) => state.liveEvents || []);
   const setActiveHazard = useStore((state) => state.setActiveHazard);
-  const forceActiveSection = useStore((state) => state.forceActiveSection);
+  const forceActivePanel = useStore((state) => state.forceActivePanel);
 
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const mode = isAdmin ? 'admin' : 'public';
+  const liveEventsTarget = getPanelTargetByComponent('liveEvents', mode);
+
+  const openLiveEventsPanel = () => {
+    setIsDropdownOpen(false);
+    if (!liveEventsTarget) return;
+    setActiveHazard(liveEventsTarget.hazardId);
+    forceActivePanel(liveEventsTarget.sectionId);
+  };
 
   return (
     <nav className="h-10 glass-panel flex items-center justify-between px-6 z-50 relative border-b-0">
@@ -95,11 +105,7 @@ export default function Navbar({ isAdmin = true }) {
                             <button
                               key={event.id || Math.random()}
                               className="text-left px-4 py-3 border-b border-slate-700/30 hover:bg-slate-800/60 transition-colors flex flex-col gap-1 last:border-0"
-                              onClick={() => {
-                                setIsDropdownOpen(false);
-                                setActiveHazard('earthquake');
-                                forceActiveSection('live_events');
-                              }}
+                              onClick={openLiveEventsPanel}
                             >
                               <div className="flex items-center justify-between">
                                 <span className={`font-bold text-sm ${isMajor ? 'text-red-400' : 'text-orange-400'}`}>
@@ -123,11 +129,7 @@ export default function Navbar({ isAdmin = true }) {
                     <div className="p-2 border-t border-slate-700/50 bg-slate-800/20">
                       <button 
                         className="w-full py-1.5 text-xs text-center text-cyan-400 hover:text-cyan-300 hover:bg-slate-800 rounded transition-colors font-semibold"
-                        onClick={() => {
-                          setIsDropdownOpen(false);
-                          setActiveHazard('earthquake');
-                          forceActiveSection('live_events');
-                        }}
+                        onClick={openLiveEventsPanel}
                       >
                         View all events
                       </button>
