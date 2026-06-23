@@ -202,7 +202,7 @@ class WavePropagationEngine:
         )
 
     def _generate_targets(self, geometry, request: WavePropagationInput) -> list[tuple[float, float]]:
-        targets: list[tuple[float, float]] = []
+        candidates: list[tuple[float, float]] = []
         spacing_degrees = max(request.target_spacing_km / KM_PER_DEGREE, 0.01)
         for line in _iter_lines(geometry):
             if line.length <= 0:
@@ -210,10 +210,17 @@ class WavePropagationEngine:
             steps = max(int(line.length / spacing_degrees), 1)
             for index in range(steps + 1):
                 point = line.interpolate(min(index * spacing_degrees, line.length))
-                targets.append((float(point.x), float(point.y)))
-                if len(targets) >= request.max_targets:
-                    return targets
-        return targets
+                candidates.append((float(point.x), float(point.y)))
+
+        candidates.sort(
+            key=lambda coord: haversine_km(
+                request.source_longitude,
+                request.source_latitude,
+                coord[0],
+                coord[1],
+            )
+        )
+        return candidates[:request.max_targets]
 
     def _resolve_offshore_height(self, request: WavePropagationInput) -> float | None:
         if request.offshore_wave_height_m is not None:

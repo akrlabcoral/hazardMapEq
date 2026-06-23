@@ -1,33 +1,40 @@
-import React, { useState } from 'react';
-import { Calculator, Gauge, MapPin, RotateCcw, Waves } from 'lucide-react';
+import React, { useEffect, useRef } from 'react';
+import { 
+  AlertTriangle, 
+  BarChart3, 
+  Clock, 
+  MapPin, 
+  Play, 
+  RotateCcw, 
+  Users, 
+  Waves 
+} from 'lucide-react';
 
 import useStore from '../../store/useStore';
 import HazardBottomPanel from '../../components/hazards/HazardBottomPanel';
-import { calculateTsunamiHazard } from './api';
-import { buildTsunamiInfoPanel } from './infoPanels';
+import {
+  getTsunamiAnalysisLayers,
+  getTsunamiAnalysisResult,
+  startTsunamiAnalysis,
+} from './api';
+import { getTsunamiAlertColor, summarizeTsunamiSimulation } from './analysisSummary';
+import { TSUNAMI_DEFAULT_FORM } from './state';
 
-const TSUNAMI_DEFAULT_FORM = {
-  magnitude: '7.0',
-  depth_m: '4000',
-  period_s: '1200',
-  seabed_displacement_m: '',
-  wave_height_m: '',
-  distance_km: '',
-  amplification_factor: '3',
-};
-
-const toOptionalNumber = (value) => {
-  if (value === '' || value === null || value === undefined) return undefined;
+const toNumber = (value, fallback = undefined) => {
   const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  return Number.isFinite(parsed) ? parsed : fallback;
 };
 
-const NumberInput = ({ label, value, onChange, min = '0', step = '0.1' }) => (
+const formatMetric = (val, { digits = 1, suffix = '' } = {}) => {
+  if (val == null || !Number.isFinite(val)) return 'N/A';
+  return `${val.toFixed(digits)}${suffix}`;
+};
+
+const NumberInput = ({ label, value, onChange, step = '0.1' }) => (
   <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
     {label}
     <input
       type="number"
-      min={min}
       step={step}
       value={value}
       onChange={(event) => onChange(event.target.value)}
@@ -36,153 +43,325 @@ const NumberInput = ({ label, value, onChange, min = '0', step = '0.1' }) => (
   </label>
 );
 
-const tsunamiResultRows = (result) => {
-  if (!result) return [['Potential', 'Not calculated']];
-  return [
-    ['Potential', `${result.tsunami_potential_class.level}`],
-    ['Speed', `${result.tsunami_speed_kmh.toFixed(1)} km/h`],
-    ['Wavelength', `${(result.wavelength_m / 1000).toFixed(1)} km`],
-    ['Run-up', result.estimated_runup_m == null ? 'Not provided' : `${result.estimated_runup_m.toFixed(2)} m`],
-  ];
+const buildAnalysisPayload = (form) => {
+  const latitude = toNumber(form.latitude);
+  const longitude = toNumber(form.longitude);
+  const magnitude = toNumber(form.magnitude, 0);
+  const offshoreWaveHeight = toNumber(form.offshore_wave_height_m, undefined);
+  const payload = {
+    source_model: {
+      magnitude,
+      latitude,
+      longitude,
+      depth_km: toNumber(form.depth_km, 10),
+      strike_deg: toNumber(form.strike_deg, 0),
+      dip_deg: toNumber(form.dip_deg, 15),
+      rake_deg: toNumber(form.rake_deg, 90),
+      mechanism: form.mechanism || 'thrust',
+    },
+    wave_propagation: {
+      source_latitude: latitude,
+      source_longitude: longitude,
+      magnitude,
+      max_targets: toNumber(form.max_targets, 100),
+      target_spacing_km: toNumber(form.target_spacing_km, 50),
+      coastal_depth_m: toNumber(form.coastal_depth_m, 10),
+      amplification_factor: toNumber(form.amplification_factor, 1.5),
+    },
+    include_damage_assessment: Boolean(form.include_damage_assessment),
+  };
+
+  if (offshoreWaveHeight !== undefined) {
+    payload.wave_propagation.offshore_wave_height_m = offshoreWaveHeight;
+    payload.inundation = {
+      wave_height_m: offshoreWaveHeight,
+      source_latitude: latitude,
+      source_longitude: longitude,
+      max_coast_points: toNumber(form.max_coast_points, 50),
+      coast_spacing_km: toNumber(form.coast_spacing_km, 25),
+      transect_length_km: toNumber(form.transect_length_km, 10),
+      transect_spacing_m: toNumber(form.transect_spacing_m, 250),
+    };
+  }
+
+  return payload;
 };
 
 export const useTsunamiWorkflowDockLayout = () => {
   const earthquakeEpicenter = useStore((state) => state.earthquakeEpicenter);
   const earthquakeMagnitude = useStore((state) => state.earthquakeMagnitude);
-  const setTsunamiResult = useStore((state) => state.setTsunamiResult);
   const setTsunamiSource = useStore((state) => state.setTsunamiSource);
-  const clearTsunamiState = useStore((state) => state.clearTsunamiState);
-  const setInfoPanel = useStore((state) => state.setInfoPanel);
-  const tsunamiResult = useStore((state) => state.tsunamiResult);
-  const tsunamiSource = useStore((state) => state.tsunamiSource);
-  const [form, setForm] = useState(TSUNAMI_DEFAULT_FORM);
-  const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
+  const setTsunamiResult = useStore((state) => state.setTsunamiResult);
+  
+  const activeRequestId = useStore((state) => state.tsunamiAnalysisRequestId);
+  const setTsunamiAnalysisRequestId = useStore((state) => state.setTsunamiAnalysisRequestId);
+  const setTsunamiAnalysisStatus = useStore((state) => state.setTsunamiAnalysisStatus);
+  const setTsunamiAnalysisResult = useStore((state) => state.setTsunamiAnalysisResult);
+  const setTsunamiAnalysisLayers = useStore((state) => state.setTsunamiAnalysisLayers);
+  
+  const error = useStore((state) => state.tsunamiAnalysisError);
+  const setTsunamiAnalysisError = useStore((state) => state.setTsunamiAnalysisError);
+  const isRunning = useStore((state) => state.isTsunamiAnalysisRunning);
+  const setIsTsunamiAnalysisRunning = useStore((state) => state.setIsTsunamiAnalysisRunning);
 
-  const updateField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const tsunamiResult = useStore((state) => state.tsunamiAnalysisResult);
+  const clearTsunamiState = useStore((state) => state.clearTsunamiState);
+  const form = useStore((state) => state.tsunamiSimulationForm || TSUNAMI_DEFAULT_FORM);
+  const setTsunamiSimulationForm = useStore((state) => state.setTsunamiSimulationForm);
+  const resetTsunamiSimulationForm = useStore((state) => state.resetTsunamiSimulationForm);
+  const pollTimer = useRef(null);
+
+  useEffect(() => () => {
+    if (pollTimer.current) clearTimeout(pollTimer.current);
+  }, []);
+
+  const updateField = (field, value) => setTsunamiSimulationForm({ [field]: value });
+
   const useCurrentEarthquake = () => {
     if (!earthquakeEpicenter) return;
     setTsunamiSource(earthquakeEpicenter);
-    setForm((current) => ({
-      ...current,
-      magnitude: String(earthquakeMagnitude ?? current.magnitude),
-      depth_m: current.depth_m || '4000',
-      period_s: current.period_s || '1200',
-      amplification_factor: current.amplification_factor || '3',
-    }));
+    setTsunamiSimulationForm({
+      magnitude: String(earthquakeMagnitude ?? form.magnitude),
+      latitude: String(earthquakeEpicenter.lat),
+      longitude: String(earthquakeEpicenter.lng),
+    });
   };
 
-  const calculate = async () => {
-    setIsLoading(true);
-    setError('');
+  const finishCompletedAnalysis = async (requestId, result) => {
+    const resultJson = result.result_json || {};
+    const layers = await getTsunamiAnalysisLayers(requestId).catch(() => null);
+    const sourceInputs = resultJson.source_model?.inputs || {};
+    const summary = summarizeTsunamiSimulation(resultJson);
+    const source = {
+      lat: Number(sourceInputs.latitude),
+      lng: Number(sourceInputs.longitude),
+    };
+
+    setTsunamiAnalysisResult(resultJson);
+    setTsunamiAnalysisLayers(layers?.layers || resultJson.layers || null);
+    setTsunamiSource(Number.isFinite(source.lat) && Number.isFinite(source.lng) ? source : null);
+    setTsunamiResult({
+      ...resultJson,
+      tsunami_potential_class: {
+        level: summary.alertLevel,
+        description: 'Async tsunami simulation result',
+      },
+    });
+    setTsunamiAnalysisStatus('completed');
+    setIsTsunamiAnalysisRunning(false);
+  };
+
+  const pollResult = (requestId) => {
+    if (pollTimer.current) clearTimeout(pollTimer.current);
+    pollTimer.current = setTimeout(async () => {
+      try {
+        const result = await getTsunamiAnalysisResult(requestId);
+        setTsunamiAnalysisStatus(result.status);
+        if (result.status === 'completed') {
+          await finishCompletedAnalysis(requestId, result);
+          return;
+        }
+        if (result.status === 'failed') {
+          setTsunamiAnalysisError(result.error || 'Tsunami simulation failed');
+          setIsTsunamiAnalysisRunning(false);
+          return;
+        }
+        pollResult(requestId);
+      } catch (err) {
+        setTsunamiAnalysisError(err.message || 'Could not fetch simulation status');
+        setIsTsunamiAnalysisRunning(false);
+      }
+    }, 1500);
+  };
+
+  useEffect(() => {
+    if (!activeRequestId || !isRunning || pollTimer.current) return;
+    pollResult(activeRequestId);
+  }, [activeRequestId, isRunning]);
+
+  const runAnalysis = async () => {
+    setTsunamiAnalysisError('');
+    setIsTsunamiAnalysisRunning(true);
+    setTsunamiAnalysisStatus('queued');
+    // Clear any previous results when running a new simulation
+    setTsunamiAnalysisResult(null);
+    setTsunamiResult(null);
     try {
-      const result = await calculateTsunamiHazard({
-        magnitude: Number(form.magnitude),
-        depth_m: Number(form.depth_m || 4000),
-        period_s: Number(form.period_s || 1200),
-        seabed_displacement_m: toOptionalNumber(form.seabed_displacement_m),
-        wave_height_m: toOptionalNumber(form.wave_height_m),
-        distance_km: toOptionalNumber(form.distance_km),
-        amplification_factor: Number(form.amplification_factor || 3),
-        latitude: tsunamiSource?.lat,
-        longitude: tsunamiSource?.lng,
-      });
-      setTsunamiResult(result);
-      setInfoPanel(buildTsunamiInfoPanel(result, tsunamiSource));
+      const payload = buildAnalysisPayload(form);
+      const accepted = await startTsunamiAnalysis(payload);
+      setTsunamiAnalysisRequestId(accepted.request_id);
     } catch (err) {
-      setError(err.message || 'Tsunami calculation failed');
-    } finally {
-      setIsLoading(false);
+      setTsunamiAnalysisError(err.message || 'Tsunami simulation failed to start');
+      setIsTsunamiAnalysisRunning(false);
+      setTsunamiAnalysisStatus('failed');
     }
   };
 
-  const clear = () => {
-    setForm(TSUNAMI_DEFAULT_FORM);
-    setError('');
+  const reset = () => {
+    resetTsunamiSimulationForm();
+    setTsunamiAnalysisError('');
+    setTsunamiAnalysisStatus('idle');
     clearTsunamiState();
   };
 
-  const sourceLabel = tsunamiSource
-    ? `${tsunamiSource.lat.toFixed(4)}, ${tsunamiSource.lng.toFixed(4)}`
-    : 'No mapped source';
+  const canRun = form.latitude !== '' && form.longitude !== '' && !isRunning;
 
-  return {
-    id: 'tsunami',
-    title: 'Tsunami Estimate',
-    status: tsunamiResult ? `${tsunamiResult.tsunami_potential_class.level} potential` : 'Empirical model',
-    sections: [
+  // Render cards based on whether we have results or not
+  let sections = [];
+
+  if (tsunamiResult) {
+    const summary = summarizeTsunamiSimulation(tsunamiResult);
+    const alertColor = getTsunamiAlertColor(summary.alertLevel);
+    const sourceInputs = tsunamiResult.source_model?.inputs || {};
+    
+    sections = [
       {
         id: 'source',
-        title: 'Source Params',
-        icon: MapPin,
+        title: 'Source Details',
+        icon: AlertTriangle,
+        accent: alertColor,
         content: (
-          <div className="space-y-2">
-            <NumberInput label="Magnitude" value={form.magnitude} onChange={(value) => updateField('magnitude', value)} />
-            <div className="rounded-lg bg-slate-950/50 px-2 py-1.5 font-mono text-xs text-slate-100">{sourceLabel}</div>
-          </div>
-        ),
-      },
-      {
-        id: 'ocean',
-        title: 'Ocean Params',
-        icon: Waves,
-        content: (
-          <div className="grid grid-cols-2 gap-2">
-            <NumberInput label="Depth (m)" value={form.depth_m} onChange={(value) => updateField('depth_m', value)} />
-            <NumberInput label="Period (s)" value={form.period_s} onChange={(value) => updateField('period_s', value)} />
-            <NumberInput label="Distance (km)" value={form.distance_km} onChange={(value) => updateField('distance_km', value)} />
-            <NumberInput label="Amplification" value={form.amplification_factor} onChange={(value) => updateField('amplification_factor', value)} />
-          </div>
-        ),
-      },
-      {
-        id: 'wave',
-        title: 'Wave Params',
-        icon: Gauge,
-        content: (
-          <div className="grid grid-cols-2 gap-2">
-            <NumberInput label="Seabed shift (m)" value={form.seabed_displacement_m} onChange={(value) => updateField('seabed_displacement_m', value)} />
-            <NumberInput label="Wave height (m)" value={form.wave_height_m} onChange={(value) => updateField('wave_height_m', value)} />
-            <div className="col-span-2 rounded-lg border border-cyan-500/30 bg-cyan-950/30 px-2 py-1.5 text-[10px] leading-snug text-cyan-100">
-              Simplified empirical estimate, not an official warning product.
+          <div className="space-y-3">
+            <div className="flex justify-between items-end border-b border-slate-700 pb-2">
+              <span className="text-xs font-semibold text-slate-400">Magnitude</span>
+              <span className="font-mono text-lg font-bold text-white">Mw {sourceInputs.magnitude ?? form.magnitude}</span>
+            </div>
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div className="text-slate-400">Lat: <span className="font-mono text-slate-200">{sourceInputs.latitude ?? form.latitude}</span></div>
+              <div className="text-slate-400">Lng: <span className="font-mono text-slate-200">{sourceInputs.longitude ?? form.longitude}</span></div>
+              <div className="text-slate-400 mt-1 col-span-2">Depth: <span className="font-mono text-slate-200">{sourceInputs.depth_km ?? form.depth_km} km</span></div>
             </div>
           </div>
         ),
       },
       {
-        id: 'results',
-        title: 'Results',
-        icon: Calculator,
-        accent: 'amber',
+        id: 'impact',
+        title: 'Impact',
+        icon: Waves,
+        accent: '#38bdf8',
         content: (
-          <div className="space-y-1.5">
-            {tsunamiResultRows(tsunamiResult).map(([label, value]) => (
-              <div key={label} className="grid grid-cols-[86px_1fr] gap-2 text-xs">
-                <span className="text-slate-400">{label}</span>
-                <span className="truncate text-right font-mono text-slate-100">{value}</span>
+          <div className="space-y-2">
+            {summary.waveUnavailableReason && (
+              <div className="rounded border border-amber-400/40 bg-amber-950/30 p-2 text-xs font-semibold leading-snug text-amber-100">
+                {summary.waveUnavailableReason}
               </div>
-            ))}
-            {error && <div className="rounded border border-red-400/40 bg-red-950/40 px-2 py-1 text-xs text-red-200">{error}</div>}
+            )}
+            <div className="flex items-center justify-between rounded bg-slate-800/50 p-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <Clock className="w-4 h-4 text-cyan-400" />
+                First ETA
+              </div>
+              <div className="font-mono text-sm font-bold text-cyan-200">{formatMetric(summary.etaMinutes, { digits: 0, suffix: ' min' })}</div>
+            </div>
+            <div className="flex items-center justify-between rounded bg-slate-800/50 p-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <Waves className="w-4 h-4 text-blue-400" />
+                Max Wave Height
+              </div>
+              <div className="font-mono text-sm font-bold text-blue-200">{formatMetric(summary.waveHeightM, { digits: 2, suffix: ' m' })}</div>
+            </div>
+            <div className="rounded bg-slate-800/50 p-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <MapPin className="w-4 h-4 text-sky-400" />
+                Most Affected Coast
+              </div>
+              <div className="mt-1 truncate text-sm font-bold text-sky-100" title={summary.affectedLocation}>
+                {summary.affectedLocation}
+              </div>
+            </div>
           </div>
         ),
       },
-    ],
-    actions: [
       {
-        id: 'use-earthquake',
-        label: earthquakeEpicenter ? 'Use Earthquake' : 'Place Epicenter',
+        id: 'damage',
+        title: 'Damage Estimates',
+        icon: BarChart3,
+        accent: '#facc15',
+        content: (
+          <div className="space-y-2">
+            <div className="flex items-center justify-between rounded bg-slate-800/50 p-2">
+              <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-wider">
+                <Users className="w-4 h-4 text-yellow-400" />
+                Affected Pop
+              </div>
+              <div className="font-mono text-sm font-bold text-yellow-200">{formatMetric(summary.affectedPopulation, { digits: 0 })}</div>
+            </div>
+          </div>
+        ),
+      }
+    ];
+  } else {
+    sections = [
+      {
+        id: 'epicenter',
+        title: 'Epicenter & Magnitude',
         icon: MapPin,
-        disabled: !earthquakeEpicenter,
-        onClick: useCurrentEarthquake,
+        accent: 'cyan',
+        content: (
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <NumberInput label="Latitude" value={form.latitude} onChange={(value) => updateField('latitude', value)} step="0.0001" />
+              <NumberInput label="Longitude" value={form.longitude} onChange={(value) => updateField('longitude', value)} step="0.0001" />
+              <NumberInput label="Magnitude (Mw)" value={form.magnitude} onChange={(value) => updateField('magnitude', value)} />
+              <NumberInput label="Depth (km)" value={form.depth_km} onChange={(value) => updateField('depth_km', value)} />
+            </div>
+          </div>
+        ),
       },
-      { id: 'clear', label: 'Clear', icon: RotateCcw, onClick: clear },
       {
-        id: 'calculate',
-        label: isLoading ? 'Calculating...' : 'Calculate',
-        icon: Calculator,
+        id: 'advanced',
+        title: 'Advanced Settings',
+        icon: BarChart3,
+        accent: 'cyan',
+        content: (
+          <div className="space-y-2">
+             <div className="grid grid-cols-2 gap-2">
+               <NumberInput label="Wave Height (m)" value={form.offshore_wave_height_m} onChange={(value) => updateField('offshore_wave_height_m', value)} />
+               <NumberInput label="Target Spacing (km)" value={form.target_spacing_km} onChange={(value) => updateField('target_spacing_km', value)} />
+             </div>
+             <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300 mt-2">
+                <input
+                  type="checkbox"
+                  checked={form.include_damage_assessment}
+                  onChange={(event) => updateField('include_damage_assessment', event.target.checked)}
+                  className="rounded border-slate-600 bg-slate-900 text-cyan-500 focus:ring-cyan-500"
+                />
+                Include damage assessment
+             </label>
+             {error && <div className="text-xs text-red-400 mt-1 font-semibold">{error}</div>}
+          </div>
+        ),
+      }
+    ];
+  }
+
+  return {
+    id: 'tsunami_workflow',
+    title: 'Tsunami Simulation',
+    eyebrow: 'Simulation Controls',
+    status: isRunning ? 'Running' : (tsunamiResult ? 'Completed' : 'Waiting'),
+    sections,
+    actions: [
+      { 
+        id: 'sync', 
+        label: 'Use Earthquake', 
+        icon: MapPin, 
+        onClick: useCurrentEarthquake,
+        disabled: !earthquakeEpicenter 
+      },
+      { 
+        id: 'clear', 
+        label: 'Clear', 
+        icon: RotateCcw, 
+        onClick: reset 
+      },
+      {
+        id: 'run',
+        label: isRunning ? 'Running...' : (tsunamiResult ? 'Rerun Sim' : 'Run Sim'),
+        icon: Play,
         variant: 'primary',
-        disabled: isLoading,
-        onClick: calculate,
+        disabled: !canRun,
+        onClick: runAnalysis,
       },
     ],
   };

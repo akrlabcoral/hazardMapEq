@@ -2,9 +2,19 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Any
+import logging
+from pathlib import Path
+import threading
+from typing import TYPE_CHECKING, Any
 
-from app.hazards.earthquake.ingest.normalizer import EarthquakeEvent
+from shapely.geometry import Point, shape
+
+from app.shared.gis.vector_loader import load_geojson
+
+if TYPE_CHECKING:
+    from app.hazards.earthquake.ingest.normalizer import EarthquakeEvent
+
+logger = logging.getLogger("hazardmap.tsunami.trigger_engine")
 
 
 class TsunamiThreatLevel(str, Enum):
@@ -41,6 +51,10 @@ ANDAMAN_REGION = RegionBox(
 )
 TSUNAMI_TRIGGER_REGIONS = (ANDAMAN_REGION, BAY_OF_BENGAL_REGION)
 ALLOWED_MECHANISMS = {"thrust", "unknown"}
+BACKEND_ROOT = Path(__file__).resolve().parents[3]
+BAY_OF_BENGAL_GEOJSON_PATH = BACKEND_ROOT / "data" / "tsunami" / "bay_of_bengal.geojson"
+_polygon_lock = threading.RLock()
+_bay_of_bengal_geometry = None
 
 
 @dataclass(frozen=True)
@@ -112,10 +126,43 @@ def _classify_threat_level(magnitude: float, depth_km: float) -> TsunamiThreatLe
 
 
 def _match_region(longitude: float, latitude: float) -> RegionBox | None:
-    for region in TSUNAMI_TRIGGER_REGIONS:
-        if region.contains(longitude, latitude):
-            return region
+    if ANDAMAN_REGION.contains(longitude, latitude):
+        return ANDAMAN_REGION
+    if _bay_polygon_contains(longitude, latitude):
+        return BAY_OF_BENGAL_REGION
+    if BAY_OF_BENGAL_REGION.contains(longitude, latitude):
+        logger.debug("[TsunamiTrigger] Falling back to Bay of Bengal bbox match")
+        return BAY_OF_BENGAL_REGION
     return None
+
+
+def _load_bay_of_bengal_geometry():
+    global _bay_of_bengal_geometry
+    with _polygon_lock:
+        if _bay_of_bengal_geometry is not None:
+            return _bay_of_bengal_geometry
+        if not BAY_OF_BENGAL_GEOJSON_PATH.is_file():
+            return None
+        try:
+            data = load_geojson(BAY_OF_BENGAL_GEOJSON_PATH)
+            geometries = [
+                shape(feature["geometry"])
+                for feature in data.get("features", [])
+                if feature.get("geometry")
+            ]
+        except Exception as exc:
+            logger.warning("[TsunamiTrigger] Could not load Bay of Bengal polygon: %s", exc)
+            return None
+        _bay_of_bengal_geometry = geometries[0] if geometries else None
+        return _bay_of_bengal_geometry
+
+
+def _bay_polygon_contains(longitude: float, latitude: float) -> bool:
+    geometry = _load_bay_of_bengal_geometry()
+    if geometry is None:
+        return False
+    point = Point(longitude, latitude)
+    return bool(geometry.contains(point) or geometry.touches(point))
 
 
 def _get_mechanism(event: EarthquakeEvent) -> str:

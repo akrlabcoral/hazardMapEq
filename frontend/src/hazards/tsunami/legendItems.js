@@ -11,4 +11,18 @@ export const TSUNAMI_LEGEND_ITEMS = [
     layerIds: [TSUNAMI_LAYERS.marker],
     requiresRenderedFeature: true,
   },
+  {
+    id: 'tsunamiTTT',
+    label: 'Travel Time (Hours)',
+    type: 'palette',
+    layerIds: [TSUNAMI_LAYERS.tttFill, TSUNAMI_LAYERS.tttLine],
+    requiresRenderedFeature: true,
+    palette: [
+      { color: '#d73027', label: '0-2' },
+      { color: '#fdae61', label: '2-5' },
+      { color: '#e0f3f8', label: '5-10' },
+      { color: '#74add1', label: '10-20' },
+      { color: '#313695', label: '20+' }
+    ],
+  },
 ];

@@ -43,6 +43,10 @@ services:
       - AUTO_SIM_MIN_MAGNITUDE=0.0
       - AUTO_SIM_MAX_DEPTH_KM=300.0
       - VS30_RASTER_PATH=/app/data/soil/india_vs30.tif
+      - BATHYMETRY_RASTER_PATH=/app/data/tsunami/gebco_bay_indian_ocean.tif
+      - TERRAIN_RASTER_PATH=/app/data/tsunami/coastal_dem_200m_3857.tif
+      - COASTLINE_VECTOR_PATH=/app/data/tsunami/india_coastline.geojson
+      - ADMIN_BOUNDARIES_VECTOR_PATH=/app/data/tsunami/india_states.geojson
       - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
       - CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif,.tiff
       - GDAL_CACHEMAX=256
@@ -72,6 +76,10 @@ services:
       - OMP_NUM_THREADS=1
       - MKL_NUM_THREADS=1
       - OPENBLAS_NUM_THREADS=1
+      - BATHYMETRY_RASTER_PATH=/app/data/tsunami/gebco_bay_indian_ocean.tif
+      - TERRAIN_RASTER_PATH=/app/data/tsunami/coastal_dem_200m_3857.tif
+      - COASTLINE_VECTOR_PATH=/app/data/tsunami/india_coastline.geojson
+      - ADMIN_BOUNDARIES_VECTOR_PATH=/app/data/tsunami/india_states.geojson
       - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
       - CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif,.tiff
       - GDAL_CACHEMAX=256

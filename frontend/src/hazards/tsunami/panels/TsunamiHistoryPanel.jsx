@@ -27,7 +27,7 @@ export default function TsunamiHistoryPanel() {
             type="button"
             onClick={() => {
               setTsunamiAnalysisResult(result);
-              forceActivePanel('results');
+              forceActivePanel('workflow');
             }}
             className="w-full rounded border border-slate-700/70 bg-slate-900/60 p-3 text-left transition hover:bg-slate-800"
           >

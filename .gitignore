@@ -49,6 +49,8 @@ htmlcov/
 
 # Local data stores
 backend/data/simulations.db
+backend/data/tsunami/*.tif
+backend/data/tsunami/*.tiff
 
 __pycache__/
 *.pyc

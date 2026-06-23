@@ -30,7 +30,7 @@ export const tsunamiLayerAdapter = {
 
   getVisibleLayers(store) {
     return store.tsunamiResult && store.tsunamiSource
-      ? [TSUNAMI_LAYERS.markerGlow, TSUNAMI_LAYERS.marker]
+      ? [TSUNAMI_LAYERS.tttFill, TSUNAMI_LAYERS.tttLine, TSUNAMI_LAYERS.tttLabels, TSUNAMI_LAYERS.markerGlow, TSUNAMI_LAYERS.marker]
       : [];
   },
 

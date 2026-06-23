@@ -9,10 +9,13 @@ from urllib.parse import urlparse
 
 import numpy as np
 import rasterio
+from rasterio.crs import CRS
+from rasterio.warp import transform
 
 logger = logging.getLogger("hazardmap.shared.gis.raster_loader")
 
 BoundingBox = namedtuple("BoundingBox", ["left", "bottom", "right", "top"])
+WGS84_CRS = CRS.from_epsg(4326)
 
 
 def is_remote_raster(path: str) -> bool:
@@ -76,8 +79,12 @@ class LazyRasterResource:
             return self._bounds
 
     def contains(self, lon: float, lat: float) -> bool:
+        dataset = self.get_dataset()
         bounds = self.bounds()
-        return bool(bounds and bounds.left <= lon <= bounds.right and bounds.bottom <= lat <= bounds.top)
+        if dataset is None or bounds is None:
+            return False
+        x, y = self._to_dataset_coords(dataset, [(lon, lat)])[0]
+        return bool(bounds.left <= x <= bounds.right and bounds.bottom <= y <= bounds.top)
 
     def sample_point(self, lon: float, lat: float) -> float | None:
         values = self.sample_points([(lon, lat)])
@@ -85,23 +92,41 @@ class LazyRasterResource:
             return self.default_value
         return values[0]
 
+    def _to_dataset_coords(
+        self,
+        dataset: rasterio.io.DatasetReader,
+        coords: list[tuple[float, float]],
+    ) -> list[tuple[float, float]]:
+        if not coords or not dataset.crs or dataset.crs == WGS84_CRS:
+            return coords
+        xs, ys = zip(*coords, strict=False)
+        tx, ty = transform(WGS84_CRS, dataset.crs, list(xs), list(ys))
+        return list(zip(tx, ty, strict=False))
+
     def sample_points(self, coords: list[tuple[float, float]]) -> list[float | None]:
         dataset = self.get_dataset()
         if dataset is None or not coords:
             return [self.default_value for _ in coords]
+        dataset_coords = self._to_dataset_coords(dataset, coords)
+        bounds = dataset.bounds
         with self._lock:
             try:
-                sampled = list(dataset.sample(coords))
+                sampled = list(dataset.sample(dataset_coords))
             except Exception as exc:
                 logger.warning("[Raster:%s] Sampling failed: %s", self.name, exc)
                 return [self.default_value for _ in coords]
 
         values: list[float | None] = []
-        for item in sampled:
+        for (x, y), item in zip(dataset_coords, sampled, strict=False):
+            if not (bounds.left <= x <= bounds.right and bounds.bottom <= y <= bounds.top):
+                values.append(self.default_value)
+                continue
             raw = item[0] if len(item) else self.default_value
             try:
                 value = float(raw)
             except (TypeError, ValueError):
+                value = self.default_value
+            if value is not None and dataset.nodata is not None and np.isclose(value, dataset.nodata):
                 value = self.default_value
             if value is not None and not np.isfinite(value):
                 value = self.default_value

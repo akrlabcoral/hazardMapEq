@@ -22,6 +22,56 @@ export const initTsunamiLayers = (mapInstance) => {
     data: EMPTY_FEATURE_COLLECTION,
   });
 
+  mapLayerService.addSourceSafe(mapInstance, TSUNAMI_SOURCES.ttt, {
+    type: 'geojson',
+    data: EMPTY_FEATURE_COLLECTION,
+  });
+
+  mapLayerService.addLayerSafe(mapInstance, {
+    id: TSUNAMI_LAYERS.tttFill,
+    type: 'fill',
+    source: TSUNAMI_SOURCES.ttt,
+    layout: { visibility: 'none' },
+    paint: {
+      'fill-color': ['get', 'fill'],
+      'fill-opacity': ['coalesce', ['get', 'fill-opacity'], 0.35],
+    },
+    filter: ['==', '$type', 'Polygon'],
+  });
+
+  mapLayerService.addLayerSafe(mapInstance, {
+    id: TSUNAMI_LAYERS.tttLine,
+    type: 'line',
+    source: TSUNAMI_SOURCES.ttt,
+    layout: { visibility: 'none' },
+    paint: {
+      'line-color': ['coalesce', ['get', 'stroke'], '#ffffff'],
+      'line-width': 1.5,
+      'line-opacity': 0.7,
+    },
+    filter: ['==', '$type', 'LineString'],
+  });
+
+  mapLayerService.addLayerSafe(mapInstance, {
+    id: TSUNAMI_LAYERS.tttLabels,
+    type: 'symbol',
+    source: TSUNAMI_SOURCES.ttt,
+    layout: {
+      visibility: 'none',
+      'symbol-placement': 'line',
+      'text-field': ['get', 'travel_time_hours'],
+      'text-font': ['Open Sans Bold', 'Arial Unicode MS Bold'],
+      'text-size': 12,
+      'text-allow-overlap': false,
+    },
+    paint: {
+      'text-color': '#000000',
+      'text-halo-color': '#ffffff',
+      'text-halo-width': 1.5,
+    },
+    filter: ['==', '$type', 'LineString'],
+  });
+
   mapLayerService.addLayerSafe(mapInstance, {
     id: TSUNAMI_LAYERS.markerGlow,
     type: 'circle',
@@ -65,7 +115,13 @@ export const initTsunamiLayers = (mapInstance) => {
 export const setTsunamiLayerVisibility = (mapInstance, isVisible) => {
   if (!mapInstance?.getStyle()) return;
   const visibility = isVisible ? 'visible' : 'none';
-  [TSUNAMI_LAYERS.markerGlow, TSUNAMI_LAYERS.marker].forEach((layerId) => {
+  [
+    TSUNAMI_LAYERS.tttFill,
+    TSUNAMI_LAYERS.tttLine,
+    TSUNAMI_LAYERS.tttLabels,
+    TSUNAMI_LAYERS.markerGlow, 
+    TSUNAMI_LAYERS.marker
+  ].forEach((layerId) => {
     if (mapInstance.getLayer(layerId)) {
       mapInstance.setLayoutProperty(layerId, 'visibility', visibility);
     }
@@ -78,11 +134,21 @@ export const syncTsunamiSource = (mapInstance, result, source) => {
   if (mapSource?.setData) {
     mapSource.setData(buildTsunamiFeatureCollection(result, source));
   }
+  const tttSource = mapInstance.getSource(TSUNAMI_SOURCES.ttt);
+  if (tttSource?.setData) {
+    tttSource.setData(result?.layers?.travel_time_contours || EMPTY_FEATURE_COLLECTION);
+  }
 };
 
 export const bringTsunamiLayersToFront = (mapInstance) => {
   if (!mapInstance?.getStyle()) return;
-  [TSUNAMI_LAYERS.markerGlow, TSUNAMI_LAYERS.marker].forEach((layerId) => {
+  [
+    TSUNAMI_LAYERS.tttFill,
+    TSUNAMI_LAYERS.tttLine,
+    TSUNAMI_LAYERS.tttLabels,
+    TSUNAMI_LAYERS.markerGlow, 
+    TSUNAMI_LAYERS.marker
+  ].forEach((layerId) => {
     if (mapInstance.getLayer(layerId)) {
       mapInstance.moveLayer(layerId);
     }

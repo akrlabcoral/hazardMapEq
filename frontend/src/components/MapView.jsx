@@ -523,7 +523,7 @@ export default function MapView({ isAdmin = false }) {
   }, [simulationResults, pendingSimulationInfoPanel, earthquakeEpicenter, intensityVisible]);
 
   const zoomControlsPosition = isAdmin && activePanel === 'workflow'
-    ? 'bottom-[calc(clamp(260px,30vh,320px)+2rem)] z-30'
+    ? 'bottom-[calc(clamp(300px,34vh,380px)+2rem)] z-30'
     : 'bottom-10 z-20';
 
   return (
