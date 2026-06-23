@@ -5,13 +5,13 @@ const EMPTY_FEATURE_COLLECTION = { type: 'FeatureCollection', features: [] };
 
 export const buildTsunamiFeatureCollection = (result, source) => ({
   type: 'FeatureCollection',
-  features: result && source ? [{
+  features: source ? [{
     type: 'Feature',
     geometry: { type: 'Point', coordinates: [source.lng, source.lat] },
     properties: {
-      result: JSON.stringify(result),
-      level: result.tsunami_potential_class?.level || '',
-      description: result.tsunami_potential_class?.description || '',
+      result: result ? JSON.stringify(result) : '',
+      level: result?.tsunami_potential_class?.level || '',
+      description: result?.tsunami_potential_class?.description || '',
     },
   }] : [],
 });
@@ -23,6 +23,11 @@ export const initTsunamiLayers = (mapInstance) => {
   });
 
   mapLayerService.addSourceSafe(mapInstance, TSUNAMI_SOURCES.ttt, {
+    type: 'geojson',
+    data: EMPTY_FEATURE_COLLECTION,
+  });
+
+  mapLayerService.addSourceSafe(mapInstance, TSUNAMI_SOURCES.wavefront, {
     type: 'geojson',
     data: EMPTY_FEATURE_COLLECTION,
   });
@@ -96,36 +101,65 @@ export const initTsunamiLayers = (mapInstance) => {
     },
     paint: {
       'circle-radius': 9,
-      'circle-color': [
-        'match',
-        ['get', 'level'],
-        'Very Low', '#22c55e',
-        'Low', '#eab308',
-        'Moderate', '#f97316',
-        'High', '#ef4444',
-        'Very High', '#7f1d1d',
-        '#38bdf8',
-      ],
+      'circle-color': '#0ea5e9',
       'circle-stroke-color': '#ffffff',
       'circle-stroke-width': 2,
     },
   });
+
+  mapLayerService.addLayerSafe(mapInstance, {
+    id: TSUNAMI_LAYERS.wavefrontGlow,
+    type: 'line',
+    source: TSUNAMI_SOURCES.wavefront,
+    layout: { visibility: 'none' },
+    paint: {
+      'line-color': '#22d3ee',
+      'line-width': ['coalesce', ['get', 'glowWidth'], 7],
+      'line-opacity': ['coalesce', ['get', 'glowOpacity'], 0.28],
+      'line-blur': 2.5,
+    },
+  });
+
+  mapLayerService.addLayerSafe(mapInstance, {
+    id: TSUNAMI_LAYERS.wavefrontLine,
+    type: 'line',
+    source: TSUNAMI_SOURCES.wavefront,
+    layout: { visibility: 'none' },
+    paint: {
+      'line-color': '#ffffff',
+      'line-width': ['coalesce', ['get', 'width'], 2.5],
+      'line-opacity': ['coalesce', ['get', 'opacity'], 0.85],
+      'line-blur': 0.15,
+    },
+  });
 };
 
-export const setTsunamiLayerVisibility = (mapInstance, isVisible) => {
+export const setTsunamiLayerVisibility = (mapInstance, { markerVisible, resultVisible, wavefrontVisible }) => {
   if (!mapInstance?.getStyle()) return;
-  const visibility = isVisible ? 'visible' : 'none';
-  [
+  const setVisibility = (layerIds, isVisible) => {
+    const visibility = isVisible ? 'visible' : 'none';
+    layerIds.forEach((layerId) => {
+      if (mapInstance.getLayer(layerId)) {
+        mapInstance.setLayoutProperty(layerId, 'visibility', visibility);
+      }
+    });
+  };
+
+  setVisibility([
+    TSUNAMI_LAYERS.markerGlow,
+    TSUNAMI_LAYERS.marker
+  ], markerVisible);
+
+  setVisibility([
     TSUNAMI_LAYERS.tttFill,
     TSUNAMI_LAYERS.tttLine,
-    TSUNAMI_LAYERS.tttLabels,
-    TSUNAMI_LAYERS.markerGlow, 
-    TSUNAMI_LAYERS.marker
-  ].forEach((layerId) => {
-    if (mapInstance.getLayer(layerId)) {
-      mapInstance.setLayoutProperty(layerId, 'visibility', visibility);
-    }
-  });
+    TSUNAMI_LAYERS.tttLabels
+  ], resultVisible);
+
+  setVisibility([
+    TSUNAMI_LAYERS.wavefrontGlow,
+    TSUNAMI_LAYERS.wavefrontLine
+  ], wavefrontVisible);
 };
 
 export const syncTsunamiSource = (mapInstance, result, source) => {
@@ -146,6 +180,8 @@ export const bringTsunamiLayersToFront = (mapInstance) => {
     TSUNAMI_LAYERS.tttFill,
     TSUNAMI_LAYERS.tttLine,
     TSUNAMI_LAYERS.tttLabels,
+    TSUNAMI_LAYERS.wavefrontGlow,
+    TSUNAMI_LAYERS.wavefrontLine,
     TSUNAMI_LAYERS.markerGlow, 
     TSUNAMI_LAYERS.marker
   ].forEach((layerId) => {

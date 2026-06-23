@@ -103,6 +103,8 @@ export const useTsunamiWorkflowDockLayout = () => {
   const setTsunamiAnalysisError = useStore((state) => state.setTsunamiAnalysisError);
   const isRunning = useStore((state) => state.isTsunamiAnalysisRunning);
   const setIsTsunamiAnalysisRunning = useStore((state) => state.setIsTsunamiAnalysisRunning);
+  const isPlacingTsunamiEpicenter = useStore((state) => state.isPlacingTsunamiEpicenter);
+  const setIsPlacingTsunamiEpicenter = useStore((state) => state.setIsPlacingTsunamiEpicenter);
 
   const tsunamiResult = useStore((state) => state.tsunamiAnalysisResult);
   const clearTsunamiState = useStore((state) => state.clearTsunamiState);
@@ -119,7 +121,14 @@ export const useTsunamiWorkflowDockLayout = () => {
 
   const useCurrentEarthquake = () => {
     if (!earthquakeEpicenter) return;
+    setIsPlacingTsunamiEpicenter(false);
     setTsunamiSource(earthquakeEpicenter);
+    setTsunamiResult(null);
+    setTsunamiAnalysisResult(null);
+    setTsunamiAnalysisLayers(null);
+    setTsunamiAnalysisRequestId(null);
+    setTsunamiAnalysisStatus('idle');
+    setTsunamiAnalysisError('');
     setTsunamiSimulationForm({
       magnitude: String(earthquakeMagnitude ?? form.magnitude),
       latitude: String(earthquakeEpicenter.lat),
@@ -182,11 +191,17 @@ export const useTsunamiWorkflowDockLayout = () => {
   const runAnalysis = async () => {
     setTsunamiAnalysisError('');
     setIsTsunamiAnalysisRunning(true);
+    setIsPlacingTsunamiEpicenter(false);
     setTsunamiAnalysisStatus('queued');
     // Clear any previous results when running a new simulation
     setTsunamiAnalysisResult(null);
     setTsunamiResult(null);
     try {
+      const latitude = toNumber(form.latitude);
+      const longitude = toNumber(form.longitude);
+      if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+        setTsunamiSource({ lat: latitude, lng: longitude });
+      }
       const payload = buildAnalysisPayload(form);
       const accepted = await startTsunamiAnalysis(payload);
       setTsunamiAnalysisRequestId(accepted.request_id);
@@ -201,6 +216,7 @@ export const useTsunamiWorkflowDockLayout = () => {
     resetTsunamiSimulationForm();
     setTsunamiAnalysisError('');
     setTsunamiAnalysisStatus('idle');
+    setIsPlacingTsunamiEpicenter(false);
     clearTsunamiState();
   };
 
@@ -342,6 +358,13 @@ export const useTsunamiWorkflowDockLayout = () => {
     status: isRunning ? 'Running' : (tsunamiResult ? 'Completed' : 'Waiting'),
     sections,
     actions: [
+      {
+        id: 'place',
+        label: isPlacingTsunamiEpicenter ? 'Cancel Pin' : 'Drop Pin',
+        icon: MapPin,
+        onClick: () => setIsPlacingTsunamiEpicenter(!isPlacingTsunamiEpicenter),
+        disabled: isRunning,
+      },
       { 
         id: 'sync', 
         label: 'Use Earthquake', 

@@ -31,8 +31,10 @@ export const createTsunamiSlice = (set) => ({
   tsunamiAnalysisHistory: [],
   tsunamiAlerts: [],
   isTsunamiAnalysisRunning: false,
+  isPlacingTsunamiEpicenter: false,
   setTsunamiResult: (result) => set({ tsunamiResult: result }),
   setTsunamiSource: (source) => set({ tsunamiSource: source }),
+  setIsPlacingTsunamiEpicenter: (isPlacing) => set({ isPlacingTsunamiEpicenter: isPlacing }),
   setTsunamiSimulationForm: (updates) => set((state) => ({
     tsunamiSimulationForm: {
       ...state.tsunamiSimulationForm,
@@ -61,6 +63,7 @@ export const createTsunamiSlice = (set) => ({
     tsunamiAnalysisLayers: null,
     tsunamiAnalysisError: '',
     isTsunamiAnalysisRunning: false,
+    isPlacingTsunamiEpicenter: false,
   }),
 });
 

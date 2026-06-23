@@ -75,8 +75,13 @@ const inspectMapClick = (mapInstance, event) => {
   return true;
 };
 
-const getMapCursor = ({ isPlacingEpicenter, isSimulationRunning, isInspectableHover = false }) => {
-  if (isPlacingEpicenter) return 'crosshair';
+const getMapCursor = ({
+  isPlacingEpicenter,
+  isPlacingTsunamiEpicenter,
+  isSimulationRunning,
+  isInspectableHover = false,
+}) => {
+  if (isPlacingEpicenter || isPlacingTsunamiEpicenter) return 'crosshair';
   if (isSimulationRunning) return 'wait';
   if (isInspectableHover) return 'pointer';
   return '';
@@ -197,11 +202,13 @@ export default function MapView({ isAdmin = false }) {
   const mapStyle          = useStore((state) => state.mapStyle);
   const activePanel       = useStore((state) => state.activePanel);
   const isPlacingEpicenter = useStore((state) => state.isPlacingEpicenter);
+  const isPlacingTsunamiEpicenter = useStore((state) => state.isPlacingTsunamiEpicenter);
   const isSimulationRunning = useStore((state) => state.isSimulationRunning);
   const liveEvents = useStore((state) => state.liveEvents);
   const activeHazard = useStore((state) => state.activeHazard);
   const tsunamiResult = useStore((state) => state.tsunamiResult);
   const tsunamiSource = useStore((state) => state.tsunamiSource);
+  const isTsunamiAnalysisRunning = useStore((state) => state.isTsunamiAnalysisRunning);
 
   useEffect(() => {
     animationManager.setStoreActions(setIsSimulationRunning);
@@ -221,7 +228,7 @@ export default function MapView({ isAdmin = false }) {
 
   useEffect(() => {
     applyMapCursor(map.current);
-  }, [isPlacingEpicenter, isSimulationRunning]);
+  }, [isPlacingEpicenter, isPlacingTsunamiEpicenter, isSimulationRunning]);
 
   useEffect(() => {
     if (map.current) return;
@@ -250,6 +257,27 @@ export default function MapView({ isAdmin = false }) {
         debugLog('[Epicenter] Map click => setting epicenter:', coords);
         setEarthquakeEpicenter(coords);
         useStore.getState().setIsPlacingEpicenter(false);
+        return;
+      }
+
+      if (useStore.getState().isPlacingTsunamiEpicenter) {
+        const coords = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+        debugLog('[Tsunami] Map click => setting tsunami epicenter:', coords);
+        const store = useStore.getState();
+        // Tsunami epicenter placement is independent from earthquake placement.
+        // Clear stale tsunami outputs so old travel-time layers do not remain on a new source.
+        store.setTsunamiSource(coords);
+        store.setTsunamiSimulationForm({
+          latitude: String(coords.lat),
+          longitude: String(coords.lng),
+        });
+        store.setTsunamiResult(null);
+        store.setTsunamiAnalysisResult(null);
+        store.setTsunamiAnalysisLayers(null);
+        store.setTsunamiAnalysisRequestId(null);
+        store.setTsunamiAnalysisStatus('idle');
+        store.setTsunamiAnalysisError('');
+        store.setIsPlacingTsunamiEpicenter(false);
         return;
       }
 
@@ -287,6 +315,14 @@ export default function MapView({ isAdmin = false }) {
       mapLayerService.initializeSourcesAndLayers(map.current, useStore.getState().gisLayers);
       applyBoundaryTheme(map.current, useStore.getState().mapStyle);
       syncHazardLayers(map.current, { isStyleLoad: true });
+      const currentStore = useStore.getState();
+      if (
+        currentStore.activeHazard === 'tsunami'
+        && currentStore.tsunamiSource
+        && (currentStore.isTsunamiAnalysisRunning || currentStore.tsunamiResult)
+      ) {
+        animationManager.startTsunamiWavefront(map.current, currentStore.tsunamiSource);
+      }
       rasterService.setMap(map.current);
       scheduleLegendRefresh();
 
@@ -387,6 +423,7 @@ export default function MapView({ isAdmin = false }) {
 
     return () => {
       animationManager.stopShockwave();
+      animationManager.stopTsunamiWavefront();
       if (legendRefreshFrame !== null) {
         cancelAnimationFrame(legendRefreshFrame);
       }
@@ -473,7 +510,18 @@ export default function MapView({ isAdmin = false }) {
   useEffect(() => {
     if (!map.current || !map.current.getStyle()) return;
     syncHazardLayers(map.current);
-  }, [activeHazard, tsunamiResult, tsunamiSource]);
+  }, [activeHazard, tsunamiResult, tsunamiSource, isTsunamiAnalysisRunning]);
+
+  useEffect(() => {
+    if (!map.current || !map.current.getStyle()) return;
+
+    if (activeHazard === 'tsunami' && tsunamiSource && (isTsunamiAnalysisRunning || tsunamiResult)) {
+      animationManager.startTsunamiWavefront(map.current, tsunamiSource);
+      return;
+    }
+
+    animationManager.stopTsunamiWavefront();
+  }, [activeHazard, tsunamiSource, tsunamiResult, isTsunamiAnalysisRunning]);
 
   // Switch between PGA/damage and MMI intensity heatmap modes
   useEffect(() => {
@@ -532,6 +580,7 @@ export default function MapView({ isAdmin = false }) {
         ref={mapContainer}
         className={`w-full h-full ${
           isPlacingEpicenter
+          || isPlacingTsunamiEpicenter
             ? 'cursor-crosshair'
             : isSimulationRunning
               ? 'cursor-wait'
