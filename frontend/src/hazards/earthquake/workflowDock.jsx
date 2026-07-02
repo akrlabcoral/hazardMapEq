@@ -4,7 +4,10 @@ import { Ambulance, Gauge, Hospital, MapPin, Navigation, Play, RotateCcw, Route,
 import useStore from '../../store/useStore';
 import HazardBottomPanel from '../../components/hazards/HazardBottomPanel';
 import { useSimulation } from './useSimulation';
-import { createEvacuationPlan, findNearestHospitalRoute } from '../../services/evacuation/api';
+import { createEvacuationPlan, findAutoNearestHospitalRoutes } from '../../services/evacuation/api';
+
+const HIGH_RISK_PGA_THRESHOLD = 0.215;
+const HIGH_RISK_CATEGORIES = new Set(['HIGH', 'SEVERE', 'EXTREME']);
 
 const NumberInput = ({ label, value, onChange, min = '0', step = '0.1' }) => (
   <label className="block text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400">
@@ -91,6 +94,67 @@ const getPgaValue = (properties = {}) => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const riskCategory = (properties = {}) => (
+  properties.risk_category || properties.risk_level || properties.severity || ''
+).toString().toUpperCase();
+
+const isHighRiskFeature = (feature) => {
+  const category = riskCategory(feature?.properties);
+  const pga = getPgaValue(feature?.properties);
+  return HIGH_RISK_CATEGORIES.has(category) || (Number.isFinite(pga) && pga >= HIGH_RISK_PGA_THRESHOLD);
+};
+
+const roundCoord = (value) => Math.round(Number(value) * 100000) / 100000;
+
+const roundGeometryCoordinates = (coordinates) => {
+  if (!Array.isArray(coordinates)) return coordinates;
+  if (typeof coordinates[0] === 'number' && typeof coordinates[1] === 'number') {
+    return [roundCoord(coordinates[0]), roundCoord(coordinates[1])];
+  }
+  return coordinates.map(roundGeometryCoordinates);
+};
+
+const bboxForFeature = (feature) => {
+  const points = flattenCoordinates(feature?.geometry?.coordinates);
+  if (!points.length) return null;
+  const bounds = points.reduce((acc, [lng, lat]) => ({
+    minLng: Math.min(acc.minLng, lng),
+    maxLng: Math.max(acc.maxLng, lng),
+    minLat: Math.min(acc.minLat, lat),
+    maxLat: Math.max(acc.maxLat, lat),
+  }), {
+    minLng: Infinity,
+    maxLng: -Infinity,
+    minLat: Infinity,
+    maxLat: -Infinity,
+  });
+  return [bounds.minLng, bounds.minLat, bounds.maxLng, bounds.maxLat].map(roundCoord);
+};
+
+const buildUnsafeZones = (simulationResults, limit = 250) => (
+  simulationResults?.grid_geojson?.features || []
+).filter(isHighRiskFeature).map((feature, index) => {
+  const bbox = bboxForFeature(feature);
+  if (!bbox || !feature.geometry) return null;
+  const properties = feature.properties || {};
+  return {
+    id: properties.id || properties.grid_id || `zone-${index}`,
+    bbox,
+    geometry: {
+      type: feature.geometry.type,
+      coordinates: roundGeometryCoordinates(feature.geometry.coordinates),
+    },
+    risk_category: riskCategory(properties),
+    pga: getPgaValue(properties),
+  };
+}).filter(Boolean).sort((a, b) => (b.pga || 0) - (a.pga || 0)).slice(0, limit);
+
+const isNearExistingTarget = (target, selected, minDegrees = 0.08) => selected.some((existing) => {
+  const dx = target.lng - existing.lng;
+  const dy = target.lat - existing.lat;
+  return dx * dx + dy * dy < minDegrees * minDegrees;
+});
+
 const topPgaTargets = (simulationResults, limit = 3) => (
   simulationResults?.grid_geojson?.features || []
 ).map((feature) => {
@@ -101,9 +165,14 @@ const topPgaTargets = (simulationResults, limit = 3) => (
     ...center,
     pga,
     state: feature.properties?.state || feature.properties?.STATE || '',
-    risk_category: feature.properties?.risk_category || feature.properties?.risk_level || feature.properties?.severity || '',
+    risk_category: riskCategory(feature.properties),
   };
-}).filter(Boolean).sort((a, b) => b.pga - a.pga).slice(0, limit);
+}).filter(Boolean).sort((a, b) => b.pga - a.pga).reduce((selected, target) => {
+  if (selected.length >= limit) return selected;
+  if (isNearExistingTarget(target, selected)) return selected;
+  selected.push(target);
+  return selected;
+}, []);
 
 export const useEarthquakeWorkflowDockLayout = () => {
   const earthquakeEpicenter = useStore((state) => state.earthquakeEpicenter);
@@ -163,6 +232,7 @@ export const useEarthquakeWorkflowDockLayout = () => {
         costing: 'auto',
         hospital_type: 'any',
         search_radius_km: 75,
+        unsafe_zones: buildUnsafeZones(simulationResults),
       });
       setEvacuationPlan(plan);
     } catch (error) {
@@ -202,26 +272,38 @@ export const useEarthquakeWorkflowDockLayout = () => {
 
       setIsAutoEvacuationLoading(true);
       setAutoEvacuationError('');
-      const results = [];
-      const failures = [];
+      const response = await findAutoNearestHospitalRoutes({
+        targets: targets.map((target, index) => ({
+          rank: index + 1,
+          origin: { lat: target.lat, lon: target.lng },
+          pga: target.pga,
+          state: target.state,
+          risk_category: target.risk_category,
+        })),
+        costing: 'auto',
+        hospital_type: 'any',
+        search_radius_km: 75,
+        unsafe_zones: buildUnsafeZones(simulationResults),
+      });
 
-      for (const [index, target] of targets.entries()) {
-        if (cancelled) return;
-        try {
-          const plan = await findNearestHospitalRoute({
-            origin: { lat: target.lat, lon: target.lng },
-            costing: 'auto',
-            hospital_type: 'any',
-            search_radius_km: 75,
-          });
-          results.push({ rank: index + 1, target, plan });
-          setAutoEvacuationPlans([...results]);
-        } catch (error) {
-          failures.push(`#${index + 1}: ${error.message || 'route failed'}`);
-          results.push({ rank: index + 1, target, error: error.message || 'Route failed' });
-          setAutoEvacuationPlans([...results]);
-        }
-      }
+      if (cancelled) return;
+      const results = (response.results || []).map((entry, index) => {
+        const fallbackTarget = targets[index] || {};
+        return {
+          rank: entry.rank ?? index + 1,
+          target: {
+            lat: entry.target?.origin?.lat ?? fallbackTarget.lat,
+            lng: entry.target?.origin?.lon ?? fallbackTarget.lng,
+            pga: entry.target?.pga ?? fallbackTarget.pga,
+            state: entry.target?.state ?? fallbackTarget.state,
+            risk_category: entry.target?.risk_category ?? fallbackTarget.risk_category,
+          },
+          plan: entry.plan,
+          error: entry.error,
+        };
+      });
+      const failures = results.filter((entry) => entry.error).map((entry) => `#${entry.rank}: ${entry.error}`);
+      setAutoEvacuationPlans(results);
 
       if (!cancelled) {
         setAutoEvacuationError(failures.length ? `Some auto routes failed: ${failures.join(', ')}` : '');
@@ -325,7 +407,7 @@ export const useEarthquakeWorkflowDockLayout = () => {
             <div className="flex items-center justify-between rounded-lg border border-slate-600 bg-slate-950/45 px-2 py-2">
               <div>
                 <div className="text-[10px] font-black uppercase tracking-[0.14em] text-slate-300">Evacuation Mode</div>
-                <div className="text-[10px] text-slate-500">Auto-route top 3 highest-PGA cells</div>
+                <div className="text-[10px] text-slate-500">Auto-route top 3 cells to safe hospitals</div>
               </div>
               <button
                 type="button"
@@ -350,7 +432,7 @@ export const useEarthquakeWorkflowDockLayout = () => {
 
             {isAutoEvacuationLoading && (
               <div className="rounded-lg border border-cyan-400/30 bg-cyan-500/10 px-2 py-1.5 text-xs font-semibold text-cyan-100">
-                Generating nearest-hospital routes for highest-PGA cells...
+                Generating safe-hospital routes for highest-PGA cells...
               </div>
             )}
 
@@ -371,12 +453,12 @@ export const useEarthquakeWorkflowDockLayout = () => {
                     {entry.plan ? (
                       <div className="grid gap-1">
                         <div className="flex justify-between gap-2">
-                          <span className="text-slate-500">Hospital route</span>
+                          <span className="text-slate-500">Safe hospital route</span>
                           <span className="font-mono">{routeSummaryText(getBestRouteSummary(entry.plan))}</span>
                         </div>
                         <div className="flex justify-between gap-2">
-                          <span className="text-slate-500">Hospital</span>
-                          <span className="text-right font-bold">{entry.plan.hospital?.name || 'Nearest hospital'}</span>
+                          <span className="text-slate-500">Safe hospital</span>
+                          <span className="text-right font-bold">{entry.plan.hospital?.name || 'Safe hospital'}</span>
                         </div>
                       </div>
                     ) : (
@@ -434,10 +516,10 @@ export const useEarthquakeWorkflowDockLayout = () => {
                 </div>
                 <div className="grid gap-1 text-[11px]">
                   <div className="flex justify-between"><span className="text-slate-400">Responder to zone</span><span className="font-mono">{routeSummaryText(getBestRouteSummary(evacuationPlan.responder_route))}</span></div>
-                  <div className="flex justify-between"><span className="text-slate-400">Zone to hospital</span><span className="font-mono">{routeSummaryText(getBestRouteSummary(evacuationPlan.hospital_route))}</span></div>
+                  <div className="flex justify-between"><span className="text-slate-400">Zone to safe hospital</span><span className="font-mono">{routeSummaryText(getBestRouteSummary(evacuationPlan.hospital_route))}</span></div>
                   <div className="flex items-start justify-between gap-2">
                     <span className="text-slate-400"><Hospital className="mr-1 inline h-3.5 w-3.5" />Hospital</span>
-                    <span className="text-right font-bold">{evacuationPlan.hospital_route?.hospital?.name || 'Nearest hospital'}</span>
+                    <span className="text-right font-bold">{evacuationPlan.hospital_route?.hospital?.name || 'Safe hospital'}</span>
                   </div>
                 </div>
               </div>

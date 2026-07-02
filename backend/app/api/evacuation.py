@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException, status
 from app.core.errors import NotFoundError, ServiceUnavailableError
 from app.services.evacuation.route_service import EvacuationRouteService
 from app.services.evacuation.schemas import (
+    AutoNearestHospitalsRequest,
+    AutoNearestHospitalsResponse,
     EvacuationPlanRequest,
     EvacuationPlanResponse,
     EvacuationRouteRequest,
@@ -33,6 +35,14 @@ async def nearest_hospital(request: NearestHospitalRequest) -> NearestHospitalRe
         return await service.nearest_hospital(request)
     except NotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ServiceUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
+
+
+@router.post("/auto-nearest-hospitals", response_model=AutoNearestHospitalsResponse)
+async def auto_nearest_hospitals(request: AutoNearestHospitalsRequest) -> AutoNearestHospitalsResponse:
+    try:
+        return await service.auto_nearest_hospitals(request)
     except ServiceUnavailableError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
 

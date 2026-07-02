@@ -7,6 +7,9 @@ from app.core.errors import NotFoundError
 from app.services.evacuation.hospital_service import fetch_hospitals, hospitals_geojson
 from app.services.evacuation.osrm_client import OsrmClient
 from app.services.evacuation.schemas import (
+    AutoNearestHospitalResult,
+    AutoNearestHospitalsRequest,
+    AutoNearestHospitalsResponse,
     Coordinate,
     DirectionStep,
     EvacuationPlanRequest,
@@ -17,6 +20,7 @@ from app.services.evacuation.schemas import (
     NearestHospitalResponse,
     RouteResponse,
     RouteSummary,
+    UnsafeZone,
 )
 
 
@@ -88,6 +92,56 @@ def _route_response(osrm_data: dict[str, Any]) -> RouteResponse:
     return RouteResponse(best_route_index=best_index, routes=summaries, geojson=_route_geojson(routes, best_index))
 
 
+def _point_in_ring(lon: float, lat: float, ring: list) -> bool:
+    inside = False
+    if len(ring) < 4:
+        return False
+    previous_lon, previous_lat = ring[-1][:2]
+    for point in ring:
+        current_lon, current_lat = point[:2]
+        intersects = ((current_lat > lat) != (previous_lat > lat)) and (
+            lon < (previous_lon - current_lon) * (lat - current_lat) / ((previous_lat - current_lat) or 1e-12) + current_lon
+        )
+        if intersects:
+            inside = not inside
+        previous_lon, previous_lat = current_lon, current_lat
+    return inside
+
+
+def _point_in_polygon(lon: float, lat: float, polygon: list) -> bool:
+    if not polygon or not _point_in_ring(lon, lat, polygon[0]):
+        return False
+    return not any(_point_in_ring(lon, lat, hole) for hole in polygon[1:])
+
+
+def _point_in_geometry(lon: float, lat: float, geometry: dict[str, Any] | None) -> bool:
+    if not geometry:
+        return False
+    geometry_type = geometry.get("type")
+    coordinates = geometry.get("coordinates") or []
+    if geometry_type == "Polygon":
+        return _point_in_polygon(lon, lat, coordinates)
+    if geometry_type == "MultiPolygon":
+        return any(_point_in_polygon(lon, lat, polygon) for polygon in coordinates)
+    return False
+
+
+def _point_in_bbox(lon: float, lat: float, bbox: list[float] | None) -> bool:
+    if not bbox or len(bbox) != 4:
+        return False
+    min_lon, min_lat, max_lon, max_lat = bbox
+    return min_lon <= lon <= max_lon and min_lat <= lat <= max_lat
+
+
+def _hospital_in_unsafe_zone(hospital: Hospital, unsafe_zones: list[UnsafeZone]) -> bool:
+    for zone in unsafe_zones:
+        if _point_in_geometry(hospital.lon, hospital.lat, zone.geometry):
+            return True
+        if _point_in_bbox(hospital.lon, hospital.lat, zone.bbox):
+            return True
+    return False
+
+
 class EvacuationRouteService:
     def __init__(self, osrm_client: OsrmClient | None = None) -> None:
         self.osrm_client = osrm_client or OsrmClient()
@@ -104,6 +158,12 @@ class EvacuationRouteService:
         candidates = await self._hospital_candidates(request)
         if not candidates:
             raise NotFoundError("No matching hospitals found near the vulnerable zone.")
+        safe_candidates = [
+            hospital for hospital in candidates
+            if not _hospital_in_unsafe_zone(hospital, request.unsafe_zones)
+        ]
+        if request.unsafe_zones and not safe_candidates:
+            raise NotFoundError("No reachable safe hospital found outside high-risk zones.")
 
         async def try_route(hospital: Hospital):
             destination = Coordinate(lat=hospital.lat, lon=hospital.lon)
@@ -115,19 +175,40 @@ class EvacuationRouteService:
                     alternatives=1,
                 ))
                 return hospital, response
-            except Exception:
-                return hospital, None
+            except Exception as exc:
+                return hospital, exc
 
-        results = await asyncio.gather(*(try_route(hospital) for hospital in candidates[:12]))
-        reachable = [(hospital, response) for hospital, response in results if response is not None]
+        results = await asyncio.gather(*(try_route(hospital) for hospital in safe_candidates[:12]))
+        reachable = [
+            (hospital, response) for hospital, response in results
+            if isinstance(response, RouteResponse)
+        ]
         if not reachable:
+            if request.unsafe_zones and len(safe_candidates) < len(candidates):
+                raise NotFoundError("No reachable safe hospital found outside high-risk zones.")
             raise NotFoundError("No reachable hospital found near the vulnerable zone.")
         hospital, route = min(reachable, key=lambda item: item[1].routes[item[1].best_route_index].duration_min)
         return NearestHospitalResponse(
             **route.model_dump(mode="json"),
             hospital=hospital,
-            hospitals_geojson=hospitals_geojson(candidates[:25]),
+            hospitals_geojson=hospitals_geojson(safe_candidates[:25]),
         )
+
+    async def auto_nearest_hospitals(self, request: AutoNearestHospitalsRequest) -> AutoNearestHospitalsResponse:
+        results: list[AutoNearestHospitalResult] = []
+        for target in request.targets:
+            try:
+                plan = await self.nearest_hospital(NearestHospitalRequest(
+                    origin=target.origin,
+                    costing=request.costing,
+                    hospital_type=request.hospital_type,
+                    search_radius_km=request.search_radius_km,
+                    unsafe_zones=request.unsafe_zones,
+                ))
+                results.append(AutoNearestHospitalResult(rank=target.rank, target=target, plan=plan))
+            except Exception as exc:
+                results.append(AutoNearestHospitalResult(rank=target.rank, target=target, error=str(exc)))
+        return AutoNearestHospitalsResponse(results=results)
 
     async def plan(self, request: EvacuationPlanRequest) -> EvacuationPlanResponse:
         responder_route, hospital_route = await asyncio.gather(
@@ -142,6 +223,7 @@ class EvacuationRouteService:
                 costing=request.costing,
                 hospital_type=request.hospital_type,
                 search_radius_km=request.search_radius_km,
+                unsafe_zones=request.unsafe_zones,
             )),
         )
         return EvacuationPlanResponse(
@@ -162,4 +244,3 @@ class EvacuationRouteService:
             if hospitals:
                 return hospitals
         return []
-

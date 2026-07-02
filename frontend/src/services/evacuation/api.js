@@ -19,3 +19,9 @@ export const findNearestHospitalRoute = (payload) => requestJson('/scientific-ap
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify(payload),
 });
+
+export const findAutoNearestHospitalRoutes = (payload) => requestJson('/scientific-api/evacuation/auto-nearest-hospitals', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify(payload),
+});

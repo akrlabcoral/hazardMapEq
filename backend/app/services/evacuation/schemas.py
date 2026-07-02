@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
@@ -17,11 +17,20 @@ class EvacuationRouteRequest(BaseModel):
     alternatives: int = Field(default=2, ge=0, le=3)
 
 
+class UnsafeZone(BaseModel):
+    id: str | None = None
+    bbox: list[float] | None = Field(default=None, min_length=4, max_length=4)
+    geometry: dict[str, Any] | None = None
+    risk_category: str | None = None
+    pga: float | None = None
+
+
 class NearestHospitalRequest(BaseModel):
     origin: Coordinate
     costing: Literal["auto", "pedestrian", "bicycle"] = "auto"
     hospital_type: Literal["govt", "private", "any"] = "any"
     search_radius_km: float = Field(default=75, gt=0, le=300)
+    unsafe_zones: list[UnsafeZone] = Field(default_factory=list)
 
 
 class EvacuationPlanRequest(BaseModel):
@@ -30,6 +39,23 @@ class EvacuationPlanRequest(BaseModel):
     costing: Literal["auto", "pedestrian", "bicycle"] = "auto"
     hospital_type: Literal["govt", "private", "any"] = "any"
     search_radius_km: float = Field(default=75, gt=0, le=300)
+    unsafe_zones: list[UnsafeZone] = Field(default_factory=list)
+
+
+class AutoEvacuationTarget(BaseModel):
+    rank: int = Field(..., ge=1, le=10)
+    origin: Coordinate
+    pga: float | None = None
+    state: str | None = None
+    risk_category: str | None = None
+
+
+class AutoNearestHospitalsRequest(BaseModel):
+    targets: list[AutoEvacuationTarget] = Field(..., min_length=1, max_length=10)
+    costing: Literal["auto", "pedestrian", "bicycle"] = "auto"
+    hospital_type: Literal["govt", "private", "any"] = "any"
+    search_radius_km: float = Field(default=75, gt=0, le=300)
+    unsafe_zones: list[UnsafeZone] = Field(default_factory=list)
 
 
 class DirectionStep(BaseModel):
@@ -67,9 +93,19 @@ class NearestHospitalResponse(RouteResponse):
     hospitals_geojson: dict
 
 
+class AutoNearestHospitalResult(BaseModel):
+    rank: int
+    target: AutoEvacuationTarget
+    plan: NearestHospitalResponse | None = None
+    error: str | None = None
+
+
+class AutoNearestHospitalsResponse(BaseModel):
+    results: list[AutoNearestHospitalResult]
+
+
 class EvacuationPlanResponse(BaseModel):
     responder_route: RouteResponse
     hospital_route: NearestHospitalResponse
     vulnerable_zone: Coordinate
     responder_origin: Coordinate
-
