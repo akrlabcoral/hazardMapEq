@@ -64,7 +64,7 @@ The real-time MapLibre GL presentation layer:
 
 ## 🚀 Getting Started
 
-The entire application is fully dockerized for single-command orchestration.
+The application has separate Docker Compose files for local development and production-style runs.
 
 ### Prerequisites
 - Docker & Docker Compose installed.
@@ -75,19 +75,28 @@ The entire application is fully dockerized for single-command orchestration.
    ```bash
    cd hazardmap-realtime
    ```
-2. Build and start the cluster (spins up Postgres, Redis, FastAPI, 3x RQ Workers, and Vite):
+2. Build and start the development cluster (spins up Postgres, Redis, FastAPI, 3x RQ Workers, and Vite):
    ```bash
-   docker compose up --build
+   docker compose -f docker-compose.dev.yml up --build
    ```
 3. Access the Application:
    - **Frontend UI**: `http://localhost:5173`
    - **Backend API Docs**: `http://localhost:8000/docs`
 
+For a production-style local run with the Nginx frontend:
+```bash
+docker compose -f docker-compose.prod.yml up --build
+```
+
+Production-style ports:
+- **Frontend UI**: `http://localhost:8080`
+- **Backend API Docs**: `http://localhost:8001/docs`
+
 > **Note**: The backend initializes a one-time connection to the PostgreSQL database and loads the national GeoJSON grid into memory at startup. The first initialization may take a few seconds.
 
 ### Runtime Configuration
 
-The Docker Compose defaults are development-friendly. For staging or production, set these backend environment variables explicitly:
+For staging or production, set these backend environment variables explicitly:
 
 - `CORS_ALLOWED_ORIGINS`: comma-separated browser origins allowed to call the API.
 - `DATABASE_URL`: PostgreSQL connection URL.

@@ -1,0 +1,113 @@
+name: hazardmap-prod
+
+services:
+  db:
+    image: postgres:16-alpine3.21
+    restart: always
+    environment:
+      POSTGRES_DB:       ${POSTGRES_DB}
+      POSTGRES_USER:     ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8001:8000"
+    volumes:
+      - ./backend/data:/app/data
+    environment:
+      - PYTHONUNBUFFERED=1
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - REDIS_URL=redis://redis:6379/0
+      - REDIS_LOCK_FAIL_OPEN=false
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - AUTO_SIM_MIN_MAGNITUDE=0.0
+      - AUTO_SIM_MAX_DEPTH_KM=300.0
+      - VS30_RASTER_PATH=/app/data/soil/india_vs30.tif
+      - BATHYMETRY_RASTER_PATH=/app/data/tsunami/gebco_bay_indian_ocean.tif
+      - TERRAIN_RASTER_PATH=/app/data/tsunami/coastal_dem_200m_3857.tif
+      - COASTLINE_VECTOR_PATH=/app/data/tsunami/india_coastline.geojson
+      - ADMIN_BOUNDARIES_VECTOR_PATH=/app/data/tsunami/india_states.geojson
+      - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
+      - CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif,.tiff
+      - GDAL_CACHEMAX=256
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "python3 -c 'import urllib.request; urllib.request.urlopen(\"http://localhost:8000/health\")'"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  rq_worker:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    command: ["rq", "worker", "hazard_manual", "hazard_auto", "--url", "redis://redis:6379/0"]
+    env_file: .env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      - MPLBACKEND=Agg
+      - OMP_NUM_THREADS=1
+      - MKL_NUM_THREADS=1
+      - OPENBLAS_NUM_THREADS=1
+      - BATHYMETRY_RASTER_PATH=/app/data/tsunami/gebco_bay_indian_ocean.tif
+      - TERRAIN_RASTER_PATH=/app/data/tsunami/coastal_dem_200m_3857.tif
+      - COASTLINE_VECTOR_PATH=/app/data/tsunami/india_coastline.geojson
+      - ADMIN_BOUNDARIES_VECTOR_PATH=/app/data/tsunami/india_states.geojson
+      - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
+      - CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif,.tiff
+      - GDAL_CACHEMAX=256
+
+    volumes:
+      - ./backend/data:/app/data
+    deploy:
+      replicas: 3
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+volumes:
+  pg_data:

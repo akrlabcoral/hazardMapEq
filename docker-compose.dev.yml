@@ -1,7 +1,11 @@
+name: hazardmap-dev
+
 services:
   db:
     image: postgres:16-alpine3.21
     restart: always
+    ports:
+      - "5432:5432"
     environment:
       POSTGRES_DB:       ${POSTGRES_DB}
       POSTGRES_USER:     ${POSTGRES_USER}
@@ -17,6 +21,8 @@ services:
   redis:
     image: redis:7-alpine
     restart: always
+    ports:
+      - "6379:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -28,11 +34,11 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     restart: unless-stopped
+    command: ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
     ports:
       - "8000:8000"
     volumes:
       - ./backend:/app
-      - ./backend/app:/app/app
       - ./backend/data:/app/data
     environment:
       - PYTHONUNBUFFERED=1
@@ -50,7 +56,6 @@ services:
       - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
       - CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif,.tiff
       - GDAL_CACHEMAX=256
-
     depends_on:
       db:
         condition: service_healthy
@@ -83,9 +88,9 @@ services:
       - GDAL_DISABLE_READDIR_ON_OPEN=EMPTY_DIR
       - CPL_VSIL_CURL_ALLOWED_EXTENSIONS=.tif,.tiff
       - GDAL_CACHEMAX=256
-
     volumes:
       - ./backend:/app
+      - ./backend/data:/app/data
     deploy:
       replicas: 3
     depends_on:
@@ -98,13 +103,22 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      target: builder
     restart: unless-stopped
+    command: ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]
     ports:
-      - "80:80"
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_ML_API_URL=http://backend:8000
+      - VITE_SCIENTIFIC_API_URL=http://backend:8000
+      - CHOKIDAR_USEPOLLING=true
     depends_on:
       - backend
     healthcheck:
-      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost/ || exit 1"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://localhost:5173/ || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
