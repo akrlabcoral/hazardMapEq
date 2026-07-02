@@ -2,6 +2,8 @@ import { mapLayerService } from '../../services/mapLayerService';
 import { EARTHQUAKE_LAYERS, EARTHQUAKE_SOURCES } from './layerMetadata';
 
 const EMPTY_FEATURE_COLLECTION = { type: 'FeatureCollection', features: [] };
+const EVACUATION_TARGET_ICON = 'evacuation-circle-alert-icon';
+const EVACUATION_HOSPITAL_ICON = 'evacuation-hospital-icon';
 
 const asFiniteNumber = (value) => {
   const number = Number(value);
@@ -149,7 +151,72 @@ export const buildEvacuationPointsFeatureCollection = ({ origin, target, plan, a
   return { type: 'FeatureCollection', features };
 };
 
+const addEvacuationIcon = (mapInstance, id, drawIcon) => {
+  if (!mapInstance || mapInstance.hasImage?.(id)) return;
+  const size = 36;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+  if (!ctx) return;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  drawIcon(ctx, size);
+  mapInstance.addImage(id, ctx.getImageData(0, 0, size, size), { pixelRatio: 2 });
+};
+
+const drawCircleAlertIcon = (ctx, size) => {
+  const center = size / 2;
+  ctx.shadowColor = 'rgba(15, 23, 42, 0.45)';
+  ctx.shadowBlur = 5;
+  ctx.fillStyle = '#f97316';
+  ctx.beginPath();
+  ctx.arc(center, center, 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2.8;
+  ctx.beginPath();
+  ctx.arc(center, center, 10, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(center, 11);
+  ctx.lineTo(center, 19);
+  ctx.stroke();
+  ctx.fillStyle = '#ffffff';
+  ctx.beginPath();
+  ctx.arc(center, 24, 1.6, 0, Math.PI * 2);
+  ctx.fill();
+};
+
+const drawHospitalIcon = (ctx, size) => {
+  const center = size / 2;
+  ctx.shadowColor = 'rgba(15, 23, 42, 0.45)';
+  ctx.shadowBlur = 5;
+  ctx.fillStyle = '#16a34a';
+  ctx.beginPath();
+  ctx.arc(center, center, 14, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 2.4;
+  ctx.strokeRect(10, 13, 16, 14);
+  ctx.beginPath();
+  ctx.moveTo(14, 27);
+  ctx.lineTo(14, 21);
+  ctx.lineTo(22, 21);
+  ctx.lineTo(22, 27);
+  ctx.moveTo(center, 8);
+  ctx.lineTo(center, 17);
+  ctx.moveTo(13.5, 12.5);
+  ctx.lineTo(22.5, 12.5);
+  ctx.stroke();
+};
+
 export const initEvacuationLayers = (mapInstance) => {
+  addEvacuationIcon(mapInstance, EVACUATION_TARGET_ICON, drawCircleAlertIcon);
+  addEvacuationIcon(mapInstance, EVACUATION_HOSPITAL_ICON, drawHospitalIcon);
+
   mapLayerService.addSourceSafe(mapInstance, EARTHQUAKE_SOURCES.evacuationRoutes, {
     type: 'geojson',
     data: EMPTY_FEATURE_COLLECTION,
@@ -197,27 +264,27 @@ export const initEvacuationLayers = (mapInstance) => {
   });
   mapLayerService.addLayerSafe(mapInstance, {
     id: EARTHQUAKE_LAYERS.evacuationTarget,
-    type: 'circle',
+    type: 'symbol',
     source: EARTHQUAKE_SOURCES.evacuationPoints,
-    layout: { visibility: 'none' },
-    paint: {
-      'circle-radius': 9,
-      'circle-color': '#f97316',
-      'circle-stroke-color': '#ffffff',
-      'circle-stroke-width': 2,
+    layout: {
+      visibility: 'none',
+      'icon-image': EVACUATION_TARGET_ICON,
+      'icon-size': 1,
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true,
     },
     filter: ['==', ['get', 'evacuation_role'], 'target'],
   });
   mapLayerService.addLayerSafe(mapInstance, {
     id: EARTHQUAKE_LAYERS.evacuationHospital,
-    type: 'circle',
+    type: 'symbol',
     source: EARTHQUAKE_SOURCES.evacuationPoints,
-    layout: { visibility: 'none' },
-    paint: {
-      'circle-radius': 9,
-      'circle-color': '#16a34a',
-      'circle-stroke-color': '#ffffff',
-      'circle-stroke-width': 2,
+    layout: {
+      visibility: 'none',
+      'icon-image': EVACUATION_HOSPITAL_ICON,
+      'icon-size': 1,
+      'icon-allow-overlap': true,
+      'icon-ignore-placement': true,
     },
     filter: ['==', ['get', 'evacuation_role'], 'hospital'],
   });
