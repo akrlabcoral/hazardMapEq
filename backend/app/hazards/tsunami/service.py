@@ -39,6 +39,8 @@ from app.services.redis_client import redis_manager
 
 logger = logging.getLogger(__name__)
 TSUNAMI_ANALYSIS_QUEUE_NAME = "hazard_manual"
+TSUNAMI_SOURCE_NOT_WATER_MESSAGE = "Tsunami source must be in an ocean/water cell."
+TSUNAMI_BATHYMETRY_UNAVAILABLE_MESSAGE = "Bathymetry raster is unavailable; tsunami source cannot be validated."
 
 
 class TsunamiService(HazardService):
@@ -109,11 +111,12 @@ class TsunamiService(HazardService):
     def calculate(self, request: TsunamiCalculationRequest) -> TsunamiCalculationResponse:
         validated = self.validate_input(request)
         if validated.latitude is not None and validated.longitude is not None:
-            bathymetry_service.sample_depth_m(validated.longitude, validated.latitude)
+            self._validate_ocean_source(validated.longitude, validated.latitude)
             coastline_service.get_geometry()
         return TsunamiCalculationResponse.model_validate(calculate_tsunami_hazard(validated))
 
     def model_source(self, request: TsunamiSourceModelRequest) -> TsunamiSourceModelResponse:
+        self._validate_ocean_source(request.longitude, request.latitude)
         result = self.source_model.model(SourceModelInput(**request.model_dump()))
         return TsunamiSourceModelResponse.model_validate({
             **result.to_dict(),
@@ -121,6 +124,7 @@ class TsunamiService(HazardService):
         })
 
     def propagate_wave(self, request: TsunamiWavePropagationRequest) -> TsunamiWavePropagationResponse:
+        self._validate_ocean_source(request.source_longitude, request.source_latitude)
         result = self.wave_engine.propagate(WavePropagationInput(**request.model_dump()))
         return TsunamiWavePropagationResponse.model_validate({
             **result.to_dict(),
@@ -168,6 +172,7 @@ class TsunamiService(HazardService):
         if not redis_manager._is_connected:
             raise ServiceUnavailableError("Redis is unavailable; tsunami analysis job was not queued.")
 
+        self._validate_ocean_source(request.source_model.longitude, request.source_model.latitude)
         request_id = f"tsunami:{uuid.uuid4().hex}"
         payload = {
             "kind": "tsunami_analysis",
@@ -204,6 +209,14 @@ class TsunamiService(HazardService):
                 self._redis_conn = redis.Redis.from_url(redis_manager.url)
             self._analysis_queue = Queue(TSUNAMI_ANALYSIS_QUEUE_NAME, connection=self._redis_conn)
         return self._analysis_queue
+
+    def _validate_ocean_source(self, longitude: float, latitude: float) -> float:
+        if not bathymetry_service.is_available():
+            raise ServiceUnavailableError(TSUNAMI_BATHYMETRY_UNAVAILABLE_MESSAGE)
+        depth_m = bathymetry_service.sample_depth_m(longitude, latitude)
+        if depth_m is None:
+            raise ValidationError(TSUNAMI_SOURCE_NOT_WATER_MESSAGE)
+        return depth_m
 
 
 tsunami_service = TsunamiService()

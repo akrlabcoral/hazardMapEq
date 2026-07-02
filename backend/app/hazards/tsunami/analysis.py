@@ -1,16 +1,10 @@
 from __future__ import annotations
 
-import json
 import logging
 import math
 from typing import Any
 
-import geojsoncontour
-import matplotlib
 import numpy as np
-
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 
 from app.hazards.tsunami.schemas import (
     TsunamiAnalysisRequest,
@@ -18,9 +12,11 @@ from app.hazards.tsunami.schemas import (
     TsunamiInundationRequest,
     TsunamiWavePropagationRequest,
 )
+from app.shared.gis.bathymetry_service import bathymetry_service
 
 logger = logging.getLogger(__name__)
 EMPTY_FEATURE_COLLECTION = {"type": "FeatureCollection", "features": []}
+TSUNAMI_DEEP_WATER_SPEED_KMH = 750.0
 
 def haversine_dist(lon1, lat1, lon2, lat2):
     R = 6371.0
@@ -48,23 +44,129 @@ def _destination_point(lon: float, lat: float, bearing_deg: float, distance_km: 
     return (math.degrees(lon2), math.degrees(lat2))
 
 
+def _ocean_only_ring_segments(
+    epicenter_lon: float,
+    epicenter_lat: float,
+    radius_km: float,
+    *,
+    bearing_step: int = 2,
+) -> list[list[tuple[float, float]]]:
+    coordinates = [
+        _destination_point(epicenter_lon, epicenter_lat, bearing, radius_km)
+        for bearing in range(0, 360, bearing_step)
+    ]
+    depths = bathymetry_service.sample_depths_m(coordinates)
+    valid = [depth is not None and depth > 0 for depth in depths]
+
+    segments: list[list[tuple[float, float]]] = []
+    current: list[tuple[float, float]] = []
+    for coord, is_ocean in zip(coordinates + [coordinates[0]], valid + [valid[0]], strict=False):
+        if is_ocean:
+            current.append(coord)
+            continue
+        if len(current) >= 2:
+            segments.append(current)
+        current = []
+    if len(current) >= 2:
+        segments.append(current)
+    return segments
+
+
 def _travel_time_line_features(epicenter_lon: float, epicenter_lat: float, levels: list[int]) -> list[dict[str, Any]]:
+    if not bathymetry_service.is_available():
+        logger.warning("TTT contours unavailable: bathymetry raster is not configured or unavailable")
+        return []
+
     features = []
+    colors = {
+        1: "#d73027",
+        2: "#d73027",
+        5: "#fdae61",
+        10: "#e0f3f8",
+        20: "#74add1",
+    }
     for level in levels:
         if level <= 0:
             continue
-        radius_km = level * 750.0
-        coordinates = [
-            _destination_point(epicenter_lon, epicenter_lat, bearing, radius_km)
-            for bearing in range(0, 361, 4)
-        ]
+        radius_km = level * TSUNAMI_DEEP_WATER_SPEED_KMH
+        for segment in _ocean_only_ring_segments(epicenter_lon, epicenter_lat, radius_km):
+            features.append({
+                "type": "Feature",
+                "geometry": {"type": "LineString", "coordinates": segment},
+                "properties": {
+                    "travel_time_hours": f"{level}h",
+                    "stroke": "#ffffff",
+                    "stroke-width": 1.8,
+                    "fill": colors.get(level, "#e0f3f8"),
+                    "is_ocean_only": True,
+                },
+            })
+    return features
+
+
+def _travel_time_band_features(
+    epicenter_lon: float,
+    epicenter_lat: float,
+    bands: list[tuple[float, float, str, float]],
+    *,
+    bearing_step: int = 5,
+    radial_step_km: float = 150.0,
+) -> list[dict[str, Any]]:
+    if not bathymetry_service.is_available():
+        return []
+
+    cells: list[tuple[float, float, float, float, str, float]] = []
+    sample_points: list[tuple[float, float]] = []
+    for start_hour, end_hour, fill, opacity in bands:
+        start_radius = max(0.0, start_hour * TSUNAMI_DEEP_WATER_SPEED_KMH)
+        end_radius = max(start_radius, end_hour * TSUNAMI_DEEP_WATER_SPEED_KMH)
+        radial_count = max(1, math.ceil((end_radius - start_radius) / radial_step_km))
+        for radial_index in range(radial_count):
+            inner_radius = start_radius + radial_index * radial_step_km
+            outer_radius = min(end_radius, inner_radius + radial_step_km)
+            if outer_radius <= inner_radius:
+                continue
+            for bearing in range(0, 360, bearing_step):
+                next_bearing = bearing + bearing_step
+                sample_radius = (inner_radius + outer_radius) / 2
+                sample_bearing = bearing + bearing_step / 2
+                sample_points.append(_destination_point(epicenter_lon, epicenter_lat, sample_bearing, sample_radius))
+                cells.append((inner_radius, outer_radius, bearing, next_bearing, fill, opacity))
+
+    depths = bathymetry_service.sample_depths_m(sample_points)
+    features: list[dict[str, Any]] = []
+    for cell, depth in zip(cells, depths, strict=False):
+        if depth is None or depth <= 0:
+            continue
+        inner_radius, outer_radius, bearing, next_bearing, fill, opacity = cell
+        outer_start = _destination_point(epicenter_lon, epicenter_lat, bearing, outer_radius)
+        outer_end = _destination_point(epicenter_lon, epicenter_lat, next_bearing, outer_radius)
+        if inner_radius <= 0:
+            ring = [
+                [epicenter_lon, epicenter_lat],
+                list(outer_start),
+                list(outer_end),
+                [epicenter_lon, epicenter_lat],
+            ]
+        else:
+            inner_start = _destination_point(epicenter_lon, epicenter_lat, bearing, inner_radius)
+            inner_end = _destination_point(epicenter_lon, epicenter_lat, next_bearing, inner_radius)
+            ring = [
+                list(inner_start),
+                list(outer_start),
+                list(outer_end),
+                list(inner_end),
+                list(inner_start),
+            ]
         features.append({
             "type": "Feature",
-            "geometry": {"type": "LineString", "coordinates": coordinates},
+            "geometry": {"type": "Polygon", "coordinates": [ring]},
             "properties": {
-                "travel_time_hours": f"{level}h",
-                "stroke": "#ffffff",
-                "stroke-width": 1.5,
+                "travel_time_hours": f"{int(cell[0] / TSUNAMI_DEEP_WATER_SPEED_KMH)}-{int(math.ceil(cell[1] / TSUNAMI_DEEP_WATER_SPEED_KMH))}h",
+                "fill": fill,
+                "fill-opacity": opacity,
+                "is_ocean_only": True,
+                "layer_role": "affected_ocean_area",
             },
         })
     return features
@@ -74,48 +176,35 @@ def generate_ttt_geojson(epicenter_lon: float | None, epicenter_lat: float | Non
     if epicenter_lon is None or epicenter_lat is None:
         return EMPTY_FEATURE_COLLECTION
 
-    # 1. Create a large grid around epicenter
-    N = 100
-    lon_min, lon_max = epicenter_lon - 60, epicenter_lon + 60
-    lat_min, lat_max = epicenter_lat - 60, epicenter_lat + 60
-    grid_lon, grid_lat = np.mgrid[lon_min:lon_max:complex(N), lat_min:lat_max:complex(N)]
-
-    # 2. Calculate travel time in hours
-    # Approximation: Tsunami in deep ocean travels ~750 km/h
-    dist_km = haversine_dist(epicenter_lon, epicenter_lat, grid_lon, grid_lat)
-    time_hours = dist_km / 750.0
-
-    # 3. Contour levels and colors (Red to Blue)
-    levels = [0, 2, 4, 6, 8, 10, 15, 20, 25, 30]
-    line_levels = [2, 5, 10, 20]
-    colors = [
-        "#d73027", "#f46d43", "#fdae61", "#fee090", 
-        "#e0f3f8", "#abd9e9", "#74add1", "#4575b4", "#313695"
-    ]
-
     try:
-        fig, ax = plt.subplots()
-        contour = ax.contourf(grid_lon, grid_lat, time_hours, levels=levels, colors=colors, extend="max")
-        contour_geojson_str = geojsoncontour.contourf_to_geojson(
-            contourf=contour,
-            ndigits=3,
-            stroke_width=1,
-            fill_opacity=0.4
+        band_features = _travel_time_band_features(
+            epicenter_lon,
+            epicenter_lat,
+            [
+                (0, 1, "#ef4444", 0.22),
+                (1, 2, "#fb7185", 0.18),
+                (2, 5, "#fbbf24", 0.13),
+            ],
         )
-        plt.close(fig)
-        
-        geojson = json.loads(contour_geojson_str)
-        # Annotate with travel time properties for frontend labels
-        for feature in geojson.get("features", []):
-            title = feature.get("properties", {}).get("title", "")
-            # "title" format is "0.00-2.00"
-            if "-" in title:
-                end_hr = title.split("-")[1]
-                feature["properties"]["travel_time_hours"] = end_hr
-        geojson.setdefault("features", []).extend(
-            _travel_time_line_features(epicenter_lon, epicenter_lat, line_levels)
-        )
-        return geojson
+        line_features = _travel_time_line_features(epicenter_lon, epicenter_lat, [1, 2, 5, 10, 20])
+        features = [*band_features, *line_features]
+        if not features:
+            return {
+                **EMPTY_FEATURE_COLLECTION,
+                "properties": {
+                    "is_available": False,
+                    "reason": "Bathymetry raster is unavailable or no ocean cells intersect TTT rings",
+                },
+            }
+        return {
+            "type": "FeatureCollection",
+            "features": features,
+            "properties": {
+                "is_available": True,
+                "model": "ocean_only_deep_water_travel_time_bands_and_lines",
+                "speed_kmh": TSUNAMI_DEEP_WATER_SPEED_KMH,
+            },
+        }
     except Exception as e:
         logger.warning("TTT contour failed: %s", e)
         return EMPTY_FEATURE_COLLECTION

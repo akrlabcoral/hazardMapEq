@@ -53,4 +53,20 @@ export const EARTHQUAKE_LEGEND_ITEMS = [
     layerIds: [EARTHQUAKE_LAYERS.intensityFill],
     requiresRenderedFeature: true,
   },
+  {
+    id: 'evacuationResponderRoute',
+    label: 'Responder route',
+    type: 'line',
+    color: '#2563eb',
+    layerIds: [EARTHQUAKE_LAYERS.evacuationResponderRoute],
+    requiresRenderedFeature: true,
+  },
+  {
+    id: 'evacuationHospitalRoute',
+    label: 'Hospital route',
+    type: 'line',
+    color: '#22c55e',
+    layerIds: [EARTHQUAKE_LAYERS.evacuationHospitalRoute],
+    requiresRenderedFeature: true,
+  },
 ];

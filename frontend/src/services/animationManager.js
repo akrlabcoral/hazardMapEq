@@ -12,6 +12,9 @@ class AnimationManager {
     this.loopConfig = null;
     this.tsunamiLoopConfig = null;
     this.loopTimeoutId = null;
+    this.oceanMaskCache = new Map();
+    this.tsunamiFrames = [];
+    this.tsunamiLastFrameIndex = -1;
     // We intentionally removed setIsSimulationRunning to prevent state deadlocks.
     // The UI 'Run' button state should strictly follow the API fetch request,
     // not the async drawing loops.
@@ -59,6 +62,66 @@ class AnimationManager {
     return coordinates;
   }
 
+  _isOceanCoordinate(mapInstance, coordinate) {
+    const [lng, lat] = coordinate;
+    const key = `${lng.toFixed(1)},${lat.toFixed(1)}`;
+    if (this.oceanMaskCache.has(key)) return this.oceanMaskCache.get(key);
+
+    let isOcean = false;
+    try {
+      const point = mapInstance.project(coordinate);
+      const canvas = mapInstance.getCanvas();
+      if (
+        point.x < 0
+        || point.y < 0
+        || point.x > canvas.clientWidth
+        || point.y > canvas.clientHeight
+      ) {
+        this.oceanMaskCache.set(key, false);
+        return false;
+      }
+
+      const features = mapInstance.queryRenderedFeatures(point);
+      const layerIds = features.map((feature) => feature.layer?.id || '').join(' ').toLowerCase();
+      const sourceLayers = features.map((feature) => feature.sourceLayer || feature.sourceLayer || '').join(' ').toLowerCase();
+      const descriptor = `${layerIds} ${sourceLayers}`;
+
+      if (/(water|ocean|marine|sea)/.test(descriptor)) {
+        isOcean = true;
+      }
+      if (/(land|admin|country|boundary|place|settlement|building)/.test(descriptor) && !/(water|ocean|marine|sea)/.test(descriptor)) {
+        isOcean = false;
+      }
+    } catch (err) {
+      isOcean = false;
+    }
+
+    if (this.oceanMaskCache.size > 1200) this.oceanMaskCache.clear();
+    this.oceanMaskCache.set(key, isOcean);
+    return isOcean;
+  }
+
+  _splitOceanWavefrontSegments(mapInstance, coordinates) {
+    const features = [];
+    let segment = [];
+
+    for (let i = 1; i < coordinates.length; i++) {
+      const prev = coordinates[i - 1];
+      const current = coordinates[i];
+      const midpoint = [(prev[0] + current[0]) / 2, (prev[1] + current[1]) / 2];
+      if (this._isOceanCoordinate(mapInstance, midpoint)) {
+        if (!segment.length) segment.push(prev);
+        segment.push(current);
+        continue;
+      }
+      if (segment.length >= 2) features.push(segment);
+      segment = [];
+    }
+
+    if (segment.length >= 2) features.push(segment);
+    return features;
+  }
+
   startTsunamiWavefront(mapInstance, epicenter, options = {}) {
     this.stopTsunamiWavefront();
 
@@ -74,10 +137,53 @@ class AnimationManager {
       epicenter,
       duration: options.duration || 8500,
       maxRadiusKm: options.maxRadiusKm || 1700,
-      ringCount: options.ringCount || 5,
-      steps: options.steps || 128,
+      ringCount: options.ringCount || 4,
+      steps: options.steps || 72,
+      frameCount: options.frameCount || 24,
     };
+    this.tsunamiFrames = this._precomputeTsunamiWavefrontFrames(mapInstance, this.tsunamiLoopConfig);
+    this.tsunamiLastFrameIndex = -1;
     this._runTsunamiWavefront();
+  }
+
+  _precomputeTsunamiWavefrontFrames(mapInstance, config) {
+    const { epicenter, maxRadiusKm, ringCount, steps, frameCount } = config;
+    const frames = [];
+
+    for (let frameIndex = 0; frameIndex < frameCount; frameIndex++) {
+      const cycleProgress = frameIndex / frameCount;
+      const features = [];
+
+      for (let ringIndex = 0; ringIndex < ringCount; ringIndex++) {
+        const ringProgress = (cycleProgress + ringIndex / ringCount) % 1;
+        const eased = ringProgress * ringProgress * (3 - 2 * ringProgress);
+        const radiusKm = 80 + eased * maxRadiusKm;
+        const fade = Math.max(0, 1 - ringProgress);
+        const coordinates = this._buildTsunamiWavefront(epicenter, radiusKm, {
+          phase: cycleProgress * Math.PI * 2 + ringIndex,
+          steps,
+        });
+
+        // Ocean-valid wavefront segments are computed once per cached frame.
+        // Playback only swaps prebuilt GeoJSON, avoiding per-frame land checks.
+        this._splitOceanWavefrontSegments(mapInstance, coordinates).forEach((segment) => {
+          features.push({
+            type: 'Feature',
+            geometry: { type: 'LineString', coordinates: segment },
+            properties: {
+              opacity: 0.24 + fade * 0.58,
+              glowOpacity: 0.08 + fade * 0.22,
+              width: 1.4 + fade * 1.2,
+              glowWidth: 5 + fade * 4,
+            },
+          });
+        });
+      }
+
+      frames.push({ type: 'FeatureCollection', features });
+    }
+
+    return frames.length ? frames : [{ type: 'FeatureCollection', features: [] }];
   }
 
   _runTsunamiWavefront() {
@@ -91,33 +197,15 @@ class AnimationManager {
       try {
         if (!this.isTsunamiLooping || !this.tsunamiMap?.getStyle()) return;
 
-        const { epicenter, duration, maxRadiusKm, ringCount, steps } = this.tsunamiLoopConfig;
+        const { duration } = this.tsunamiLoopConfig;
         const cycleProgress = ((now - startTime) % duration) / duration;
-        const features = [];
+        const frameIndex = Math.floor(cycleProgress * this.tsunamiFrames.length) % this.tsunamiFrames.length;
 
-        for (let i = 0; i < ringCount; i++) {
-          const ringProgress = (cycleProgress + i / ringCount) % 1;
-          const eased = ringProgress * ringProgress * (3 - 2 * ringProgress);
-          const radiusKm = 80 + eased * maxRadiusKm;
-          const fade = Math.max(0, 1 - ringProgress);
-          const coordinates = this._buildTsunamiWavefront(epicenter, radiusKm, {
-            phase: cycleProgress * Math.PI * 2 + i,
-            steps,
-          });
-
-          features.push({
-            type: 'Feature',
-            geometry: { type: 'LineString', coordinates },
-            properties: {
-              opacity: 0.24 + fade * 0.58,
-              glowOpacity: 0.08 + fade * 0.22,
-              width: 1.4 + fade * 1.2,
-              glowWidth: 5 + fade * 4,
-            },
-          });
+        if (frameIndex !== this.tsunamiLastFrameIndex) {
+          source.setData(this.tsunamiFrames[frameIndex]);
+          this.tsunamiLastFrameIndex = frameIndex;
         }
 
-        source.setData({ type: 'FeatureCollection', features });
         this.tsunamiAnimRef = requestAnimationFrame(animate);
       } catch (err) {
         console.error('[AnimationManager] Tsunami wavefront animation failed:', err);
@@ -135,6 +223,8 @@ class AnimationManager {
       cancelAnimationFrame(this.tsunamiAnimRef);
       this.tsunamiAnimRef = null;
     }
+    this.tsunamiFrames = [];
+    this.tsunamiLastFrameIndex = -1;
 
     try {
       if (this.tsunamiMap && this.tsunamiMap.getStyle()) {

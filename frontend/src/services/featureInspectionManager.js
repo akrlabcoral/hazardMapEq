@@ -25,6 +25,7 @@ const INSPECTION_LAYER_PRIORITY = [
   SIM_LAYERS.INTENSITY_FILL,
   SIM_LAYERS.WB_GRID_FILL,
   SIM_LAYERS.CONTOUR_FILL,
+  'district-boundaries-fill',
   'state-boundaries-fill',
 ];
 
@@ -110,6 +111,32 @@ export const getClusterExpansion = (feature) => {
 };
 
 getHazardInspectionProviders().forEach(registerInspectionProvider);
+
+registerInspector({
+  id: 'district',
+  layerIds: ['district-boundaries-fill'],
+  inspect: (feature) => {
+    const props = feature.properties || {};
+    const districtName = props.DISTRICT || props.district || props.name || props.NAME || UNKNOWN;
+    const stateName = props.STATE_UT || props.state || props.STATE || UNKNOWN;
+
+    return {
+      type: 'district',
+      title: districtName,
+      subtitle: stateName,
+      accent: '#38bdf8',
+      sections: [
+        {
+          title: 'District',
+          rows: rows([
+            { label: 'District name', value: districtName },
+            { label: 'State', value: stateName },
+          ]),
+        },
+      ],
+    };
+  },
+});
 
 registerInspector({
   id: 'state',

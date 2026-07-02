@@ -28,6 +28,8 @@ router = APIRouter()
 async def analyze_tsunami(request: TsunamiAnalysisRequest) -> TsunamiAnalysisAcceptedResponse:
     try:
         request_id = await tsunami_service.enqueue_analysis(request)
+    except ValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
     except ServiceUnavailableError as exc:
         raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
     return TsunamiAnalysisAcceptedResponse(
@@ -57,17 +59,32 @@ async def get_tsunami_analysis_layers(request_id: str) -> TsunamiAnalysisLayersR
 
 @router.post("/calculate", response_model=TsunamiCalculationResponse)
 def calculate_tsunami(request: TsunamiCalculationRequest) -> TsunamiCalculationResponse:
-    return tsunami_service.calculate(request)
+    try:
+        return tsunami_service.calculate(request)
+    except ValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except ServiceUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
 
 
 @router.post("/source-model", response_model=TsunamiSourceModelResponse)
 def model_tsunami_source(request: TsunamiSourceModelRequest) -> TsunamiSourceModelResponse:
-    return tsunami_service.model_source(request)
+    try:
+        return tsunami_service.model_source(request)
+    except ValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except ServiceUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
 
 
 @router.post("/wave-propagation", response_model=TsunamiWavePropagationResponse)
 def propagate_tsunami_wave(request: TsunamiWavePropagationRequest) -> TsunamiWavePropagationResponse:
-    return tsunami_service.propagate_wave(request)
+    try:
+        return tsunami_service.propagate_wave(request)
+    except ValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(exc)) from exc
+    except ServiceUnavailableError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
 
 
 @router.post("/inundation", response_model=TsunamiInundationResponse)

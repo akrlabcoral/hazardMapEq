@@ -133,6 +133,49 @@ export const LAYER_CONFIGS = {
       }
     ]
   },
+  districtBoundaries: {
+    sourceId: 'district-boundaries-source',
+    dataUrl: 'india_districts_simplified.geojson',
+    promoteId: 'DIST_LGD',
+    layers: [
+      {
+        id: 'district-boundaries-fill',
+        type: 'fill',
+        source: 'district-boundaries-source',
+        beforeId: 'sim-wb-grid-fill',
+        paint: {
+          'fill-color': '#38bdf8',
+          'fill-opacity': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            0.12,
+            0.0
+          ]
+        }
+      },
+      {
+        id: 'district-boundaries-line',
+        type: 'line',
+        source: 'district-boundaries-source',
+        beforeId: 'sim-wb-grid-fill',
+        paint: {
+          'line-color': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            '#000000',
+            '#000000'
+          ],
+          'line-width': [
+            'case',
+            ['boolean', ['feature-state', 'hover'], false],
+            1.1,
+            0.2
+          ],
+          'line-opacity': 0.5
+        }
+      }
+    ]
+  },
   tectonicPlates: {
     sourceId: 'tectonic-plates-source',
     dataUrl: 'tectonic_plates.geojson',

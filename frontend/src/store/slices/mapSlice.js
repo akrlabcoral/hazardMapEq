@@ -14,7 +14,7 @@ export const createMapSlice = (set) => ({
   
 
 
-  gisLayers: { satellite: false, terrain: false, indiaBoundary: true, stateBoundaries: true, tectonicPlates: true, gpsVectors: false, historicEarthquakes: false },
+  gisLayers: { satellite: false, terrain: false, indiaBoundary: true, stateBoundaries: true, districtBoundaries: true, tectonicPlates: true, gpsVectors: false, historicEarthquakes: false },
   toggleGisLayer: (layer) => set((state) => ({ gisLayers: { ...state.gisLayers, [layer]: !state.gisLayers[layer] } })),
   historicMinMag: 4.0,
   setHistoricMinMag: (magnitude) => set({ historicMinMag: magnitude }),

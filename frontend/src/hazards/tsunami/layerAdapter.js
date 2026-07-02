@@ -23,7 +23,7 @@ export const tsunamiLayerAdapter = {
       {
         markerVisible: isActive && Boolean(store.tsunamiSource),
         resultVisible: isActive && Boolean(store.tsunamiResult && store.tsunamiSource),
-        wavefrontVisible: isActive && Boolean(store.tsunamiSource && (store.isTsunamiAnalysisRunning || store.tsunamiResult)),
+        wavefrontVisible: isActive && Boolean(store.tsunamiSource && store.isTsunamiAnalysisRunning),
       }
     );
   },
@@ -35,7 +35,7 @@ export const tsunamiLayerAdapter = {
   getVisibleLayers(store) {
     if (!store.tsunamiSource) return [];
     const markerLayers = [TSUNAMI_LAYERS.markerGlow, TSUNAMI_LAYERS.marker];
-    const waveLayers = store.isTsunamiAnalysisRunning || store.tsunamiResult
+    const waveLayers = store.isTsunamiAnalysisRunning
       ? [TSUNAMI_LAYERS.wavefrontGlow, TSUNAMI_LAYERS.wavefrontLine]
       : [];
     const resultLayers = store.tsunamiResult

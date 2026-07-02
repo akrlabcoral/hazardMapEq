@@ -75,13 +75,30 @@ const inspectMapClick = (mapInstance, event) => {
   return true;
 };
 
+const isRenderedWaterPoint = (mapInstance, point) => {
+  try {
+    const features = mapInstance.queryRenderedFeatures(point);
+    return features.some((feature) => {
+      const layerId = feature.layer?.id?.toLowerCase?.() || '';
+      const sourceLayer = feature.sourceLayer?.toLowerCase?.() || '';
+      const properties = Object.values(feature.properties || {}).join(' ').toLowerCase();
+      const descriptor = `${layerId} ${sourceLayer} ${properties}`;
+      return /(water|ocean|sea|marine)/.test(descriptor);
+    });
+  } catch (err) {
+    return false;
+  }
+};
+
 const getMapCursor = ({
   isPlacingEpicenter,
   isPlacingTsunamiEpicenter,
+  isPlacingEvacuationOrigin,
+  isSelectingEvacuationTarget,
   isSimulationRunning,
   isInspectableHover = false,
 }) => {
-  if (isPlacingEpicenter || isPlacingTsunamiEpicenter) return 'crosshair';
+  if (isPlacingEpicenter || isPlacingTsunamiEpicenter || isPlacingEvacuationOrigin || isSelectingEvacuationTarget) return 'crosshair';
   if (isSimulationRunning) return 'wait';
   if (isInspectableHover) return 'pointer';
   return '';
@@ -152,6 +169,68 @@ const applyBoundaryTheme = (mapInstance, mapStyle) => {
       boundaryLine,
     ]);
   }
+  if (mapInstance.getLayer('district-boundaries-fill')) {
+    mapInstance.setPaintProperty('district-boundaries-fill', 'fill-color', stateHoverFill);
+  }
+  if (mapInstance.getLayer('district-boundaries-line')) {
+    mapInstance.setPaintProperty('district-boundaries-line', 'line-color', [
+      'case',
+      ['boolean', ['feature-state', 'hover'], false],
+      stateHoverFill,
+      boundaryLine,
+    ]);
+  }
+};
+
+const flattenCoordinates = (coordinates, points = []) => {
+  if (!Array.isArray(coordinates)) return points;
+  if (typeof coordinates[0] === 'number' && typeof coordinates[1] === 'number') {
+    points.push(coordinates);
+    return points;
+  }
+  coordinates.forEach((child) => flattenCoordinates(child, points));
+  return points;
+};
+
+const getFeatureCenter = (feature, fallbackLngLat) => {
+  const points = flattenCoordinates(feature?.geometry?.coordinates);
+  if (!points.length) return { lng: fallbackLngLat.lng, lat: fallbackLngLat.lat };
+  const bounds = points.reduce((acc, [lng, lat]) => ({
+    minLng: Math.min(acc.minLng, lng),
+    maxLng: Math.max(acc.maxLng, lng),
+    minLat: Math.min(acc.minLat, lat),
+    maxLat: Math.max(acc.maxLat, lat),
+  }), {
+    minLng: Infinity,
+    maxLng: -Infinity,
+    minLat: Infinity,
+    maxLat: -Infinity,
+  });
+  return {
+    lng: (bounds.minLng + bounds.maxLng) / 2,
+    lat: (bounds.minLat + bounds.maxLat) / 2,
+  };
+};
+
+const isHighRiskGridFeature = (feature) => {
+  const properties = feature?.properties || {};
+  const category = String(
+    properties.risk_category
+    || properties.riskLevel
+    || properties.risk_level
+    || properties.severity
+    || ''
+  ).toLowerCase();
+  if (/(high|very high|extreme|severe)/.test(category)) return true;
+
+  const pga = Number(properties.local_pga ?? properties.final_pga ?? properties.pga);
+  const mmi = Number(properties.mmi ?? properties.intensity);
+  const riskScore = Number(properties.risk_score ?? properties.risk);
+  return (
+    (Number.isFinite(pga) && pga >= 0.215)
+    || (Number.isFinite(mmi) && mmi >= 7)
+    || (Number.isFinite(riskScore) && riskScore >= 0.7)
+  );
 };
 
 const createHazardLayerContext = () => ({
@@ -203,12 +282,18 @@ export default function MapView({ isAdmin = false }) {
   const activePanel       = useStore((state) => state.activePanel);
   const isPlacingEpicenter = useStore((state) => state.isPlacingEpicenter);
   const isPlacingTsunamiEpicenter = useStore((state) => state.isPlacingTsunamiEpicenter);
+  const isPlacingEvacuationOrigin = useStore((state) => state.isPlacingEvacuationOrigin);
+  const isSelectingEvacuationTarget = useStore((state) => state.isSelectingEvacuationTarget);
   const isSimulationRunning = useStore((state) => state.isSimulationRunning);
   const liveEvents = useStore((state) => state.liveEvents);
   const activeHazard = useStore((state) => state.activeHazard);
   const tsunamiResult = useStore((state) => state.tsunamiResult);
   const tsunamiSource = useStore((state) => state.tsunamiSource);
   const isTsunamiAnalysisRunning = useStore((state) => state.isTsunamiAnalysisRunning);
+  const evacuationOrigin = useStore((state) => state.evacuationOrigin);
+  const evacuationTarget = useStore((state) => state.evacuationTarget);
+  const evacuationPlan = useStore((state) => state.evacuationPlan);
+  const autoEvacuationPlans = useStore((state) => state.autoEvacuationPlans);
 
   useEffect(() => {
     animationManager.setStoreActions(setIsSimulationRunning);
@@ -228,7 +313,7 @@ export default function MapView({ isAdmin = false }) {
 
   useEffect(() => {
     applyMapCursor(map.current);
-  }, [isPlacingEpicenter, isPlacingTsunamiEpicenter, isSimulationRunning]);
+  }, [isPlacingEpicenter, isPlacingTsunamiEpicenter, isPlacingEvacuationOrigin, isSelectingEvacuationTarget, isSimulationRunning]);
 
   useEffect(() => {
     if (map.current) return;
@@ -264,6 +349,10 @@ export default function MapView({ isAdmin = false }) {
         const coords = { lng: e.lngLat.lng, lat: e.lngLat.lat };
         debugLog('[Tsunami] Map click => setting tsunami epicenter:', coords);
         const store = useStore.getState();
+        if (!isRenderedWaterPoint(map.current, e.point)) {
+          store.setTsunamiAnalysisError('Tsunami source must be in an ocean/water cell.');
+          return;
+        }
         // Tsunami epicenter placement is independent from earthquake placement.
         // Clear stale tsunami outputs so old travel-time layers do not remain on a new source.
         store.setTsunamiSource(coords);
@@ -278,6 +367,39 @@ export default function MapView({ isAdmin = false }) {
         store.setTsunamiAnalysisStatus('idle');
         store.setTsunamiAnalysisError('');
         store.setIsPlacingTsunamiEpicenter(false);
+        return;
+      }
+
+      if (useStore.getState().isPlacingEvacuationOrigin) {
+        const coords = { lng: e.lngLat.lng, lat: e.lngLat.lat };
+        const store = useStore.getState();
+        store.setEvacuationOrigin(coords);
+        store.setEvacuationPlan(null);
+        store.setEvacuationError('');
+        store.setIsPlacingEvacuationOrigin(false);
+        return;
+      }
+
+      if (useStore.getState().isSelectingEvacuationTarget) {
+        const store = useStore.getState();
+        const gridLayers = ['sim-wb-grid-fill', 'sim-intensity-fill']
+          .filter((layerId) => map.current.getLayer(layerId));
+        const features = gridLayers.length
+          ? map.current.queryRenderedFeatures(e.point, { layers: gridLayers })
+          : [];
+        const feature = features.find(isHighRiskGridFeature);
+        if (!feature) {
+          store.setEvacuationError('Select a high-risk simulation grid cell.');
+          return;
+        }
+        store.setEvacuationTarget({
+          ...getFeatureCenter(feature, e.lngLat),
+          risk_category: feature.properties?.risk_category || feature.properties?.risk_level || feature.properties?.severity || '',
+          state: feature.properties?.state || feature.properties?.STATE || '',
+        });
+        store.setEvacuationPlan(null);
+        store.setEvacuationError('');
+        store.setIsSelectingEvacuationTarget(false);
         return;
       }
 
@@ -319,7 +441,7 @@ export default function MapView({ isAdmin = false }) {
       if (
         currentStore.activeHazard === 'tsunami'
         && currentStore.tsunamiSource
-        && (currentStore.isTsunamiAnalysisRunning || currentStore.tsunamiResult)
+        && currentStore.isTsunamiAnalysisRunning
       ) {
         animationManager.startTsunamiWavefront(map.current, currentStore.tsunamiSource);
       }
@@ -385,6 +507,36 @@ export default function MapView({ isAdmin = false }) {
             );
           }
           hoveredStateId = null;
+        });
+
+        let hoveredDistrictId = null;
+        map.current.on('mousemove', 'district-boundaries-fill', (e) => {
+          if (e.features.length > 0) {
+            const feature = e.features[0];
+            if (hoveredDistrictId !== null) {
+              map.current.setFeatureState(
+                { source: 'district-boundaries-source', id: hoveredDistrictId },
+                { hover: false }
+              );
+            }
+            hoveredDistrictId = feature.properties.DIST_LGD ?? feature.properties.OBJECTID ?? feature.id;
+            if (hoveredDistrictId !== undefined) {
+              map.current.setFeatureState(
+                { source: 'district-boundaries-source', id: hoveredDistrictId },
+                { hover: true }
+              );
+            }
+          }
+        });
+
+        map.current.on('mouseleave', 'district-boundaries-fill', () => {
+          if (hoveredDistrictId !== null) {
+            map.current.setFeatureState(
+              { source: 'district-boundaries-source', id: hoveredDistrictId },
+              { hover: false }
+            );
+          }
+          hoveredDistrictId = null;
         });
 
         let hoveredPlateId = null;
@@ -510,12 +662,12 @@ export default function MapView({ isAdmin = false }) {
   useEffect(() => {
     if (!map.current || !map.current.getStyle()) return;
     syncHazardLayers(map.current);
-  }, [activeHazard, tsunamiResult, tsunamiSource, isTsunamiAnalysisRunning]);
+  }, [activeHazard, tsunamiResult, tsunamiSource, isTsunamiAnalysisRunning, evacuationOrigin, evacuationTarget, evacuationPlan, autoEvacuationPlans]);
 
   useEffect(() => {
     if (!map.current || !map.current.getStyle()) return;
 
-    if (activeHazard === 'tsunami' && tsunamiSource && (isTsunamiAnalysisRunning || tsunamiResult)) {
+    if (activeHazard === 'tsunami' && tsunamiSource && isTsunamiAnalysisRunning) {
       animationManager.startTsunamiWavefront(map.current, tsunamiSource);
       return;
     }
@@ -581,6 +733,8 @@ export default function MapView({ isAdmin = false }) {
         className={`w-full h-full ${
           isPlacingEpicenter
           || isPlacingTsunamiEpicenter
+          || isPlacingEvacuationOrigin
+          || isSelectingEvacuationTarget
             ? 'cursor-crosshair'
             : isSimulationRunning
               ? 'cursor-wait'

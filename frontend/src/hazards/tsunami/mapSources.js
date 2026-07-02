@@ -150,8 +150,8 @@ export const setTsunamiLayerVisibility = (mapInstance, { markerVisible, resultVi
     TSUNAMI_LAYERS.marker
   ], markerVisible);
 
+  setVisibility([TSUNAMI_LAYERS.tttFill], resultVisible);
   setVisibility([
-    TSUNAMI_LAYERS.tttFill,
     TSUNAMI_LAYERS.tttLine,
     TSUNAMI_LAYERS.tttLabels
   ], resultVisible);

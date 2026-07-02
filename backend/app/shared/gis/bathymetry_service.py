@@ -21,13 +21,22 @@ class BathymetryService:
 
     def sample_depth_m(self, lon: float, lat: float) -> float | None:
         value = self._raster.sample_point(lon, lat)
-        if value is None:
-            return None
-        return abs(float(value))
+        return self._to_ocean_depth(value)
 
     def sample_depths_m(self, coords: list[tuple[float, float]]) -> list[float | None]:
         values = self._raster.sample_points(coords)
-        return [None if value is None else abs(float(value)) for value in values]
+        return [self._to_ocean_depth(value) for value in values]
+
+    @staticmethod
+    def _to_ocean_depth(value: float | None) -> float | None:
+        if value is None:
+            return None
+        numeric = float(value)
+        # GEBCO stores ocean bathymetry as negative elevation and land as
+        # positive elevation. Only negative cells are valid tsunami water paths.
+        if numeric >= 0:
+            return None
+        return abs(numeric)
 
     def close(self) -> None:
         self._raster.close()

@@ -7,13 +7,15 @@ import { LayerRow } from '../components/ui/LayerRow';
 
 const RasterLayersPanel = React.lazy(() => import('../components/RasterLayersPanel'));
 
-const GIS_BOUNDARY_LAYERS = ['indiaBoundary', 'stateBoundaries'];
+const GIS_BOUNDARY_LAYERS = ['indiaBoundary', 'stateBoundaries', 'districtBoundaries'];
+const PUBLIC_BOUNDARY_LAYERS = ['districtBoundaries'];
 const GLOBAL_LAYERS = ['tectonicPlates', 'gpsVectors'];
 const BASE_LAYERS = ['satellite', 'terrain'];
 
 const LAYER_LABELS = {
   indiaBoundary:    'India Boundary',
   stateBoundaries:  'State Boundaries',
+  districtBoundaries: 'District Boundaries',
   tectonicPlates:   'Tectonic Plate Boundaries',
   satellite:        'Satellite',
   terrain:          'Terrain',
@@ -24,6 +26,7 @@ export function LayersPanel({ isAdmin = true }) {
   const {
     gisLayers, toggleGisLayer,
   } = useLayersState();
+  const boundaryLayers = isAdmin ? GIS_BOUNDARY_LAYERS : PUBLIC_BOUNDARY_LAYERS;
 
   return (
     <div className="space-y-3 max-h-[480px] overflow-y-auto pr-1">
@@ -46,7 +49,7 @@ export function LayersPanel({ isAdmin = true }) {
         <div className="text-xs text-slate-400 uppercase tracking-wider mb-2">Data Layers</div>
 
         {/* GIS Boundary Layers */}
-        {isAdmin && GIS_BOUNDARY_LAYERS.map((key) => (
+        {boundaryLayers.map((key) => (
           <LayerRow
             key={key}
             label={LAYER_LABELS[key]}

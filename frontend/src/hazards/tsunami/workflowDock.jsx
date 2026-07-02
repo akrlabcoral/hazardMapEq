@@ -113,8 +113,15 @@ export const useTsunamiWorkflowDockLayout = () => {
   const resetTsunamiSimulationForm = useStore((state) => state.resetTsunamiSimulationForm);
   const pollTimer = useRef(null);
 
+  const clearPollTimer = () => {
+    if (pollTimer.current) {
+      clearTimeout(pollTimer.current);
+      pollTimer.current = null;
+    }
+  };
+
   useEffect(() => () => {
-    if (pollTimer.current) clearTimeout(pollTimer.current);
+    clearPollTimer();
   }, []);
 
   const updateField = (field, value) => setTsunamiSimulationForm({ [field]: value });
@@ -167,16 +174,19 @@ export const useTsunamiWorkflowDockLayout = () => {
         const result = await getTsunamiAnalysisResult(requestId);
         setTsunamiAnalysisStatus(result.status);
         if (result.status === 'completed') {
+          clearPollTimer();
           await finishCompletedAnalysis(requestId, result);
           return;
         }
         if (result.status === 'failed') {
+          clearPollTimer();
           setTsunamiAnalysisError(result.error || 'Tsunami simulation failed');
           setIsTsunamiAnalysisRunning(false);
           return;
         }
         pollResult(requestId);
       } catch (err) {
+        clearPollTimer();
         setTsunamiAnalysisError(err.message || 'Could not fetch simulation status');
         setIsTsunamiAnalysisRunning(false);
       }
@@ -189,12 +199,15 @@ export const useTsunamiWorkflowDockLayout = () => {
   }, [activeRequestId, isRunning]);
 
   const runAnalysis = async () => {
+    clearPollTimer();
     setTsunamiAnalysisError('');
     setIsTsunamiAnalysisRunning(true);
     setIsPlacingTsunamiEpicenter(false);
     setTsunamiAnalysisStatus('queued');
     // Clear any previous results when running a new simulation
+    setTsunamiAnalysisRequestId(null);
     setTsunamiAnalysisResult(null);
+    setTsunamiAnalysisLayers(null);
     setTsunamiResult(null);
     try {
       const latitude = toNumber(form.latitude);
@@ -205,7 +218,9 @@ export const useTsunamiWorkflowDockLayout = () => {
       const payload = buildAnalysisPayload(form);
       const accepted = await startTsunamiAnalysis(payload);
       setTsunamiAnalysisRequestId(accepted.request_id);
+      pollResult(accepted.request_id);
     } catch (err) {
+      clearPollTimer();
       setTsunamiAnalysisError(err.message || 'Tsunami simulation failed to start');
       setIsTsunamiAnalysisRunning(false);
       setTsunamiAnalysisStatus('failed');
@@ -213,6 +228,7 @@ export const useTsunamiWorkflowDockLayout = () => {
   };
 
   const reset = () => {
+    clearPollTimer();
     resetTsunamiSimulationForm();
     setTsunamiAnalysisError('');
     setTsunamiAnalysisStatus('idle');
@@ -332,7 +348,7 @@ export const useTsunamiWorkflowDockLayout = () => {
         content: (
           <div className="space-y-2">
              <div className="grid grid-cols-2 gap-2">
-               <NumberInput label="Wave Height (m)" value={form.offshore_wave_height_m} onChange={(value) => updateField('offshore_wave_height_m', value)} />
+               <NumberInput label="Offshore Wave Height (m)" value={form.offshore_wave_height_m} onChange={(value) => updateField('offshore_wave_height_m', value)} />
                <NumberInput label="Target Spacing (km)" value={form.target_spacing_km} onChange={(value) => updateField('target_spacing_km', value)} />
              </div>
              <label className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300 mt-2">

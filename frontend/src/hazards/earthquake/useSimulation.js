@@ -94,6 +94,9 @@ export function useSimulation() {
     setError(null);
     setSimulationResults(null);
     setPendingSimulationInfoPanel(null);
+    state.setAutoEvacuationPlans?.([]);
+    state.setAutoEvacuationError?.('');
+    state.setIsAutoEvacuationLoading?.(false);
 
     try {
       const payload = {

@@ -2,6 +2,8 @@ import { initSimulationLayers, SIM_LAYERS } from '../../config/simulationLayers'
 import { mapLayerService } from '../../services/mapLayerService';
 import {
   buildEpicenterFeatureCollection,
+  initEvacuationLayers,
+  syncEvacuationSources,
   syncLiveEarthquakesSource,
 } from './mapSources';
 import {
@@ -22,6 +24,11 @@ const EARTHQUAKE_LAYER_IDS = [
   SIM_LAYERS.EPICENTER,
   EARTHQUAKE_LAYERS.livePulse,
   EARTHQUAKE_LAYERS.livePoint,
+  EARTHQUAKE_LAYERS.evacuationResponderRoute,
+  EARTHQUAKE_LAYERS.evacuationHospitalRoute,
+  EARTHQUAKE_LAYERS.evacuationOrigin,
+  EARTHQUAKE_LAYERS.evacuationTarget,
+  EARTHQUAKE_LAYERS.evacuationHospital,
 ];
 
 const setLayerVisibility = (mapInstance, layerId, visibility) => {
@@ -35,6 +42,7 @@ export const earthquakeLayerAdapter = {
 
   registerLayers(mapInstance) {
     initSimulationLayers(mapInstance);
+    initEvacuationLayers(mapInstance);
   },
 
   syncLayers(mapInstance, store, context = {}) {
@@ -45,7 +53,6 @@ export const earthquakeLayerAdapter = {
         store,
         refreshVisibleLegendItems: context.refreshVisibleLegendItems,
       });
-      return;
     }
 
     const epicenterSource = mapInstance.getSource('sim-epicenter-source');
@@ -53,6 +60,12 @@ export const earthquakeLayerAdapter = {
       epicenterSource.setData(buildEpicenterFeatureCollection(store.earthquakeEpicenter));
     }
     syncLiveEarthquakesSource(mapInstance, store.liveEvents);
+    syncEvacuationSources(mapInstance, {
+      origin: store.evacuationOrigin,
+      target: store.evacuationTarget,
+      plan: store.evacuationPlan,
+      autoPlans: store.autoEvacuationPlans,
+    });
     renderSimulationResults({
       mapInstance,
       simulationResults: store.simulationResults,
@@ -79,19 +92,45 @@ export const earthquakeLayerAdapter = {
     [EARTHQUAKE_LAYERS.livePulse, EARTHQUAKE_LAYERS.livePoint].forEach((layerId) => {
       setLayerVisibility(mapInstance, layerId, 'visible');
     });
+
+    const hasAutoPlans = Boolean(store.autoEvacuationPlans?.length);
+    const routeVisibility = store.evacuationPlan || hasAutoPlans ? 'visible' : 'none';
+    [EARTHQUAKE_LAYERS.evacuationResponderRoute, EARTHQUAKE_LAYERS.evacuationHospitalRoute].forEach((layerId) => {
+      setLayerVisibility(mapInstance, layerId, routeVisibility);
+    });
+    setLayerVisibility(mapInstance, EARTHQUAKE_LAYERS.evacuationOrigin, store.evacuationOrigin ? 'visible' : 'none');
+    setLayerVisibility(mapInstance, EARTHQUAKE_LAYERS.evacuationTarget, store.evacuationTarget || hasAutoPlans ? 'visible' : 'none');
+    setLayerVisibility(mapInstance, EARTHQUAKE_LAYERS.evacuationHospital, store.evacuationPlan?.hospital_route?.hospital || hasAutoPlans ? 'visible' : 'none');
   },
 
   bringToFront(mapInstance) {
     mapLayerService.bringSimulationLayersToFront(mapInstance);
+    [
+      EARTHQUAKE_LAYERS.evacuationResponderRoute,
+      EARTHQUAKE_LAYERS.evacuationHospitalRoute,
+      EARTHQUAKE_LAYERS.evacuationOrigin,
+      EARTHQUAKE_LAYERS.evacuationTarget,
+      EARTHQUAKE_LAYERS.evacuationHospital,
+    ].forEach((layerId) => {
+      if (mapInstance?.getLayer(layerId)) mapInstance.moveLayer(layerId);
+    });
   },
 
   getVisibleLayers(store) {
+    const evacuationLayers = [
+      ...(store.evacuationPlan || store.autoEvacuationPlans?.length ? [EARTHQUAKE_LAYERS.evacuationHospitalRoute] : []),
+      ...(store.evacuationPlan ? [EARTHQUAKE_LAYERS.evacuationResponderRoute] : []),
+      ...(store.evacuationOrigin ? [EARTHQUAKE_LAYERS.evacuationOrigin] : []),
+      ...(store.evacuationTarget || store.autoEvacuationPlans?.length ? [EARTHQUAKE_LAYERS.evacuationTarget] : []),
+      ...(store.evacuationPlan?.hospital_route?.hospital || store.autoEvacuationPlans?.length ? [EARTHQUAKE_LAYERS.evacuationHospital] : []),
+    ];
     if (!store.simulationResults) {
-      return [EARTHQUAKE_LAYERS.livePulse, EARTHQUAKE_LAYERS.livePoint];
+      return [EARTHQUAKE_LAYERS.livePulse, EARTHQUAKE_LAYERS.livePoint, ...evacuationLayers];
     }
-    return store.intensityVisible
+    const simulationLayers = store.intensityVisible
       ? [SIM_LAYERS.INTENSITY_FILL, SIM_LAYERS.EPICENTER, EARTHQUAKE_LAYERS.livePoint]
       : [SIM_LAYERS.WB_GRID_FILL, SIM_LAYERS.CONTOUR_FILL, SIM_LAYERS.CONTOUR_STROKE, SIM_LAYERS.EPICENTER, EARTHQUAKE_LAYERS.livePoint];
+    return [...simulationLayers, ...evacuationLayers];
   },
 
   getLayerMetadata() {
